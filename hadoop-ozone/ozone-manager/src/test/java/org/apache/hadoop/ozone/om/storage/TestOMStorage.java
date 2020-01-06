@@ -14,14 +14,14 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.apache.hadoop.ozone.om;
+package org.apache.hadoop.ozone.om.storage;
 
 import java.io.File;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.om.storage.OMStorage;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.apache.commons.io.FileUtils;

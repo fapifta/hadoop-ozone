@@ -9,6 +9,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Properties;
@@ -51,8 +52,9 @@ public class TestStorage {
   @Test
   public void testStorageInInitializedStateIfVersionFileExists()
       throws Exception {
-    Storage storage =
-        aStorageImplWithRealVersionFile(aRealDirectory(), aValidProperties());
+    Storage storage = aStorageImplWithRealVersionFile(
+        aRealDirectory(), propsForDNWithClusterIdAs1AndCTimeAs0()
+    );
 
     assertEquals(StorageState.INITIALIZED, storage.getState());
   }
@@ -83,6 +85,47 @@ public class TestStorage {
     );
   }
 
+  @Test
+  public void testVersionFilePropertiesAreReadCorrectlyIfInitialized()
+      throws Exception {
+    Storage storage = aStorageImplWithRealVersionFile(
+        aRealDirectory(), propsForDNWithClusterIdAs1AndCTimeAs0()
+    );
+
+    assertEquals(NodeType.DATANODE, storage.getNodeType());
+    assertEquals("1", storage.getClusterID());
+    assertEquals(0, storage.getCreationTime());
+  }
+
+  @Test
+  public void testVersionFilePropertiesAreSetIfInitializing() throws Exception {
+    File workingDir = aRealDirectory();
+    Storage storage = aStorageImplWith(workingDir);
+    storage.initialize();
+
+    Properties props = loadPropertiesFromVersionFile(workingDir);
+
+    assertEquals(props.getProperty("nodeType"), storage.getNodeType().name());
+    assertEquals(props.getProperty("clusterID"), storage.getClusterID());
+    assertEquals(
+        props.getProperty("cTime"), Long.toString(storage.getCreationTime()));
+  }
+
+  @Test
+  public void testAdditionalPropertiesSavedIfInitializing() throws Exception {
+    File workingDir = aRealDirectory();
+    Properties extraProps =
+        new Properties(propsForDNWithClusterIdAs1AndCTimeAs0());
+    extraProps.setProperty("extraProp1", "value1");
+    extraProps.setProperty("extraProp2", "value2");
+    Storage storage = aStorageImplWith(workingDir, extraProps);
+    storage.initialize();
+
+    Properties props = loadPropertiesFromVersionFile(workingDir);
+
+    assertEquals(props.getProperty("extraProp1"), "value1");
+    assertEquals(props.getProperty("extraProp2"), "value2");
+  }
 
 
 
@@ -132,7 +175,7 @@ public class TestStorage {
     return f;
   }
 
-  private Properties aValidProperties(){
+  private Properties propsForDNWithClusterIdAs1AndCTimeAs0(){
     Properties props = new Properties();
     props.setProperty("nodeType", NodeType.DATANODE.name());
     props.setProperty("clusterID", "1");
@@ -156,11 +199,22 @@ public class TestStorage {
 
   private Storage aStorageImplWithRealVersionFile(
       File workingDir, Properties props) throws Exception {
-    File actualDir = new File (workingDir, aPath() + "/current");
+    String currentDirPath = aPath() + "/" + Storage.STORAGE_DIR_CURRENT;
+    File actualDir = new File (workingDir, currentDirPath);
     actualDir.mkdirs();
-    File versionFile = new File(actualDir, "VERSION");
-    props.store(new FileWriter(versionFile), "no comments needed");
+    File versionFile = new File(actualDir, Storage.STORAGE_FILE_VERSION);
+    props.store(new FileWriter(versionFile), null);
 
     return aStorageImplWith(workingDir, props);
+  }
+
+  private Properties loadPropertiesFromVersionFile(File workingDir)
+      throws Exception {
+    String currentDirPath = aPath() + "/" + Storage.STORAGE_DIR_CURRENT;
+    File actualDir = new File (workingDir, currentDirPath);
+    File versionFile = new File(actualDir, Storage.STORAGE_FILE_VERSION);
+    Properties props = new Properties();
+    props.load(new FileReader(versionFile));
+    return props;
   }
 }

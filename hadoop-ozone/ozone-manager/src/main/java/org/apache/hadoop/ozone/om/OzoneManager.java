@@ -1001,16 +1001,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   @VisibleForTesting
-  public ScmInfo getScmInfo() throws IOException {
-    return scmBlockClient.getScmInfo();
-  }
-
-  @VisibleForTesting
-  public OMStorage getOmStorage() {
-    return omStorage;
-  }
-
-  @VisibleForTesting
   public OzoneManagerRatisServer getOmRatisServer() {
     return omRatisServer;
   }

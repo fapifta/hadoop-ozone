@@ -16,6 +16,8 @@
  */
 package org.apache.hadoop.ozone.om.storage;
 
+import static org.junit.Assert.*;
+
 import java.io.File;
 
 import org.apache.hadoop.conf.Configuration;
@@ -25,7 +27,6 @@ import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.apache.commons.io.FileUtils;
-import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -34,9 +35,6 @@ import org.junit.rules.ExpectedException;
  * Testing OMStorage class.
  */
 public class TestOMStorage {
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   /**
    * Test {@link OMStorage#getOmDbDir}.
@@ -77,9 +75,8 @@ public class TestOMStorage {
     }
   }
 
-  @Test
+  @Test(expected = IllegalArgumentException.class)
   public void testNoOmDbDirConfigured() {
-    thrown.expect(IllegalArgumentException.class);
     OMStorage.getOmDbDir(new OzoneConfiguration());
   }
 

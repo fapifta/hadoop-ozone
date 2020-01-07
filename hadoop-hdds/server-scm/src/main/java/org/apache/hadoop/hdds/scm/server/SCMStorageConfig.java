@@ -27,13 +27,14 @@ import java.util.Properties;
 import java.util.UUID;
 
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_ID;
-import static org.apache.hadoop.ozone.OzoneConsts.STORAGE_DIR;
 
 /**
  * SCMStorageConfig is responsible for management of the
  * StorageDirectories used by the SCM.
  */
 public class SCMStorageConfig extends Storage {
+
+  private static final String STORAGE_DIR = "scm";
 
   /**
    * Construct SCMStorageConfig.

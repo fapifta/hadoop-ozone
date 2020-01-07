@@ -31,8 +31,6 @@ import static org.apache.ratis.thirdparty.io.grpc.Metadata.ASCII_STRING_MARSHALL
 @InterfaceAudience.Private
 public final class OzoneConsts {
 
-
-  public static final String STORAGE_DIR = "scm";
   public static final String SCM_ID = "scmUuid";
 
   public static final String OZONE_SIMPLE_ROOT_USER = "root";

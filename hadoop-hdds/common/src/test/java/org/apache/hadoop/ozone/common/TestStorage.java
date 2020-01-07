@@ -127,6 +127,15 @@ public class TestStorage {
     assertEquals(props.getProperty("extraProp2"), "value2");
   }
 
+  @Test(expected = IOException.class)
+  public void testUpdatesAreDisabledToClusterIDIfInitialized()
+      throws Exception {
+    Storage storage = aStorageImplWith(
+        aRealDirectory(), propsForDNWithClusterIdAs1AndCTimeAs0());
+    storage.initialize();
+
+    storage.setClusterId("newId");
+  }
 
 
   private String aPath(){

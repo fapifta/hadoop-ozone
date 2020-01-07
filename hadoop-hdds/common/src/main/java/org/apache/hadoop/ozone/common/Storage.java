@@ -235,7 +235,7 @@ public abstract class Storage {
    * otherwise returns with IOException.
    * @throws IOException
    */
-  public void initialize() throws IOException {
+  public synchronized void initialize() throws IOException {
     if (state == StorageState.INITIALIZED) {
       throw new IOException("Storage directory already initialized.");
     }
@@ -243,6 +243,7 @@ public abstract class Storage {
       throw new IOException("Cannot create directory " + getCurrentDir());
     }
     storageInfo.writeTo(getVersionFile());
+    state = StorageState.INITIALIZED;
   }
 
   /**

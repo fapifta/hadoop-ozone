@@ -48,7 +48,7 @@ public class SCMStorageConfig extends Storage {
     if (getState() == StorageState.INITIALIZED) {
       throw new IOException("SCM is already initialized.");
     } else {
-      getStorageInfo().setProperty(SCM_ID, scmId);
+      setProperty(SCM_ID, scmId);
     }
   }
 
@@ -57,7 +57,7 @@ public class SCMStorageConfig extends Storage {
    * @return SCM_ID
    */
   public String getScmId() {
-    return getStorageInfo().getProperty(SCM_ID);
+    return getProperty(SCM_ID);
   }
 
   @Override

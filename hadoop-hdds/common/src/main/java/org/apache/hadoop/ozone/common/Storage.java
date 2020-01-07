@@ -176,13 +176,12 @@ public abstract class Storage {
     }
   }
 
-  /**
-   * Retrieves the storageInfo instance to read/write the common
-   * version file properties.
-   * @return the instance of the storageInfo class
-   */
-  protected StorageInfo getStorageInfo() {
-    return storageInfo;
+  public void setProperty(String key, String value) {
+    storageInfo.setProperty(key, value);
+  }
+
+  public String getProperty(String key) {
+    return storageInfo.getProperty(key);
   }
 
   abstract protected Properties getNodeProperties();

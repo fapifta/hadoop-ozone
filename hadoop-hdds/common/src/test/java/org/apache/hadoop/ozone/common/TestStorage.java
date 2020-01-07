@@ -169,8 +169,8 @@ public class TestStorage {
     Storage storage = aStorageImplWith(workingDir);
     storage.initialize();
     long t = Time.monotonicNow();
-    storage.getStorageInfo().setProperty("cTime", Long.toString(t));
-    storage.getStorageInfo().setProperty("aPropertyKey", "aValue");
+    storage.setProperty("cTime", Long.toString(t));
+    storage.setProperty("aPropertyKey", "aValue");
     storage.persistCurrentState();
 
     Properties props = loadPropertiesFromVersionFile(workingDir);

@@ -53,19 +53,19 @@ public class OMStorage extends Storage {
     if (getState() == StorageState.INITIALIZED) {
       throw new IOException("OM is already initialized.");
     } else {
-      getStorageInfo().setProperty(SCM_ID, scmId);
+      setProperty(SCM_ID, scmId);
     }
   }
 
   public void setOmCertSerialId(String certSerialId) throws IOException {
-    getStorageInfo().setProperty(OM_CERT_SERIAL_ID, certSerialId);
+    setProperty(OM_CERT_SERIAL_ID, certSerialId);
   }
 
   public void setOmId(String omId) throws IOException {
     if (getState() == StorageState.INITIALIZED) {
       throw new IOException("OM is already initialized.");
     } else {
-      getStorageInfo().setProperty(OM_ID, omId);
+      setProperty(OM_ID, omId);
     }
   }
 
@@ -74,7 +74,7 @@ public class OMStorage extends Storage {
    * @return SCM_ID
    */
   public String getScmId() {
-    return getStorageInfo().getProperty(SCM_ID);
+    return getProperty(SCM_ID);
   }
 
   /**
@@ -82,7 +82,7 @@ public class OMStorage extends Storage {
    * @return OM_ID
    */
   public String getOmId() {
-    return getStorageInfo().getProperty(OM_ID);
+    return getProperty(OM_ID);
   }
 
   /**
@@ -90,7 +90,7 @@ public class OMStorage extends Storage {
    * @return OM_ID
    */
   public String getOmCertSerialId() {
-    return getStorageInfo().getProperty(OM_CERT_SERIAL_ID);
+    return getProperty(OM_CERT_SERIAL_ID);
   }
 
   @Override

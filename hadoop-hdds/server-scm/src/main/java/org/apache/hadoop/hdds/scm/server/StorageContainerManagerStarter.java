@@ -25,7 +25,7 @@ import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
-import org.apache.hadoop.ozone.common.StorageInfo;
+import org.apache.hadoop.ozone.common.Storage;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -146,7 +146,7 @@ public class StorageContainerManagerStarter extends GenericCli {
     }
 
     public String generateClusterId() {
-      return StorageInfo.newClusterID();
+      return Storage.newClusterID();
     }
   }
 }

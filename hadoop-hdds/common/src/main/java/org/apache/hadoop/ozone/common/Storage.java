@@ -30,6 +30,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
+import java.util.UUID;
 
 /**
  * The internal representation of the Data directory underneath certain
@@ -54,9 +55,10 @@ import java.util.Properties;
  *   - clusterID: unique immutable cluster identification string, practically
  *        any arbitrary string consistent throughout the cluster services, but
  *        the suggested format is CID-[UUID string].
- *        See {@link StorageInfo#newClusterID()}.
+ *        See {@link Storage#newClusterID()}.
  *   - cTime: the creation time of the VERSION file as a unix timestamp with
  *        milliseconds included.
+ *   - uTime: the last update time of the VERSION file.
  *   - nodeType: the {@link NodeType} of the service for which this file
  *        belongs to.
  *
@@ -99,6 +101,18 @@ public abstract class Storage {
   private StorageState state;
   private StorageInfo storageInfo;
 
+  /**
+   * Generate new clusterID.
+   *
+   * clusterID is a persistent attribute of the cluster.
+   * It is generated when the cluster is created and remains the same
+   * during the life cycle of the cluster.  When a new SCM node is initialized,
+   * if this is a new cluster, a new clusterID is generated and stored.
+   * @return new clusterID
+   */
+  public static String newClusterID() {
+    return "CID-" + UUID.randomUUID().toString();
+  }
 
   /**
    * Determines the state of the Version file.
@@ -117,7 +131,7 @@ public abstract class Storage {
       this.storageInfo = new StorageInfo(type, getVersionFile());
     } else {
       this.storageInfo = new StorageInfo(
-          nodeType, StorageInfo.newClusterID(), Time.now());
+          nodeType, newClusterID(), Time.now());
       setNodeProperties();
     }
   }

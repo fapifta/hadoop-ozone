@@ -30,28 +30,36 @@ import java.util.Properties;
 import java.util.UUID;
 
 /**
- * Common class for storage information. This class defines the common
- * properties and functions to set them , write them into the version file
- * and read them from the version file.
- *
+ * Represents the VERSION file inside a Storage directory.
+ * This class defines the basic mandatory properties, and provides functions
+ * to manipulate data in the VERSION file.
  */
 @InterfaceAudience.Private
 public class StorageInfo {
-
-  private Properties properties = new Properties();
-
+  // NOTE: these basic properties are documented in Storage class, upon
+  // extending the list, update the documentation as well.
   /**
-   * Property to hold node type.
+   * Property key to hold node type.
    */
   private static final String NODE_TYPE = "nodeType";
   /**
-   * Property to hold ID of the cluster.
+   * Property key to hold the ID of the cluster.
    */
   private static final String CLUSTER_ID = "clusterID";
   /**
-   * Property to hold creation time of the storage.
+   * Property key to hold creation time of the storage.
    */
   private static final String CREATION_TIME = "cTime";
+  /**
+   * Property key to hold the last update time of the VERSION file.
+   */
+  private static final String LAST_UPDATE_TIME = "uTime";
+
+
+  /**
+   * Internal representation of properties in the version file.
+   */
+  private Properties properties = new Properties();
 
   /**
    * Constructs StorageInfo instance.
@@ -164,19 +172,6 @@ public class StorageInfo {
       props.load(in);
       return props;
     }
-  }
-
-  /**
-   * Generate new clusterID.
-   *
-   * clusterID is a persistent attribute of the cluster.
-   * It is generated when the cluster is created and remains the same
-   * during the life cycle of the cluster.  When a new SCM node is initialized,
-   * if this is a new cluster, a new clusterID is generated and stored.
-   * @return new clusterID
-   */
-  public static String newClusterID() {
-    return "CID-" + UUID.randomUUID().toString();
   }
 
 }

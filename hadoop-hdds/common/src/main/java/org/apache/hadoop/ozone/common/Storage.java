@@ -32,14 +32,58 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 /**
- * Storage information file. This Class defines the methods to check
- * the consistency of the storage dir and the version file.
- * <p>
- * Local storage information is stored in a separate file VERSION.
- * It contains type of the node,
- * the storage layout version, the SCM id, and
- * the OM/SCM state creation time.
+ * The internal representation of the Data directory underneath certain
+ * services.
  *
+ * The basic structure is the following:
+ * / workingDir
+ *   / service specific dir
+ *     / current
+ *       / ...
+ *     / VERSION
+ *
+ * Where
+ *   - the workingDir should be configurable for the service
+ *   - the service specific directory is fixed and hardcoded at compile time
+ *   - current is fixed and hardcoded compile time to hold the current actual
+ *     metadata belongs to the service
+ *   - VERSION file is a property file, that holds actual information about the
+ *     service and the cluster "runtime" in which the service supposed to work.
+ *
+ * A VERSION file consists of the following minimum set of properties:
+ *   - clusterID: unique immutable cluster identification string, practically
+ *        any arbitrary string consistent throughout the cluster services, but
+ *        the suggested format is CID-[UUID string].
+ *        See {@link StorageInfo#newClusterID()}.
+ *   - cTime: the creation time of the VERSION file as a unix timestamp with
+ *        milliseconds included.
+ *   - nodeType: the {@link NodeType} of the service for which this file
+ *        belongs to.
+ *
+ * Guarantees:
+ *   - state of Storage is
+ *     - NON_EXISTENT
+ *       - if the working directory does not exists
+ *       - if the working directory is not a directory
+ *       - if the working directory is not writable
+ *       - if the working directory is inaccessible according to the current
+ *           SecurityManager
+ *     - NOT_INITIALIZED
+ *       - if the VERSION file in the service specific directory does not exists
+ *     - INITIALIZED
+ *       - if the VERSION file and the current directory exists and accessible
+ *     - In an inconsistent state reported by an Exception at instantiation
+ *         otherwise
+ *   - updating the VERSION file is atomic
+ *   - once set the clusterID and nodeType is not allowed to be updated
+ *       programmatically
+ *
+ * Implementors of this class are not allowed to access the underlying
+ * facilities used to store the properties, but are allowed to update existing
+ * properties and add new properties.
+ * The internal logic of loading and saving the properties in the version file
+ * is also hidden from implementors, properties are persisted automatically on
+ * setting them.
  */
 @InterfaceAudience.Private
 public abstract class Storage {
@@ -106,6 +150,9 @@ public abstract class Storage {
     return storageInfo.getCreationTime();
   }
 
+
+  //This method is used only from tests, and from OM and SCM initialization
+  //Can we change this to a constructor parameter?
   public void setClusterId(String clusterId) throws IOException {
     if (state == StorageState.INITIALIZED) {
       throw new IOException(

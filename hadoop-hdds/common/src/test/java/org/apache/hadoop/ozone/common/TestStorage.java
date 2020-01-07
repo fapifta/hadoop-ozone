@@ -68,7 +68,8 @@ public class TestStorage {
   }
 
   @Test
-  public void testStorageDirIsTheCompositionOfCtorParameters()
+  public void
+  testStorageDirIsTheCompositionOfWorkingDirAndStorageDirectoryName()
       throws Exception {
     File workingDir = aWriteableDirectory();
     String sdName = aPath();
@@ -83,6 +84,19 @@ public class TestStorage {
         new File(workingDir, sdName).getAbsoluteFile().toString(),
         storage.getStorageDir()
     );
+  }
+
+  @Test(expected = InconsistentStorageStateException.class)
+  public void testNonEmptyCurrentWithoutVersionFilesLeadsToExceptionAtCTor()
+      throws Exception {
+    File workingDir = aRealDirectory();
+    File storageDir = new File(workingDir, aPath());
+    File currentDir = new File(storageDir, Storage.STORAGE_DIR_CURRENT);
+    currentDir.mkdirs();
+    File f = new File(currentDir, aPath());
+    f.createNewFile();
+
+    aStorageImplWith(workingDir);
   }
 
   @Test
@@ -128,7 +142,7 @@ public class TestStorage {
   }
 
   @Test(expected = IOException.class)
-  public void testUpdatesAreDisabledToClusterIDIfInitialized()
+  public void testUpdatesAreDisabledToClusterIDAfterInitialization()
       throws Exception {
     Storage storage = aStorageImplWith(
         aRealDirectory(), propsForDNWithClusterIdAs1AndCTimeAs0());
@@ -220,8 +234,8 @@ public class TestStorage {
   private Properties loadPropertiesFromVersionFile(File workingDir)
       throws Exception {
     String currentDirPath = aPath() + "/" + Storage.STORAGE_DIR_CURRENT;
-    File actualDir = new File (workingDir, currentDirPath);
-    File versionFile = new File(actualDir, Storage.STORAGE_FILE_VERSION);
+    File storageDir = new File (workingDir, currentDirPath);
+    File versionFile = new File(storageDir, Storage.STORAGE_FILE_VERSION);
     Properties props = new Properties();
     props.load(new FileReader(versionFile));
     return props;

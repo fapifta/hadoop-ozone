@@ -70,28 +70,28 @@ public class TestStorage {
 
   @Test
   public void
-  testStorageDirIsTheCompositionOfWorkingDirAndStorageDirectoryName()
+  testStorageDirIsTheCompositionOfWorkingDirAndServiceName()
       throws Exception {
     File workingDir = aWriteableDirectory();
-    String sdName = aPath();
 
-    Storage storage = new Storage(NodeType.DATANODE, workingDir, sdName) {
+    Storage storage = new Storage(NodeType.DATANODE, workingDir) {
       @Override protected Properties getNodeProperties() {
         return null;
       }
     };
 
-    assertEquals(
-        new File(workingDir, sdName).getAbsoluteFile().toString(),
-        storage.getStorageDir()
-    );
+    String serviceTypeName = NodeType.DATANODE.name().toLowerCase();
+    String expectedDir =
+        new File(workingDir, serviceTypeName).getAbsoluteFile().toString();
+    assertEquals(expectedDir, storage.getStorageDir());
   }
 
   @Test(expected = InconsistentStorageStateException.class)
   public void testNonEmptyCurrentWithoutVersionFilesLeadsToExceptionAtCTor()
       throws Exception {
     File workingDir = aRealDirectory();
-    File storageDir = new File(workingDir, aPath());
+    String serviceName = NodeType.DATANODE.name().toLowerCase();
+    File storageDir = new File(workingDir, serviceName);
     File currentDir = new File(storageDir, Storage.STORAGE_DIR_CURRENT);
     currentDir.mkdirs();
     File f = new File(currentDir, aPath());
@@ -243,7 +243,7 @@ public class TestStorage {
 
   private Storage aStorageImplWith(File workingDir, Properties props)
       throws IOException {
-    return new Storage(NodeType.DATANODE, workingDir, aPath()) {
+    return new Storage(NodeType.DATANODE, workingDir) {
       @Override
       protected Properties getNodeProperties() {
         return props;
@@ -253,7 +253,8 @@ public class TestStorage {
 
   private Storage aStorageImplWithRealVersionFile(
       File workingDir, Properties props) throws Exception {
-    String currentDirPath = aPath() + "/" + Storage.STORAGE_DIR_CURRENT;
+    String serviceName = NodeType.DATANODE.name().toLowerCase();
+    String currentDirPath = serviceName + "/" + Storage.STORAGE_DIR_CURRENT;
     File actualDir = new File (workingDir, currentDirPath);
     actualDir.mkdirs();
     File versionFile = new File(actualDir, Storage.STORAGE_FILE_VERSION);
@@ -264,7 +265,8 @@ public class TestStorage {
 
   private Properties loadPropertiesFromVersionFile(File workingDir)
       throws Exception {
-    String currentDirPath = aPath() + "/" + Storage.STORAGE_DIR_CURRENT;
+    String serviceName = NodeType.DATANODE.name().toLowerCase();
+    String currentDirPath = serviceName + "/" + Storage.STORAGE_DIR_CURRENT;
     File storageDir = new File (workingDir, currentDirPath);
     File versionFile = new File(storageDir, Storage.STORAGE_FILE_VERSION);
     Properties props = new Properties();

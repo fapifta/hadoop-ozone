@@ -34,14 +34,12 @@ import static org.apache.hadoop.ozone.OzoneConsts.SCM_ID;
  */
 public class SCMStorageConfig extends Storage {
 
-  private static final String STORAGE_DIR = "scm";
-
   /**
    * Construct SCMStorageConfig.
    * @throws IOException if any directories are inaccessible.
    */
   public SCMStorageConfig(OzoneConfiguration conf) throws IOException {
-    super(NodeType.SCM, ServerUtils.getScmDbDir(conf), STORAGE_DIR);
+    super(NodeType.SCM, ServerUtils.getScmDbDir(conf));
   }
 
   public void setScmId(String scmId) throws IOException {

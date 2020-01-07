@@ -45,7 +45,8 @@ import java.util.UUID;
  *
  * Where
  *   - the workingDir should be configurable for the service
- *   - the service specific directory is fixed and hardcoded at compile time
+ *   - the service specific directory is the lowercase name of the NodeType
+ *     hardcoded and should not be changing.
  *   - current is fixed and hardcoded compile time to hold the current actual
  *     metadata belongs to the service
  *   - VERSION file is a property file, that holds actual information about the
@@ -85,6 +86,7 @@ import java.util.UUID;
  * The internal logic of loading and saving the properties in the version file
  * is also hidden from implementors, properties are persisted automatically on
  * setting them.
+
  */
 @InterfaceAudience.Private
 public abstract class Storage {
@@ -120,11 +122,11 @@ public abstract class Storage {
     NOT_INITIALIZED, INITIALIZED
   }
 
-  public Storage(NodeType type, File root, String sdName)
+  public Storage(NodeType type, File root)
       throws IOException {
     this.nodeType = type;
     this.root = root;
-    this.storageDir = new File(root, sdName);
+    this.storageDir = new File(root, type.name().toLowerCase());
     this.state = getStorageState();
     if (state == StorageState.INITIALIZED) {
       this.storageInfo = new StorageInfo(type, getVersionFile());

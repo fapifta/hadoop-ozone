@@ -37,7 +37,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.SCM_ID;
  */
 public class OMStorage extends Storage {
 
-  public static final String STORAGE_DIR = "om";
+  private static final String STORAGE_DIR = "om";
   public static final String OM_ID = "omUuid";
   public static final String OM_CERT_SERIAL_ID = "omCertSerialId";
 

@@ -151,6 +151,16 @@ public class TestStorage {
     storage.setClusterId("newId");
   }
 
+  @Test(expected = IOException.class)
+  public void testUpdatesAreDisabledToClusterIDIfInitialized()
+      throws Exception {
+    Storage storage = aStorageImplWithRealVersionFile(
+        aRealDirectory(), propsForDNWithClusterIdAs1AndCTimeAs0()
+    );
+
+    storage.setClusterId("newId");
+  }
+
 
   private String aPath(){
     return "aPath";

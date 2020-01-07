@@ -35,7 +35,7 @@ import java.util.UUID;
  * to manipulate data in the VERSION file.
  */
 @InterfaceAudience.Private
-public class StorageInfo {
+class StorageInfo {
   // NOTE: these basic properties are documented in Storage class, upon
   // extending the list, update the documentation as well.
   /**

@@ -22,7 +22,7 @@ public class TestStorage {
       throws Exception {
     Storage storage = aStorageImplWith(aNonExistingFile());
 
-    assertEquals(StorageState.NON_EXISTENT, storage.getState());
+    assertEquals(StorageState.NOT_INITIALIZED, storage.getState());
   }
 
   @Test
@@ -30,7 +30,7 @@ public class TestStorage {
       throws Exception {
     Storage storage = aStorageImplWith(aFile());
 
-    assertEquals(StorageState.NON_EXISTENT, storage.getState());
+    assertEquals(StorageState.NOT_INITIALIZED, storage.getState());
   }
 
   @Test
@@ -38,7 +38,7 @@ public class TestStorage {
       throws Exception {
     Storage storage = aStorageImplWith(aNonWritableDirectory());
 
-    assertEquals(StorageState.NON_EXISTENT, storage.getState());
+    assertEquals(StorageState.NOT_INITIALIZED, storage.getState());
   }
 
   @Test
@@ -47,7 +47,7 @@ public class TestStorage {
       throws Exception {
     Storage storage = aStorageImplWith(aNonAccessibleFile());
 
-    assertEquals(StorageState.NON_EXISTENT, storage.getState());
+    assertEquals(StorageState.NOT_INITIALIZED, storage.getState());
   }
 
   @Test

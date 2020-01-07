@@ -64,13 +64,12 @@ import java.util.UUID;
  *
  * Guarantees:
  *   - state of Storage is
- *     - NON_EXISTENT
+ *     - NOT_INITIALIZED
  *       - if the working directory does not exists
  *       - if the working directory is not a directory
  *       - if the working directory is not writable
  *       - if the working directory is inaccessible according to the current
  *           SecurityManager
- *     - NOT_INITIALIZED
  *       - if the VERSION file in the service specific directory does not exists
  *     - INITIALIZED
  *       - if the VERSION file and the current directory exists and accessible
@@ -118,7 +117,7 @@ public abstract class Storage {
    * Determines the state of the Version file.
    */
   public enum StorageState {
-    NON_EXISTENT, NOT_INITIALIZED, INITIALIZED
+    NOT_INITIALIZED, INITIALIZED
   }
 
   public Storage(NodeType type, File root, String sdName)
@@ -176,11 +175,11 @@ public abstract class Storage {
     }
   }
 
-  public void setProperty(String key, String value) {
+  protected void setProperty(String key, String value) {
     storageInfo.setProperty(key, value);
   }
 
-  public String getProperty(String key) {
+  protected String getProperty(String key) {
     return storageInfo.getProperty(key);
   }
 
@@ -261,20 +260,20 @@ public abstract class Storage {
       if (!root.exists()) {
         // storage directory does not exist
         LOG.warn("Storage directory " + rootPath + " does not exist");
-        return StorageState.NON_EXISTENT;
+        return StorageState.NOT_INITIALIZED;
       }
       // or is inaccessible
       if (!root.isDirectory()) {
         LOG.warn(rootPath + "is not a directory");
-        return StorageState.NON_EXISTENT;
+        return StorageState.NOT_INITIALIZED;
       }
       if (!FileUtil.canWrite(root)) {
         LOG.warn("Cannot access storage directory " + rootPath);
-        return StorageState.NON_EXISTENT;
+        return StorageState.NOT_INITIALIZED;
       }
     } catch (SecurityException ex) {
       LOG.warn("Cannot access storage directory " + rootPath, ex);
-      return StorageState.NON_EXISTENT;
+      return StorageState.NOT_INITIALIZED;
     }
 
     // check whether current directory is valid

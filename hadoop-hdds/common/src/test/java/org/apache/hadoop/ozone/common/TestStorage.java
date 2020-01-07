@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 
 import java.io.File;
@@ -160,6 +161,26 @@ public class TestStorage {
 
     storage.setClusterId("newId");
   }
+
+  @Test
+  public void testPersistingCurrentStateSavesChanges()
+      throws Exception{
+    File workingDir = aRealDirectory();
+    Storage storage = aStorageImplWith(workingDir);
+    storage.initialize();
+    long t = Time.monotonicNow();
+    storage.getStorageInfo().setProperty("cTime", Long.toString(t));
+    storage.getStorageInfo().setProperty("aPropertyKey", "aValue");
+    storage.persistCurrentState();
+
+    Properties props = loadPropertiesFromVersionFile(workingDir);
+
+    assertEquals(t, storage.getCreationTime());
+    assertEquals(t, Long.parseLong(props.getProperty("cTime")));
+    assertEquals("aValue", props.getProperty("aPropertyKey"));
+  }
+
+
 
 
   private String aPath(){

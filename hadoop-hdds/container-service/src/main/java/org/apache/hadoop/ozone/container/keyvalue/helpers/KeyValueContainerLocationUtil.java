@@ -28,6 +28,8 @@ import java.io.File;
  */
 public final class KeyValueContainerLocationUtil {
 
+  private static final String CONTAINER_DIR = "containerDir";
+
   /* Never constructed. */
   private KeyValueContainerLocationUtil() {
 
@@ -98,7 +100,7 @@ public final class KeyValueContainerLocationUtil {
    */
   private static String getContainerSubDirectory(long containerId){
     int directory = (int) ((containerId >> 9) & 0xFF);
-    return Storage.CONTAINER_DIR + directory;
+    return CONTAINER_DIR + directory;
   }
 
   /**

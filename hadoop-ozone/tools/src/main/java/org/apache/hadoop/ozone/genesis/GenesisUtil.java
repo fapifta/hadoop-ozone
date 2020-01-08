@@ -32,6 +32,7 @@ import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.Storage;
+import org.apache.hadoop.ozone.common.StorageAlreadyInitializedException;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.storage.OMStorage;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -125,14 +126,12 @@ public final class GenesisUtil {
   static StorageContainerManager getScm(OzoneConfiguration conf,
       SCMConfigurator configurator) throws IOException,
       AuthenticationException {
-    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
-    if(scmStore.getState() != Storage.StorageState.INITIALIZED) {
-      String clusterId = UUID.randomUUID().toString();
-      String scmId = UUID.randomUUID().toString();
-      scmStore.setClusterId(clusterId);
-      scmStore.setScmId(scmId);
-      // writes the version file properties
-      scmStore.initialize();
+    try {
+      File storageDir = ServerUtils.getScmDbDir(conf);
+      String clusterId = Storage.newClusterID();
+      SCMStorageConfig.initialize(storageDir, clusterId);
+    } catch (StorageAlreadyInitializedException aie){
+      // ignore as in this case the version file read should be good for us.
     }
     return new StorageContainerManager(conf, configurator);
   }
@@ -183,13 +182,16 @@ public final class GenesisUtil {
 
   static OzoneManager getOm(OzoneConfiguration conf)
       throws IOException, AuthenticationException {
-    OMStorage omStorage = new OMStorage(conf);
-    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
-    if (omStorage.getState() != Storage.StorageState.INITIALIZED) {
-      omStorage.setClusterId(scmStore.getClusterID());
-      omStorage.setScmId(scmStore.getScmId());
-      omStorage.setOmId(UUID.randomUUID().toString());
-      omStorage.initialize();
+    File scmStorageDir = ServerUtils.getScmDbDir(conf);
+    File omStorageDir =
+        ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
+    SCMStorageConfig scmStore = new SCMStorageConfig(scmStorageDir);
+    try {
+      OMStorage.initialize(
+          omStorageDir, scmStore.getClusterID(), scmStore.getScmId());
+    } catch (StorageAlreadyInitializedException aie) {
+      // ignored, if already initialized we will go with the version file
+      // already written.
     }
     return OzoneManager.createOm(conf);
   }

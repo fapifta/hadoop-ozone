@@ -95,7 +95,6 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.common.Storage;
-import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.common.StorageAlreadyInitializedException;
 import org.apache.hadoop.ozone.lease.LeaseManager;
 import org.apache.hadoop.ozone.lock.LockManager;
@@ -242,12 +241,14 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     /**
      * It is assumed the scm --init command creates the SCM Storage Config.
      */
-    scmStorageConfig = new SCMStorageConfig(conf);
-    if (scmStorageConfig.getState() != StorageState.INITIALIZED) {
+    try {
+      File storageDir = ServerUtils.getScmDbDir(conf);
+      scmStorageConfig = new SCMStorageConfig(storageDir);
+    } catch (IOException e) {
       LOG.error("Please make sure you have run \'ozone scm --init\' " +
-          "command to generate all the required metadata.");
+          "command to generate all the required metadata.", e);
       throw new SCMException("SCM not initialized due to storage config " +
-          "failure.", ResultCodes.SCM_NOT_INITIALIZED);
+          "failure.", e, ResultCodes.SCM_NOT_INITIALIZED);
     }
 
     /**
@@ -620,7 +621,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
           storageDir, clusterId);
 
     } catch (StorageAlreadyInitializedException aie) {
-      SCMStorageConfig storage = new SCMStorageConfig(conf);
+      SCMStorageConfig storage = new SCMStorageConfig(storageDir);
       LOG.info("SCM already initialized. "
               + "Reusing existing cluster id for Storage Directory={}; "
               + "Cluster ID={}",

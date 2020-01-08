@@ -36,6 +36,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.mockito.Mockito;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -115,17 +116,12 @@ public class TestSecureOzoneManager {
     PublicKey publicKey;
     LogCapturer omLogs =
         LogCapturer.captureLogs(OzoneManager.getLogger());
-    OMStorage omStorage = new OMStorage(conf);
-    omStorage.setClusterId(clusterId);
-    omStorage.setScmId(scmId);
-    omStorage.setOmId(omId);
     omLogs.clearOutput();
 
     // Case 1: When keypair as well as certificate is missing. Initial keypair
     // boot-up. Get certificate will fail when SCM is not running.
     SecurityConfig securityConfig = new SecurityConfig(conf);
-    CertificateClient client = new OMCertificateClient(securityConfig,
-        omStorage.getOmCertSerialId());
+    CertificateClient client = new OMCertificateClient(securityConfig, "");
     Assert.assertEquals(CertificateClient.InitResponse.GETCERT, client.init());
     privateKey = client.getPrivateKey();
     publicKey = client.getPublicKey();
@@ -134,8 +130,7 @@ public class TestSecureOzoneManager {
     Assert.assertNull(client.getCertificate());
 
     // Case 2: If key pair already exist than response should be RECOVER.
-    client = new OMCertificateClient(securityConfig,
-        omStorage.getOmCertSerialId());
+    client = new OMCertificateClient(securityConfig, "");
     Assert.assertEquals(CertificateClient.InitResponse.RECOVER, client.init());
     Assert.assertNotNull(client.getPrivateKey());
     Assert.assertNotNull(client.getPublicKey());
@@ -173,7 +168,6 @@ public class TestSecureOzoneManager {
         x509Certificate.getEncoded()));
     client = new OMCertificateClient(securityConfig,
         x509Certificate.getSerialNumber().toString());
-    omStorage.setOmCertSerialId(x509Certificate.getSerialNumber().toString());
     Assert.assertEquals(CertificateClient.InitResponse.FAILURE, client.init());
     Assert.assertNull(client.getPrivateKey());
     Assert.assertNull(client.getPublicKey());
@@ -205,10 +199,7 @@ public class TestSecureOzoneManager {
   @Test
   public void testSecureOmInitFailure() throws Exception {
     OzoneConfiguration config = new OzoneConfiguration(conf);
-    OMStorage omStorage = new OMStorage(config);
-    omStorage.setClusterId(clusterId);
-    omStorage.setScmId(scmId);
-    omStorage.setOmId(omId);
+    OMStorage omStorage = Mockito.mock(OMStorage.class);
     config.set(OZONE_OM_ADDRESS_KEY, "om-unknown");
     LambdaTestUtils.intercept(RuntimeException.class, "Can't get SCM signed" +
             " certificate",

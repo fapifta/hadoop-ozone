@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
 import org.apache.hadoop.ozone.OmUtils;
@@ -46,6 +47,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
@@ -98,11 +100,10 @@ public class TestOzoneFsHAURLs {
         OMConfigKeys.OZONE_OM_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY,
         LEADER_ELECTION_TIMEOUT, TimeUnit.MILLISECONDS);
 
-    OMStorage omStore = new OMStorage(conf);
-    omStore.setClusterId(clusterId);
-    omStore.setScmId(scmId);
+    File omStorageDir =
+        ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
     // writes the version file properties
-    omStore.initialize();
+    OMStorage.initialize(omStorageDir, clusterId, scmId);
 
     // Start the cluster
     cluster = MiniOzoneCluster.newHABuilder(conf)

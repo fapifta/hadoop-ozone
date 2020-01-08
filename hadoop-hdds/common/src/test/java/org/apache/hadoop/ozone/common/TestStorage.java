@@ -4,7 +4,6 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
-import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.hamcrest.core.IsInstanceOf;
@@ -89,16 +88,6 @@ public class TestStorage {
     ex.expectMessage(Storage.E_NOT_INITIALIZED);
 
     aStorageImplWith(aWriteableDirectory());
-  }
-
-  @Test
-  public void testStorageInInitializedStateIfVersionFileExists()
-      throws Exception {
-    Storage storage = aStorageImplWithRealVersionFile(
-        aRealDirectory(), propsForDNWithClusterIdAs1AndCTimeAs0()
-    );
-
-    assertEquals(StorageState.INITIALIZED, storage.getState());
   }
 
   @Test

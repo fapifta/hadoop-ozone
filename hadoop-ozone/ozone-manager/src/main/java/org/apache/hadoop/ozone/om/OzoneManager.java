@@ -104,7 +104,6 @@ import org.apache.hadoop.ozone.audit.AuditLoggerType;
 import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.audit.Auditor;
 import org.apache.hadoop.ozone.audit.OMAction;
-import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
@@ -318,9 +317,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     this.peerNodes = omhaNodeDetails.getPeerNodeDetails();
     this.omNodeDetails = omhaNodeDetails.getLocalNodeDetails();
 
-    File storageDir =
-        ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
-    omStorage = new OMStorage(storageDir);
+    omMetaDir = ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
+    omStorage = new OMStorage(omMetaDir);
     omId = omStorage.getOmId();
 
     // In case of single OM Node Service there will be no OM Node ID
@@ -339,14 +337,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     Preconditions.checkArgument(this.maxUserVolumeCount > 0,
         OZONE_OM_USER_MAX_VOLUME + " value should be greater than zero");
 
-    if (omStorage.getState() != StorageState.INITIALIZED) {
-      throw new OMException("OM not initialized.",
-          ResultCodes.OM_NOT_INITIALIZED);
-    }
-
     // Read configuration and set values.
     ozAdmins = conf.getTrimmedStringCollection(OZONE_ADMINISTRATORS);
-    omMetaDir = OMStorage.getOmDbDir(configuration);
     this.isAclEnabled = conf.getBoolean(OZONE_ACL_ENABLED,
         OZONE_ACL_ENABLED_DEFAULT);
     this.scmBlockSize = (long) conf.getStorageSize(OZONE_SCM_BLOCK_SIZE,

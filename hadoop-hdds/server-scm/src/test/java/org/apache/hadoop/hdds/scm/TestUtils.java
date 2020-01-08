@@ -62,8 +62,10 @@ import org.apache.hadoop.hdds.scm.node.SCMNodeManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.Storage;
+import org.apache.hadoop.ozone.common.StorageAlreadyInitializedException;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.security.authentication.client
     .AuthenticationException;
@@ -488,14 +490,12 @@ public final class TestUtils {
     conf.set(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
     conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
     conf.set(ScmConfigKeys.OZONE_SCM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
-    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
-    if(scmStore.getState() != Storage.StorageState.INITIALIZED) {
-      String clusterId = UUID.randomUUID().toString();
-      String scmId = UUID.randomUUID().toString();
-      scmStore.setClusterId(clusterId);
-      scmStore.setScmId(scmId);
-      // writes the version file properties
-      scmStore.initialize();
+    try {
+      File storageDir = ServerUtils.getScmDbDir(conf);
+      String clusterId = Storage.newClusterID();
+      SCMStorageConfig.initialize(storageDir, clusterId);
+    } catch (StorageAlreadyInitializedException aie){
+      // ignore as in this case the version file read should be good for us.
     }
     return new StorageContainerManager(conf, configurator);
   }

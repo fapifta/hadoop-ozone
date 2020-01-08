@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.OzoneStorageContainerManager;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +58,8 @@ public class ReconStorageContainerManager
       throws IOException {
     this.eventQueue = new EventQueue();
     this.ozoneConfiguration = getReconScmConfiguration(conf);
-    this.scmStorageConfig = new SCMStorageConfig(conf);
+    this.scmStorageConfig =
+        new SCMStorageConfig(ServerUtils.getScmDbDir(conf));
     this.datanodeProtocolServer = new ReconDatanodeProtocolServer(
         conf, this, eventQueue);
   }

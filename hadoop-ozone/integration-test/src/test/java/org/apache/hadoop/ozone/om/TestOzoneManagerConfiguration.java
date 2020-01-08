@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.om;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OmUtils;
@@ -34,6 +35,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
@@ -72,11 +74,10 @@ public class TestOzoneManagerConfiguration {
         OMConfigKeys.OZONE_OM_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY,
         LEADER_ELECTION_TIMEOUT, TimeUnit.MILLISECONDS);
 
-    OMStorage omStore = new OMStorage(conf);
-    omStore.setClusterId("testClusterId");
-    omStore.setScmId("testScmId");
+    File workingDir =
+        ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
     // writes the version file properties
-    omStore.initialize();
+    OMStorage.initialize(workingDir, "testClusterId", "testScmId");
   }
 
   @After

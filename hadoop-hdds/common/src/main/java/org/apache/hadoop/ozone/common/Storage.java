@@ -164,13 +164,6 @@ public abstract class Storage {
 
 
 
-  /**
-   * Determines the state of the Version file.
-   */
-  public enum StorageState {
-    INITIALIZED;
-
-  }
   public Storage(NodeType type, File root)
       throws IOException {
     ensureDirIsInitializedFor(type, root);
@@ -186,14 +179,6 @@ public abstract class Storage {
    */
   public String getStorageDir() {
     return storageDir.getAbsoluteFile().toString();
-  }
-
-  /**
-   * Gets the state of the version file.
-   * @return the state of the Version file
-   */
-  public StorageState getState() {
-    return StorageState.INITIALIZED;
   }
 
   public NodeType getNodeType() {

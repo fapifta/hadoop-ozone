@@ -73,10 +73,13 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.StaticMapping;
+import org.apache.hadoop.ozone.common.Storage;
+import org.apache.hadoop.ozone.common.StorageAlreadyInitializedException;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -447,10 +450,12 @@ public class TestStorageContainerManager {
     // This will initialize SCM
     StorageContainerManager.scmInit(conf, "testClusterId");
 
-    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
+    SCMStorageConfig scmStore =
+        new SCMStorageConfig(ServerUtils.getScmDbDir(conf));
     Assert.assertEquals(NodeType.SCM, scmStore.getNodeType());
     Assert.assertEquals("testClusterId", scmStore.getClusterID());
     StorageContainerManager.scmInit(conf, "testClusterIdNew");
+    scmStore = new SCMStorageConfig(ServerUtils.getScmDbDir(conf));
     Assert.assertEquals(NodeType.SCM, scmStore.getNodeType());
     Assert.assertEquals("testClusterId", scmStore.getClusterID());
   }
@@ -469,7 +474,8 @@ public class TestStorageContainerManager {
     try {
       // This will initialize SCM
       StorageContainerManager.scmInit(conf, "testClusterId");
-      SCMStorageConfig scmStore = new SCMStorageConfig(conf);
+      SCMStorageConfig scmStore =
+          new SCMStorageConfig(ServerUtils.getScmDbDir(conf));
       Assert.assertEquals(NodeType.SCM, scmStore.getNodeType());
       Assert.assertNotEquals("testClusterId", scmStore.getClusterID());
     } finally {
@@ -499,18 +505,19 @@ public class TestStorageContainerManager {
     try {
       Path scmPath = Paths.get(path, "scm-meta");
       conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
-      SCMStorageConfig scmStore = new SCMStorageConfig(conf);
-      String clusterId = UUID.randomUUID().toString();
-      String scmId = UUID.randomUUID().toString();
-      scmStore.setClusterId(clusterId);
-      scmStore.setScmId(scmId);
-      // writes the version file properties
-      scmStore.initialize();
+      String clusterId = Storage.newClusterID();
+      File storageDir = ServerUtils.getScmDbDir(conf);
+      try {
+        SCMStorageConfig.initialize(storageDir, clusterId);
+      } catch (StorageAlreadyInitializedException aie){
+        // ignore as in this case the version file read should be good for us.
+      }
+      SCMStorageConfig scmStore = new SCMStorageConfig(storageDir);
       StorageContainerManager scm = StorageContainerManager.createSCM(conf);
       //Reads the SCM Info from SCM instance
       ScmInfo scmInfo = scm.getClientProtocolServer().getScmInfo();
       Assert.assertEquals(clusterId, scmInfo.getClusterId());
-      Assert.assertEquals(scmId, scmInfo.getScmId());
+      Assert.assertEquals(scmStore.getScmId(), scmInfo.getScmId());
 
       String expectedVersion = HddsVersionInfo.HDDS_VERSION_INFO.getVersion();
       String actualVersion = scm.getSoftwareVersion();

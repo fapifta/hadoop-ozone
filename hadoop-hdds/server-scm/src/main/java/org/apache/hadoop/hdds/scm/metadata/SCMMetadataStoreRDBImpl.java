@@ -22,8 +22,10 @@ import java.math.BigInteger;
 import java.nio.file.Paths;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import java.io.IOException;
+
 import org.apache.hadoop.hdds.security.x509.certificate.authority
     .CertificateStore;
 import org.apache.hadoop.hdds.server.ServerUtils;
@@ -88,7 +90,7 @@ public class SCMMetadataStoreRDBImpl implements SCMMetadataStore {
   public void start(OzoneConfiguration config)
       throws IOException {
     if (this.store == null) {
-      File metaDir = ServerUtils.getScmDbDir(configuration);
+      File metaDir = ServerUtils.getScmDbDir(config);
 
       this.store = DBStoreBuilder.newBuilder(configuration)
           .setName(SCM_DB_NAME)

@@ -38,12 +38,21 @@ import static org.apache.hadoop.ozone.OzoneConsts.SCM_ID;
 public class OMStorage extends Storage {
 
   private static final String OM_ID = "omUuid";
+  private static final String SCM_ID = "scmUuid";
   private static final String OM_CERT_SERIAL_ID = "omCertSerialId";
 
   public static synchronized void initialize(
       File workingDir, String clusterId, String scmId)
       throws IOException {
+    Properties props = createOMSpecificProperties(scmId);
+    Storage.initialize(NodeType.OM, workingDir, clusterId, props);
+  }
 
+  private static Properties createOMSpecificProperties(String scmId) {
+    Properties props = new Properties();
+    props.setProperty(OM_ID, UUID.randomUUID().toString());
+    props.setProperty(SCM_ID, scmId);
+    return props;
   }
 
   /**
@@ -54,24 +63,8 @@ public class OMStorage extends Storage {
     super(NodeType.OM, workingDir);
   }
 
-  public void setScmId(String scmId) throws IOException {
-    if (getState() == StorageState.INITIALIZED) {
-      throw new IOException("OM is already initialized.");
-    } else {
-      setProperty(SCM_ID, scmId);
-    }
-  }
-
   public void setOmCertSerialId(String certSerialId) throws IOException {
     setProperty(OM_CERT_SERIAL_ID, certSerialId);
-  }
-
-  public void setOmId(String omId) throws IOException {
-    if (getState() == StorageState.INITIALIZED) {
-      throw new IOException("OM is already initialized.");
-    } else {
-      setProperty(OM_ID, omId);
-    }
   }
 
   /**
@@ -111,16 +104,5 @@ public class OMStorage extends Storage {
       omProperties.setProperty(OM_CERT_SERIAL_ID, getOmCertSerialId());
     }
     return omProperties;
-  }
-
-  /**
-   * Get the location where OM should store its metadata directories.
-   * Fall back to OZONE_METADATA_DIRS if not defined.
-   *
-   * @param conf - Config
-   * @return File path, after creating all the required Directories.
-   */
-  public static File getOmDbDir(Configuration conf) {
-    return ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
   }
 }

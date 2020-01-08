@@ -23,6 +23,7 @@ import java.io.File;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 
@@ -47,7 +48,8 @@ public class TestOMStorage {
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, metaDir.getPath());
 
     try {
-      assertEquals(dbDir, OMStorage.getOmDbDir(conf));
+      assertEquals(dbDir,
+          ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS));
       assertTrue(dbDir.exists());          // should have been created.
     } finally {
       FileUtils.deleteQuietly(dbDir);
@@ -66,7 +68,8 @@ public class TestOMStorage {
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, metaDir.getPath());
 
     try {
-      assertEquals(metaDir, OMStorage.getOmDbDir(conf));
+      assertEquals(metaDir,
+          ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS));
       assertTrue(metaDir.exists());        // should have been created.
     } finally {
       FileUtils.deleteQuietly(metaDir);
@@ -75,7 +78,8 @@ public class TestOMStorage {
 
   @Test(expected = IllegalArgumentException.class)
   public void testNoOmDbDirConfigured() {
-    OMStorage.getOmDbDir(new OzoneConfiguration());
+    ServerUtils
+        .getDBPath(new OzoneConfiguration(), OMConfigKeys.OZONE_OM_DB_DIRS);
   }
 
   public File createTestDir() {

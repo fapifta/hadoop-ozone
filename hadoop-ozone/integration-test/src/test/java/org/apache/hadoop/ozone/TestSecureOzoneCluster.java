@@ -45,6 +45,7 @@ import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
@@ -55,6 +56,8 @@ import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.client.CertificateClientTestImpl;
 import org.apache.hadoop.ozone.common.Storage;
+import org.apache.hadoop.ozone.common.StorageAlreadyInitializedException;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.storage.OMStorage;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -319,19 +322,22 @@ public final class TestSecureOzoneCluster {
   }
 
   private void initSCM() throws IOException {
-    clusterId = UUID.randomUUID().toString();
+    clusterId = Storage.newClusterID();
     scmId = UUID.randomUUID().toString();
-    omId = UUID.randomUUID().toString();
 
     final String path = folder.newFolder().toString();
     Path scmPath = Paths.get(path, "scm-meta");
     Files.createDirectories(scmPath);
     conf.set(OZONE_METADATA_DIRS, scmPath.toString());
-    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
-    scmStore.setClusterId(clusterId);
-    scmStore.setScmId(scmId);
+    File scmStorageDir = ServerUtils.getScmDbDir(conf);
     // writes the version file properties
-    scmStore.initialize();
+    try {
+      SCMStorageConfig.initialize(scmStorageDir, clusterId);
+    } catch (StorageAlreadyInitializedException aie) {
+      // ignore we already have one
+    }
+    SCMStorageConfig storage = new SCMStorageConfig(scmStorageDir);
+    scmId = storage.getScmId();
   }
 
   @Test
@@ -631,12 +637,17 @@ public final class TestSecureOzoneCluster {
   }
 
   private void setupOm(OzoneConfiguration config) throws Exception {
-    OMStorage omStore = new OMStorage(config);
-    omStore.setClusterId("testClusterId");
-    omStore.setScmId("testScmId");
+    File omStorageDir =
+        ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
+    try {
+      OMStorage.initialize(omStorageDir, "testClusterId", "testScmId");
+    } catch (StorageAlreadyInitializedException aie) {
+      // ignore, we already have a version file.
+    }
+    OMStorage omStore = new OMStorage(omStorageDir);
     omStore.setOmCertSerialId(OM_CERT_SERIAL_ID);
     // writes the version file properties
-    omStore.initialize();
+    omStore.persistCurrentState();
     OzoneManager.setTestSecureOmFlag(true);
     om = OzoneManager.createOm(config);
   }
@@ -719,8 +730,9 @@ public final class TestSecureOzoneCluster {
       scm = HddsTestUtils.getScm(conf);
       scm.start();
       conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, false);
-      OMStorage omStore = new OMStorage(conf);
-      initializeOmStorage(omStore);
+      File omStorageDir =
+          ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
+      initializeOmStorage();
       OzoneManager.setTestSecureOmFlag(true);
       om = OzoneManager.createOm(conf);
 
@@ -765,8 +777,7 @@ public final class TestSecureOzoneCluster {
       scm = HddsTestUtils.getScm(conf);
       scm.start();
 
-      OMStorage omStore = new OMStorage(conf);
-      initializeOmStorage(omStore);
+      initializeOmStorage();
       OzoneManager.setTestSecureOmFlag(true);
       om = OzoneManager.createOm(conf);
 
@@ -830,17 +841,19 @@ public final class TestSecureOzoneCluster {
     assertEquals(encodedKey1, encodedKey2);
   }
 
-  private void initializeOmStorage(OMStorage omStorage) throws IOException {
-    if (omStorage.getState() == Storage.StorageState.INITIALIZED) {
-      return;
+  private void initializeOmStorage() throws IOException {
+    File omStorageDir =
+        ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
+    try {
+      OMStorage.initialize(omStorageDir, clusterId, scmId);
+    } catch (StorageAlreadyInitializedException aie) {
+      // ignore, we already have a version file.
     }
-    omStorage.setClusterId(clusterId);
-    omStorage.setScmId(scmId);
-    omStorage.setOmId(omId);
+    OMStorage storage = new OMStorage(omStorageDir);
+    omId = storage.getOmId();
     // Initialize ozone certificate client if security is enabled.
     if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
-      OzoneManager.initializeSecurity(conf, omStorage);
+      OzoneManager.initializeSecurity(conf, storage);
     }
-    omStorage.initialize();
   }
 }

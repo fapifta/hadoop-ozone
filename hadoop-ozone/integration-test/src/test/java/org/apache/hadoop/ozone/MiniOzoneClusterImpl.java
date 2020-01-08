@@ -31,6 +31,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.safemode.HealthyPipelineSafeModeRule;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ipc.Client;
@@ -39,7 +40,8 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.ozone.common.Storage.StorageState;
+import org.apache.hadoop.ozone.common.Storage;
+import org.apache.hadoop.ozone.common.StorageAlreadyInitializedException;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -530,8 +532,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     protected StorageContainerManager createSCM()
         throws IOException, AuthenticationException {
       configureSCM();
-      SCMStorageConfig scmStore = new SCMStorageConfig(conf);
-      initializeScmStorage(scmStore);
+      initializeScmStorage();
       StorageContainerManager scm = StorageContainerManager.createSCM(conf);
       HealthyPipelineSafeModeRule rule =
           scm.getScmSafeModeManager().getHealthyPipelineSafeModeRule();
@@ -543,31 +544,31 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       return scm;
     }
 
-    private void initializeScmStorage(SCMStorageConfig scmStore)
+    private void initializeScmStorage()
         throws IOException {
-      if (scmStore.getState() == StorageState.INITIALIZED) {
-        return;
+      File storageDir = ServerUtils.getScmDbDir(conf);
+      try {
+        String clusterId = Storage.newClusterID();
+        SCMStorageConfig.initialize(storageDir, clusterId);
+      } catch (StorageAlreadyInitializedException aie) {
+        // ignore as in this case the version file we have is good for us.
       }
-      scmStore.setClusterId(clusterId);
-      if (!scmId.isPresent()) {
-        scmId = Optional.of(UUID.randomUUID().toString());
-      }
-      scmStore.setScmId(scmId.get());
-      scmStore.initialize();
+      scmId = Optional.of(new SCMStorageConfig(storageDir).getScmId());
     }
 
-    void initializeOmStorage(OMStorage omStorage) throws IOException{
-      if (omStorage.getState() == StorageState.INITIALIZED) {
-        return;
+    void initializeOmStorage() throws IOException{
+      File storageDir =
+          ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
+      try {
+        OMStorage.initialize(storageDir, clusterId, scmId.get());
+      } catch (StorageAlreadyInitializedException aie) {
+        //ignore in this case the version file we have is good for us.
       }
-      omStorage.setClusterId(clusterId);
-      omStorage.setScmId(scmId.get());
-      omStorage.setOmId(omId.orElse(UUID.randomUUID().toString()));
       // Initialize ozone certificate client if security is enabled.
       if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+        OMStorage omStorage = new OMStorage(storageDir);
         OzoneManager.initializeSecurity(conf, omStorage);
       }
-      omStorage.initialize();
     }
 
     /**
@@ -580,8 +581,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     protected OzoneManager createOM()
         throws IOException, AuthenticationException {
       configureOM();
-      OMStorage omStore = new OMStorage(conf);
-      initializeOmStorage(omStore);
+      initializeOmStorage();
       return OzoneManager.createOm(conf);
     }
 

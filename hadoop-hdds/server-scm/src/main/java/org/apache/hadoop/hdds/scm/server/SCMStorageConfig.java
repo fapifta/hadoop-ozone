@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdds.scm.server;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.ozone.common.Storage;
@@ -52,16 +52,8 @@ public class SCMStorageConfig extends Storage {
    * Construct SCMStorageConfig.
    * @throws IOException if any directories are inaccessible.
    */
-  public SCMStorageConfig(OzoneConfiguration conf) throws IOException {
-    super(NodeType.SCM, ServerUtils.getScmDbDir(conf));
-  }
-
-  public void setScmId(String scmId) throws IOException {
-    if (getState() == StorageState.INITIALIZED) {
-      throw new IOException("SCM is already initialized.");
-    } else {
-      setProperty(SCM_ID, scmId);
-    }
+  public SCMStorageConfig(File workingDir) throws IOException {
+    super(NodeType.SCM, workingDir);
   }
 
   /**

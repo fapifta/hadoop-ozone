@@ -7,7 +7,10 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.hamcrest.core.IsInstanceOf;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.FileReader;
@@ -17,37 +20,75 @@ import java.util.Properties;
 
 public class TestStorage {
 
-  @Test
-  public void testStorageInNonExistentStateIfStorageDirectoryIsNotCreated()
-      throws Exception {
-    Storage storage = aStorageImplWith(aNonExistingFile());
+  @Rule public ExpectedException ex = ExpectedException.none();
+  private final NodeType testNodeType = NodeType.DATANODE;
 
-    assertEquals(StorageState.NOT_INITIALIZED, storage.getState());
+  @Test
+  public void testInstantiationFailsIfWorkDirDoesNotExists() throws Exception {
+    ex.expect(IOException.class);
+    ex.expectMessage(Storage.E_NOT_EXIST);
+
+    aStorageImplWith(aNonExistingFile());
   }
 
   @Test
-  public void testStorageInNonExistentStateIfStorageDirectoryIsNotADirectory()
-      throws Exception {
-    Storage storage = aStorageImplWith(aFile());
+  public void testInstantiationFailsIfWorkDirIsNotADirectory() throws Exception {
+    ex.expect(IOException.class);
+    ex.expectMessage(Storage.E_NOT_DIRECTORY);
 
-    assertEquals(StorageState.NOT_INITIALIZED, storage.getState());
+    aStorageImplWith(aFile());
   }
 
   @Test
-  public void testStorageInNonExistentStateIfStorageDirectoryIsNotWritable()
-      throws Exception {
-    Storage storage = aStorageImplWith(aNonWritableDirectory());
+  public void testInstantiationFailsIfWorkDirIsNotWriteable() throws Exception {
+    ex.expect(IOException.class);
+    ex.expectMessage(Storage.E_NOT_WRITEABLE);
 
-    assertEquals(StorageState.NOT_INITIALIZED, storage.getState());
+    aStorageImplWith(aNonWritableDirectory());
   }
 
   @Test
-  public void
-  testStorageInNonExistentStateIfStorageDirectoryAccessThrowsSecurityException()
+  public void testInstantiationFailsIfWorkDirAccessThrowsSecurityException()
       throws Exception {
-    Storage storage = aStorageImplWith(aNonAccessibleFile());
+    ex.expect(IOException.class);
+    ex.expectCause(IsInstanceOf.any(SecurityException.class));
+    ex.expectMessage(Storage.E_NOT_ACCESSIBLE);
 
-    assertEquals(StorageState.NOT_INITIALIZED, storage.getState());
+    aStorageImplWith(aNonAccessibleFile());
+  }
+
+  @Test
+  public void testInstantiationFailsIfWorkDirIsNotInitialized()
+      throws Exception {
+    ex.expect(IOException.class);
+    ex.expectMessage(Storage.E_NOT_INITIALIZED);
+
+    aStorageImplWith(aWriteableDirectory());
+  }
+
+  @Test
+  public void testInstantiationFailsIfNonEmptyCurrentDirWithVersionFileExists()
+      throws Exception {
+    ex.expect(IOException.class);
+    ex.expectCause(IsInstanceOf.any(InconsistentStorageStateException.class));
+    ex.expectMessage(Storage.E_CURRENT_NOT_EMPTY);
+
+    File workingDir = aRealDirectory();
+    File currentDir = Storage.currentDirFor(workingDir, testNodeType);
+    currentDir.mkdirs();
+    File f = new File(currentDir, aPath());
+    f.createNewFile();
+
+    aStorageImplWith(workingDir);
+  }
+
+  @Test
+  public void testInstantiationFailsIfVersionFileDoesNotExist()
+      throws Exception {
+    ex.expect(IOException.class);
+    ex.expectMessage(Storage.E_NOT_INITIALIZED);
+
+    aStorageImplWith(aWriteableDirectory());
   }
 
   @Test
@@ -61,43 +102,18 @@ public class TestStorage {
   }
 
   @Test
-  public void testStorageInNotInitializedStateIfVersionFileDoesNotExist()
-      throws Exception {
-    Storage storage = aStorageImplWith(aWriteableDirectory());
-
-    assertEquals(StorageState.NOT_INITIALIZED, storage.getState());
-  }
-
-  @Test
   public void
   testStorageDirIsTheCompositionOfWorkingDirAndServiceName()
       throws Exception {
-    File workingDir = aWriteableDirectory();
+    File workingDir = aRealDirectory();
+    Storage storage = aStorageImplWithRealVersionFile(
+        workingDir, propsForDNWithClusterIdAs1AndCTimeAs0()
+    );
 
-    Storage storage = new Storage(NodeType.DATANODE, workingDir) {
-      @Override protected Properties getNodeProperties() {
-        return null;
-      }
-    };
-
-    String serviceTypeName = NodeType.DATANODE.name().toLowerCase();
+    String serviceTypeName = testNodeType.name().toLowerCase();
     String expectedDir =
         new File(workingDir, serviceTypeName).getAbsoluteFile().toString();
     assertEquals(expectedDir, storage.getStorageDir());
-  }
-
-  @Test(expected = InconsistentStorageStateException.class)
-  public void testNonEmptyCurrentWithoutVersionFilesLeadsToExceptionAtCTor()
-      throws Exception {
-    File workingDir = aRealDirectory();
-    String serviceName = NodeType.DATANODE.name().toLowerCase();
-    File storageDir = new File(workingDir, serviceName);
-    File currentDir = new File(storageDir, Storage.STORAGE_DIR_CURRENT);
-    currentDir.mkdirs();
-    File f = new File(currentDir, aPath());
-    f.createNewFile();
-
-    aStorageImplWith(workingDir);
   }
 
   @Test
@@ -107,7 +123,7 @@ public class TestStorage {
         aRealDirectory(), propsForDNWithClusterIdAs1AndCTimeAs0()
     );
 
-    assertEquals(NodeType.DATANODE, storage.getNodeType());
+    assertEquals(testNodeType, storage.getNodeType());
     assertEquals("1", storage.getClusterID());
     assertEquals(0, storage.getCreationTime());
   }
@@ -115,8 +131,8 @@ public class TestStorage {
   @Test
   public void testVersionFilePropertiesAreSetIfInitializing() throws Exception {
     File workingDir = aRealDirectory();
+    Storage.initialize(testNodeType, workingDir, Storage.newClusterID(), null);
     Storage storage = aStorageImplWith(workingDir);
-    storage.initialize();
 
     Properties props = loadPropertiesFromVersionFile(workingDir);
 
@@ -133,8 +149,9 @@ public class TestStorage {
         new Properties(propsForDNWithClusterIdAs1AndCTimeAs0());
     extraProps.setProperty("extraProp1", "value1");
     extraProps.setProperty("extraProp2", "value2");
-    Storage storage = aStorageImplWith(workingDir, extraProps);
-    storage.initialize();
+    Storage.initialize(
+        testNodeType, workingDir, Storage.newClusterID(), extraProps
+    );
 
     Properties props = loadPropertiesFromVersionFile(workingDir);
 
@@ -142,32 +159,13 @@ public class TestStorage {
     assertEquals(props.getProperty("extraProp2"), "value2");
   }
 
-  @Test(expected = IOException.class)
-  public void testUpdatesAreDisabledToClusterIDAfterInitialization()
-      throws Exception {
-    Storage storage = aStorageImplWith(
-        aRealDirectory(), propsForDNWithClusterIdAs1AndCTimeAs0());
-    storage.initialize();
-
-    storage.setClusterId("newId");
-  }
-
-  @Test(expected = IOException.class)
-  public void testUpdatesAreDisabledToClusterIDIfInitialized()
-      throws Exception {
-    Storage storage = aStorageImplWithRealVersionFile(
-        aRealDirectory(), propsForDNWithClusterIdAs1AndCTimeAs0()
-    );
-
-    storage.setClusterId("newId");
-  }
-
   @Test
   public void testPersistingCurrentStateSavesChanges()
       throws Exception{
     File workingDir = aRealDirectory();
-    Storage storage = aStorageImplWith(workingDir);
-    storage.initialize();
+    Storage storage = aStorageImplWithRealVersionFile(
+        workingDir, propsForDNWithClusterIdAs1AndCTimeAs0()
+    );
     long t = Time.monotonicNow();
     storage.setProperty("cTime", Long.toString(t));
     storage.setProperty("aPropertyKey", "aValue");
@@ -231,7 +229,7 @@ public class TestStorage {
 
   private Properties propsForDNWithClusterIdAs1AndCTimeAs0(){
     Properties props = new Properties();
-    props.setProperty("nodeType", NodeType.DATANODE.name());
+    props.setProperty("nodeType", testNodeType.name());
     props.setProperty("clusterID", "1");
     props.setProperty("cTime", "0");
     return props;
@@ -243,7 +241,7 @@ public class TestStorage {
 
   private Storage aStorageImplWith(File workingDir, Properties props)
       throws IOException {
-    return new Storage(NodeType.DATANODE, workingDir) {
+    return new Storage(testNodeType, workingDir) {
       @Override
       protected Properties getNodeProperties() {
         return props;
@@ -253,11 +251,9 @@ public class TestStorage {
 
   private Storage aStorageImplWithRealVersionFile(
       File workingDir, Properties props) throws Exception {
-    String serviceName = NodeType.DATANODE.name().toLowerCase();
-    String currentDirPath = serviceName + "/" + Storage.STORAGE_DIR_CURRENT;
-    File actualDir = new File (workingDir, currentDirPath);
-    actualDir.mkdirs();
-    File versionFile = new File(actualDir, Storage.STORAGE_FILE_VERSION);
+    File currentDir = Storage.currentDirFor(workingDir, testNodeType);
+    currentDir.mkdirs();
+    File versionFile = Storage.versionFileFor(workingDir, testNodeType);
     props.store(new FileWriter(versionFile), null);
 
     return aStorageImplWith(workingDir, props);
@@ -265,10 +261,7 @@ public class TestStorage {
 
   private Properties loadPropertiesFromVersionFile(File workingDir)
       throws Exception {
-    String serviceName = NodeType.DATANODE.name().toLowerCase();
-    String currentDirPath = serviceName + "/" + Storage.STORAGE_DIR_CURRENT;
-    File storageDir = new File (workingDir, currentDirPath);
-    File versionFile = new File(storageDir, Storage.STORAGE_FILE_VERSION);
+    File versionFile = Storage.versionFileFor(workingDir, testNodeType);
     Properties props = new Properties();
     props.load(new FileReader(versionFile));
     return props;

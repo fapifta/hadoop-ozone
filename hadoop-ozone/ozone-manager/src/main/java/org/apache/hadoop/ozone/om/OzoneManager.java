@@ -63,6 +63,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient
 import org.apache.hadoop.hdds.security.x509.certificate.client.OMCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -75,6 +76,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
+import org.apache.hadoop.ozone.common.StorageAlreadyInitializedException;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.ha.OMHANodeDetails;
 import org.apache.hadoop.ozone.om.ha.OMNodeDetails;
@@ -316,7 +318,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     this.peerNodes = omhaNodeDetails.getPeerNodeDetails();
     this.omNodeDetails = omhaNodeDetails.getLocalNodeDetails();
 
-    omStorage = new OMStorage(conf);
+    File storageDir =
+        ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
+    omStorage = new OMStorage(storageDir);
     omId = omStorage.getOmId();
 
     // In case of single OM Node Service there will be no OM Node ID
@@ -886,48 +890,34 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       AuthenticationException {
     OMHANodeDetails.loadOMHAConfig(conf);
     loginOMUserIfSecurityEnabled(conf);
-    OMStorage omStorage = new OMStorage(conf);
-    StorageState state = omStorage.getState();
-    if (state != StorageState.INITIALIZED) {
-      try {
-        ScmInfo scmInfo = getScmInfo(conf);
-        String clusterId = scmInfo.getClusterId();
-        String scmId = scmInfo.getScmId();
-        if (clusterId == null || clusterId.isEmpty()) {
-          throw new IOException("Invalid Cluster ID");
-        }
-        if (scmId == null || scmId.isEmpty()) {
-          throw new IOException("Invalid SCM ID");
-        }
-        omStorage.setClusterId(clusterId);
-        omStorage.setScmId(scmId);
-        if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
-          initializeSecurity(conf, omStorage);
-        }
-        omStorage.initialize();
-        System.out.println(
-            "OM initialization succeeded.Current cluster id for sd="
-                + omStorage.getStorageDir() + ";cid=" + omStorage
-                .getClusterID());
 
-        return true;
-      } catch (IOException ioe) {
-        LOG.error("Could not initialize OM version file", ioe);
-        return false;
-      }
-    } else {
-      if(OzoneSecurityUtil.isSecurityEnabled(conf) &&
-          omStorage.getOmCertSerialId() == null) {
-        LOG.info("OM storage is already initialized. Initializing security");
-        initializeSecurity(conf, omStorage);
-        omStorage.persistCurrentState();
-      }
-      System.out.println(
-          "OM already initialized.Reusing existing cluster id for sd="
-              + omStorage.getStorageDir() + ";cid=" + omStorage
-              .getClusterID());
-      return true;
+    File workingDir =
+        ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
+    ScmInfo scmInfo = getScmInfo(conf);
+    String clusterId = scmInfo.getClusterId();
+    String scmId = scmInfo.getScmId();
+    try {
+      OMStorage.initialize(workingDir, clusterId, scmId);
+      LOG.info("OM initialization succeeded. Current cluster id for "
+          + "Storage directory {}; Cluster ID={}",
+          workingDir, clusterId);
+    } catch (StorageAlreadyInitializedException aie) {
+      OMStorage storage = new OMStorage(workingDir);
+      LOG.info("OM already initialized. Reusing existing cluster id "
+          + "in storage diretory {}; Cluster ID={}.",
+          storage.getStorageDir(), storage.getClusterID());
+    } catch (IOException ioe) {
+      LOG.error("Could not initialize OM metadata storage directory.", ioe);
+      return false;
     }
+    OMStorage storage = new OMStorage(workingDir);
+    if(OzoneSecurityUtil.isSecurityEnabled(conf) &&
+        storage.getOmCertSerialId() == null) {
+      LOG.info("Adding security setup related properties to OM metadata.");
+      initializeSecurity(conf, storage);
+      storage.persistCurrentState();
+    }
+    return true;
   }
 
   /**

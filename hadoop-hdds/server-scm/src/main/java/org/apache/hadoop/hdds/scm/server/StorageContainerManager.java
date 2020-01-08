@@ -26,6 +26,8 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.protobuf.BlockingService;
+
+import java.io.File;
 import java.util.Objects;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -81,6 +83,7 @@ import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateServer;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.DefaultCAServer;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -91,7 +94,9 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
+import org.apache.hadoop.ozone.common.Storage;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
+import org.apache.hadoop.ozone.common.StorageAlreadyInitializedException;
 import org.apache.hadoop.ozone.lease.LeaseManager;
 import org.apache.hadoop.ozone.lock.LockManager;
 import org.apache.hadoop.ozone.protocol.commands.RetriableDatanodeEventWatcher;
@@ -603,34 +608,30 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    */
   public static boolean scmInit(OzoneConfiguration conf,
       String clusterId) throws IOException {
-    SCMStorageConfig scmStorageConfig = new SCMStorageConfig(conf);
-    StorageState state = scmStorageConfig.getState();
-    if (state != StorageState.INITIALIZED) {
-      try {
-        if (clusterId != null && !clusterId.isEmpty()) {
-          scmStorageConfig.setClusterId(clusterId);
-        }
-        scmStorageConfig.initialize();
-        LOG.info(
-            "SCM initialization succeeded."
-                + "Current cluster id for sd="
-                + scmStorageConfig.getStorageDir()
-                + ";cid="
-                + scmStorageConfig.getClusterID());
-        return true;
-      } catch (IOException ioe) {
-        LOG.error("Could not initialize SCM version file", ioe);
-        return false;
-      }
-    } else {
-      LOG.info(
-          "SCM already initialized. Reusing existing"
-              + " cluster id for sd="
-              + scmStorageConfig.getStorageDir()
-              + ";cid="
-              + scmStorageConfig.getClusterID());
-      return true;
+    File storageDir = ServerUtils.getScmDbDir(conf);
+    if (clusterId != null && !clusterId.isEmpty()) {
+      clusterId = Storage.newClusterID();
     }
+    try {
+      SCMStorageConfig.initialize(storageDir, clusterId);
+
+      LOG.info("SCM initialization succeeded. "
+              + "Current cluster id for Storage Directory={}; Cluster ID={}",
+          storageDir, clusterId);
+
+    } catch (StorageAlreadyInitializedException aie) {
+      SCMStorageConfig storage = new SCMStorageConfig(conf);
+      LOG.info("SCM already initialized. "
+              + "Reusing existing cluster id for Storage Directory={}; "
+              + "Cluster ID={}",
+          storage.getStorageDir(), storage.getClusterID());
+
+    } catch (IOException ioe) {
+      LOG.error("Could not initialize SCM metadata storage directory.", ioe);
+      return false;
+    }
+
+    return true;
   }
 
   /**

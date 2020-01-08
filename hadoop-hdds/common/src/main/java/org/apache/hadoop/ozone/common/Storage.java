@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.common;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -26,9 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -92,14 +90,27 @@ import java.util.UUID;
 public abstract class Storage {
   private static final Logger LOG = LoggerFactory.getLogger(Storage.class);
 
+  static final String E_NOT_EXIST = "does not exist";
+  static final String E_NOT_DIRECTORY = "is not a directory";
+  static final String E_NOT_WRITEABLE = "is not writeable";
+  static final String E_NOT_ACCESSIBLE = "is not accessible";
+  static final String E_NOT_INITIALIZED = "is not initialized";
+  static final String E_CURRENT_NOT_EMPTY = "is a non empty folder "
+      + "but it does not have a VERSION file";
+  static final String E_ALREADY_INITIALIZED = "is already initialized";
+  static final String E_DIRECTORY_CREATION = "could not be created";
+  static final String E_VERSION_FILE_CREATION = "VERSION file could not be "
+      + "written.";
+
+  private static final String STORAGE_FILE_VERSION = "VERSION";
+  // this one should be private as well, after DNs are using this class
+  // also to manage local storage.
   public static final String STORAGE_DIR_CURRENT = "current";
-  protected static final String STORAGE_FILE_VERSION = "VERSION";
 
   private final NodeType nodeType;
   private final File root;
   private final File storageDir;
 
-  private StorageState state;
   private StorageInfo storageInfo;
 
   /**
@@ -116,25 +127,57 @@ public abstract class Storage {
   }
 
   /**
+   * Creates the Version file if not present,
+   * otherwise returns with IOException.
+   * @throws IOException
+   */
+  protected static synchronized void initialize(
+      NodeType nodeType, File workingDir, String clusterId, Properties props)
+      throws IOException {
+    ensureInitializationAllowed(nodeType, workingDir);
+    ensureCurrentDirExists(nodeType, workingDir);
+
+
+    StorageInfo info = new StorageInfo(nodeType, clusterId, Time.now());
+    if (props!=null) {
+      for (String key : props.stringPropertyNames()) {
+        info.setProperty(key, props.getProperty(key));
+      }
+    }
+
+    File versionFile = versionFileFor(workingDir, nodeType);
+    try {
+      info.writeTo(versionFile);
+    } catch (IOException e) {
+      warnAndThrow(E_VERSION_FILE_CREATION, versionFile, e);
+    }
+  }
+
+  static File versionFileFor(File workingDir, NodeType type){
+    return new File(currentDirFor(workingDir, type), STORAGE_FILE_VERSION);
+  }
+
+  static File currentDirFor(File workingDir, NodeType type){
+    return new File (nodeDirFor(workingDir, type), STORAGE_DIR_CURRENT);
+  }
+
+
+
+
+  /**
    * Determines the state of the Version file.
    */
   public enum StorageState {
-    NOT_INITIALIZED, INITIALIZED
-  }
+    INITIALIZED;
 
+  }
   public Storage(NodeType type, File root)
       throws IOException {
+    ensureDirIsInitializedFor(type, root);
     this.nodeType = type;
     this.root = root;
-    this.storageDir = new File(root, type.name().toLowerCase());
-    this.state = getStorageState();
-    if (state == StorageState.INITIALIZED) {
-      this.storageInfo = new StorageInfo(type, getVersionFile());
-    } else {
-      this.storageInfo = new StorageInfo(
-          nodeType, newClusterID(), Time.now());
-      setNodeProperties();
-    }
+    this.storageDir = nodeDirFor(root, type);
+    this.storageInfo = new StorageInfo(type, versionFileFor(root, type));
   }
 
   /**
@@ -150,7 +193,7 @@ public abstract class Storage {
    * @return the state of the Version file
    */
   public StorageState getState() {
-    return state;
+    return StorageState.INITIALIZED;
   }
 
   public NodeType getNodeType() {
@@ -161,22 +204,26 @@ public abstract class Storage {
     return storageInfo.getClusterID();
   }
 
+  /**
+   * Directory {@code current} contains latest files defining
+   * the file system meta-data.
+   *
+   * @return the directory path
+   */
+  public File getCurrentDir() {
+    return currentDirFor(root, nodeType);
+  }
+
   public long getCreationTime() {
     return storageInfo.getCreationTime();
   }
 
-
   //This method is used only from tests, and from OM and SCM initialization
   //Can we change this to a constructor parameter?
   public void setClusterId(String clusterId) throws IOException {
-    if (state == StorageState.INITIALIZED) {
-      throw new IOException(
-          "Storage directory " + storageDir + " already initialized.");
-    } else {
-      storageInfo.setClusterId(clusterId);
-    }
+    throw new IOException(
+        "Storage directory " + storageDir + " already initialized.");
   }
-
   protected void setProperty(String key, String value) {
     storageInfo.setProperty(key, value);
   }
@@ -200,122 +247,101 @@ public abstract class Storage {
   }
 
   /**
-   * Directory {@code current} contains latest files defining
-   * the file system meta-data.
-   *
-   * @return the directory path
-   */
-  public File getCurrentDir() {
-    return new File(storageDir, STORAGE_DIR_CURRENT);
-  }
-
-  /**
-   * File {@code VERSION} contains the following fields:
-   * <ol>
-   * <li>node type</li>
-   * <li>OM/SCM state creation time</li>
-   * <li>other fields specific for this node type</li>
-   * </ol>
-   * The version file is always written last during storage directory updates.
-   * The existence of the version file indicates that all other files have
-   * been successfully written in the storage directory, the storage is valid
-   * and does not need to be recovered.
-   *
-   * @return the version file path
-   */
-  private File getVersionFile() {
-    return new File(getCurrentDir(), STORAGE_FILE_VERSION);
-  }
-
-
-  /**
-   * Check to see if current/ directory is empty. This method is used
-   * before determining to format the directory.
-   * @throws IOException if unable to list files under the directory.
-   */
-  private void checkEmptyCurrent() throws IOException {
-    File currentDir = getCurrentDir();
-    if (!currentDir.exists()) {
-      // if current/ does not exist, it's safe to format it.
-      return;
-    }
-    try (DirectoryStream<Path> dirStream = Files
-        .newDirectoryStream(currentDir.toPath())) {
-      if (dirStream.iterator().hasNext()) {
-        throw new InconsistentStorageStateException(getCurrentDir(),
-            "Can't initialize the storage directory because the current "
-                + "it is not empty.");
-      }
-    }
-  }
-
-  /**
-   * Check consistency of the storage directory.
-   *
-   * @return state {@link StorageState} of the storage directory
-   * @throws IOException
-   */
-  private StorageState getStorageState() throws IOException {
-    assert root != null : "root is null";
-    String rootPath = root.getCanonicalPath();
-    try { // check that storage exists
-      if (!root.exists()) {
-        // storage directory does not exist
-        LOG.warn("Storage directory " + rootPath + " does not exist");
-        return StorageState.NOT_INITIALIZED;
-      }
-      // or is inaccessible
-      if (!root.isDirectory()) {
-        LOG.warn(rootPath + "is not a directory");
-        return StorageState.NOT_INITIALIZED;
-      }
-      if (!FileUtil.canWrite(root)) {
-        LOG.warn("Cannot access storage directory " + rootPath);
-        return StorageState.NOT_INITIALIZED;
-      }
-    } catch (SecurityException ex) {
-      LOG.warn("Cannot access storage directory " + rootPath, ex);
-      return StorageState.NOT_INITIALIZED;
-    }
-
-    // check whether current directory is valid
-    File versionFile = getVersionFile();
-    boolean hasCurrent = versionFile.exists();
-
-    if (hasCurrent) {
-      return StorageState.INITIALIZED;
-    } else {
-      checkEmptyCurrent();
-      return StorageState.NOT_INITIALIZED;
-    }
-  }
-
-  /**
-   * Creates the Version file if not present,
-   * otherwise returns with IOException.
-   * @throws IOException
-   */
-  public synchronized void initialize() throws IOException {
-    if (state == StorageState.INITIALIZED) {
-      throw new IOException("Storage directory already initialized.");
-    }
-    if (!getCurrentDir().mkdirs()) {
-      throw new IOException("Cannot create directory " + getCurrentDir());
-    }
-    storageInfo.writeTo(getVersionFile());
-    state = StorageState.INITIALIZED;
-  }
-
-  /**
    * Persists current StorageInfo to file system..
    * @throws IOException
    */
   public void persistCurrentState() throws IOException {
-    if (!getCurrentDir().exists()) {
+    if (!currentDirFor(root, nodeType).exists()) {
       throw new IOException("Metadata dir doesn't exist, dir: " +
           getCurrentDir());
     }
-    storageInfo.writeTo(getVersionFile());
+    storageInfo.writeTo(versionFileFor(root, nodeType));
+  }
+
+
+
+
+
+  private void ensureDirIsInitializedFor(NodeType nodeType, File directory)
+      throws IOException {
+    assert directory != null : "root is null";
+    try {
+      if (!directory.exists()) {
+        warnAndThrow(E_NOT_EXIST, directory, null);
+      }
+      if (!directory.isDirectory()) {
+        warnAndThrow(E_NOT_DIRECTORY, directory, null);
+      }
+      if (!FileUtil.canWrite(directory)) {
+        warnAndThrow(E_NOT_WRITEABLE, directory, null);
+      }
+    } catch (SecurityException ex) {
+      warnAndThrow(E_NOT_ACCESSIBLE, directory, ex);
+    }
+
+    ensureDirectoryStructureFor(nodeType, directory);
+  }
+
+  private void ensureDirectoryStructureFor(NodeType nodeType, File directory)
+      throws IOException {
+    if (!versionFileFor(directory, nodeType).exists()){
+      ensureCurrentFolderIsEmptyOrThrowInconsistentState(nodeType, directory);
+      warnAndThrow(E_NOT_INITIALIZED, directory, null);
+    }
+  }
+
+  private void ensureCurrentFolderIsEmptyOrThrowInconsistentState(
+      NodeType nodeType, File workingDir) throws IOException {
+    File currentDir = currentDirFor(workingDir, nodeType);
+    if (!isEmptyOrNonExistingDirectory(currentDir)){
+      String msg = "There is content in the current directory but the VERSION "
+          + "file does not exist.";
+      InconsistentStorageStateException ex =
+          new InconsistentStorageStateException(msg);
+      warnAndThrow(E_CURRENT_NOT_EMPTY, currentDir, ex);
+    }
+  }
+
+  private static void warnAndThrow(String msg, File f, Throwable cause)
+      throws IOException {
+    String loggedMsg = "Storage directory: " + f.getCanonicalPath()
+        + " " + msg + ".";
+    LOG.warn(loggedMsg, cause);
+    throw new IOException(loggedMsg, cause);
+  }
+
+  private static File nodeDirFor(File workingDir, NodeType type) {
+    return new File(workingDir, type.name().toLowerCase());
+  }
+
+  private static void ensureInitializationAllowed(
+      NodeType type, File workingDir) throws IOException {
+    if (workingDir.exists() && !nodeTypeNotInitializedIn(workingDir, type)){
+      String loggedMsg = "Storage directory: " + workingDir.getCanonicalPath()
+          + " " + E_ALREADY_INITIALIZED + ".";
+      LOG.info(loggedMsg);
+      throw new StorageAlreadyInitializedException(loggedMsg);
+    }
+  }
+
+  private static boolean nodeTypeNotInitializedIn(
+      File workingDir, NodeType type) {
+    File nodeDir = nodeDirFor(workingDir, type);
+    File currentDir = currentDirFor(workingDir, type);
+    return !nodeDir.exists() || isEmptyOrNonExistingDirectory(currentDir);
+  }
+
+  private static void ensureCurrentDirExists(NodeType nodeType, File workingDir)
+      throws IOException {
+    File currentDir = currentDirFor(workingDir, nodeType);
+    if (!currentDir.mkdirs()) {
+      warnAndThrow(E_DIRECTORY_CREATION, currentDir, null);
+    }
+  }
+
+  private static boolean isEmptyOrNonExistingDirectory(File directory){
+    return !directory.exists() ||
+        directory.isDirectory() && directory.list().length == 0;
   }
 
 }

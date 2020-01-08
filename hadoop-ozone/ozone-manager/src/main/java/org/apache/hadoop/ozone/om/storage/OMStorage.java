@@ -37,15 +37,21 @@ import static org.apache.hadoop.ozone.OzoneConsts.SCM_ID;
  */
 public class OMStorage extends Storage {
 
-  public static final String OM_ID = "omUuid";
-  public static final String OM_CERT_SERIAL_ID = "omCertSerialId";
+  private static final String OM_ID = "omUuid";
+  private static final String OM_CERT_SERIAL_ID = "omCertSerialId";
+
+  public static synchronized void initialize(
+      File workingDir, String clusterId, String scmId)
+      throws IOException {
+
+  }
 
   /**
    * Construct OMStorage.
    * @throws IOException if any directories are inaccessible.
    */
-  public OMStorage(OzoneConfiguration conf) throws IOException {
-    super(NodeType.OM, getOmDbDir(conf));
+  public OMStorage(File workingDir) throws IOException {
+    super(NodeType.OM, workingDir);
   }
 
   public void setScmId(String scmId) throws IOException {

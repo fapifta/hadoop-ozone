@@ -22,17 +22,31 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.ozone.common.Storage;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.UUID;
-
-import static org.apache.hadoop.ozone.OzoneConsts.SCM_ID;
 
 /**
  * SCMStorageConfig is responsible for management of the
  * StorageDirectories used by the SCM.
  */
 public class SCMStorageConfig extends Storage {
+  //deliberately not using OzoneConsts.SCM_ID here, as that is used in protobuf
+  //as well, and having it duplicated here decouples this two thing nicely.
+  private static final String SCM_ID = "scmUuid";
+
+  public static synchronized void initialize(File workingDir, String clusterID)
+      throws IOException {
+    Properties props = createSCMSpecificProperties();
+    Storage.initialize(NodeType.SCM, workingDir, clusterID, props);
+  }
+
+  private static Properties createSCMSpecificProperties() {
+    Properties props = new Properties();
+    props.setProperty(SCM_ID, UUID.randomUUID().toString());
+    return props;
+  }
 
   /**
    * Construct SCMStorageConfig.

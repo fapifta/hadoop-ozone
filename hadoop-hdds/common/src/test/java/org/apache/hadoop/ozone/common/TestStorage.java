@@ -17,6 +17,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Properties;
 
+/**
+ * Test class to test basic Storage implementation that is responsible to
+ * store role metadata in the VERSION file and to handle its Storage directory.
+ */
 public class TestStorage {
 
   @Rule
@@ -33,7 +37,8 @@ public class TestStorage {
   }
 
   @Test
-  public void testInstantiationFailsIfWorkDirIsNotADirectory() throws Exception {
+  public void testInstantiationFailsIfWorkDirIsNotADirectory()
+      throws Exception {
     ex.expect(IOException.class);
     ex.expectMessage(Storage.E_NOT_DIRECTORY);
 
@@ -94,7 +99,7 @@ public class TestStorage {
 
   @Test
   public void
-  testStorageDirIsTheCompositionOfWorkingDirAndServiceName()
+        testStorageDirIsTheCompositionOfWorkingDirAndServiceName()
       throws Exception {
     File workingDir = aRealDirectory();
     Storage storage = aStorageImplWithRealVersionFile(

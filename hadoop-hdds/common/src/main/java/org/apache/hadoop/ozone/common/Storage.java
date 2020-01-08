@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.common;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -154,14 +153,10 @@ public abstract class Storage {
 
   @VisibleForTesting
   static File currentDirFor(File workingDir, NodeType type){
-    return new File (nodeDirFor(workingDir, type), STORAGE_DIR_CURRENT);
+    return new File(nodeDirFor(workingDir, type), STORAGE_DIR_CURRENT);
   }
 
-
-
-
-  public Storage(NodeType type, File root)
-      throws IOException {
+  public Storage(NodeType type, File root) throws IOException {
     ensureDirIsInitializedFor(type, root);
     this.nodeType = type;
     this.root = root;
@@ -215,7 +210,7 @@ public abstract class Storage {
     return storageInfo.getProperty(key);
   }
 
-  private void ensureDirIsInitializedFor(NodeType nodeType, File directory)
+  private void ensureDirIsInitializedFor(NodeType type, File directory)
       throws IOException {
     assert directory != null : "root is null";
     try {
@@ -232,20 +227,20 @@ public abstract class Storage {
       warnAndThrow(E_NOT_ACCESSIBLE, directory, ex);
     }
 
-    ensureDirectoryStructureFor(nodeType, directory);
+    ensureDirectoryStructureFor(type, directory);
   }
 
-  private void ensureDirectoryStructureFor(NodeType nodeType, File directory)
+  private void ensureDirectoryStructureFor(NodeType type, File directory)
       throws IOException {
-    if (!versionFileFor(directory, nodeType).exists()){
+    if (!versionFileFor(directory, type).exists()){
       ensureCurrentFolderIsEmptyOrThrowInconsistentState(nodeType, directory);
       warnAndThrow(E_NOT_INITIALIZED, directory, null);
     }
   }
 
   private void ensureCurrentFolderIsEmptyOrThrowInconsistentState(
-      NodeType nodeType, File workingDir) throws IOException {
-    File currentDir = currentDirFor(workingDir, nodeType);
+      NodeType type, File workingDir) throws IOException {
+    File currentDir = currentDirFor(workingDir, type);
     if (!isEmptyOrNonExistingDirectory(currentDir)){
       String msg = "There is content in the current directory but the VERSION "
           + "file does not exist.";

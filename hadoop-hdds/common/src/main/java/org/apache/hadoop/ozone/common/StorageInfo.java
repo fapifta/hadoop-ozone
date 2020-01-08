@@ -27,7 +27,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Properties;
-import java.util.UUID;
 
 /**
  * Represents the VERSION file inside a Storage directory.
@@ -72,8 +71,7 @@ class StorageInfo {
 
    * @throws IOException - on Error.
    */
-  public StorageInfo(NodeType type, String cid, long cT)
-      throws IOException {
+  StorageInfo(NodeType type, String cid, long cT) {
     Preconditions.checkNotNull(type);
     Preconditions.checkNotNull(cid);
     properties.setProperty(NODE_TYPE, type.name());
@@ -81,7 +79,7 @@ class StorageInfo {
     properties.setProperty(CREATION_TIME, String.valueOf(cT));
   }
 
-  public StorageInfo(NodeType type, File propertiesFile)
+  StorageInfo(NodeType type, File propertiesFile)
       throws IOException {
     this.properties = readFrom(propertiesFile);
     verifyNodeType(type);

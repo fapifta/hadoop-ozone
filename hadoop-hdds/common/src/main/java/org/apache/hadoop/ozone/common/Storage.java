@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.common;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -62,29 +63,23 @@ import java.util.UUID;
  *        belongs to.
  *
  * Guarantees:
- *   - state of Storage is
- *     - NOT_INITIALIZED
- *       - if the working directory does not exists
- *       - if the working directory is not a directory
- *       - if the working directory is not writable
- *       - if the working directory is inaccessible according to the current
- *           SecurityManager
- *       - if the VERSION file in the service specific directory does not exists
- *     - INITIALIZED
- *       - if the VERSION file and the current directory exists and accessible
- *     - In an inconsistent state reported by an Exception at instantiation
- *         otherwise
- *   - updating the VERSION file is atomic
- *   - once set the clusterID and nodeType is not allowed to be updated
- *       programmatically
+ *   - setting a property updates the VERSION file in the actual storage
+ *   - once initialized the clusterID and nodeType is not allowed to be updated
+ *       programmatically in the VERSION file
  *
- * Implementors of this class are not allowed to access the underlying
- * facilities used to store the properties, but are allowed to update existing
- * properties and add new properties.
- * The internal logic of loading and saving the properties in the version file
- * is also hidden from implementors, properties are persisted automatically on
- * setting them.
-
+ * For implementors of this class:
+ * - it is not allowed to access the underlying facilities used to store the
+ *   properties, but it is allowed to update existing properties and add new
+ *   properties.
+ * - The internal logic of loading and saving the properties in the version file
+ *   is also hidden from implementors, properties are persisted automatically on
+ *   setting them.
+ * - Initialization of the Storage directory happens via the static initialize
+ *   method, every implementation should have its own logic to set the
+ *   implementation specific additional properties supported by the
+ *   implementation and it is their responsibility to call
+ *   {@link Storage#initialize(NodeType, File, String, Properties)} method
+ *   to setup and save the VERSION file into the directory.
  */
 @InterfaceAudience.Private
 public abstract class Storage {
@@ -137,7 +132,6 @@ public abstract class Storage {
     ensureInitializationAllowed(nodeType, workingDir);
     ensureCurrentDirExists(nodeType, workingDir);
 
-
     StorageInfo info = new StorageInfo(nodeType, clusterId, Time.now());
     if (props!=null) {
       for (String key : props.stringPropertyNames()) {
@@ -153,10 +147,12 @@ public abstract class Storage {
     }
   }
 
+  @VisibleForTesting
   static File versionFileFor(File workingDir, NodeType type){
     return new File(currentDirFor(workingDir, type), STORAGE_FILE_VERSION);
   }
 
+  @VisibleForTesting
   static File currentDirFor(File workingDir, NodeType type){
     return new File (nodeDirFor(workingDir, type), STORAGE_DIR_CURRENT);
   }
@@ -199,38 +195,6 @@ public abstract class Storage {
     return currentDirFor(root, nodeType);
   }
 
-  public long getCreationTime() {
-    return storageInfo.getCreationTime();
-  }
-
-  //This method is used only from tests, and from OM and SCM initialization
-  //Can we change this to a constructor parameter?
-  public void setClusterId(String clusterId) throws IOException {
-    throw new IOException(
-        "Storage directory " + storageDir + " already initialized.");
-  }
-  protected void setProperty(String key, String value) {
-    storageInfo.setProperty(key, value);
-  }
-
-  protected String getProperty(String key) {
-    return storageInfo.getProperty(key);
-  }
-
-  abstract protected Properties getNodeProperties();
-
-  /**
-   * Sets the Node properties specific to OM/SCM.
-   */
-  private void setNodeProperties() {
-    Properties nodeProperties = getNodeProperties();
-    if (nodeProperties != null) {
-      for (String key : nodeProperties.stringPropertyNames()) {
-        storageInfo.setProperty(key, nodeProperties.getProperty(key));
-      }
-    }
-  }
-
   /**
    * Persists current StorageInfo to file system..
    * @throws IOException
@@ -243,9 +207,13 @@ public abstract class Storage {
     storageInfo.writeTo(versionFileFor(root, nodeType));
   }
 
+  protected void setProperty(String key, String value) {
+    storageInfo.setProperty(key, value);
+  }
 
-
-
+  protected String getProperty(String key) {
+    return storageInfo.getProperty(key);
+  }
 
   private void ensureDirIsInitializedFor(NodeType nodeType, File directory)
       throws IOException {

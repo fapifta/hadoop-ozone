@@ -22,14 +22,8 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.UUID;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
-import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.ozone.common.Storage;
-import org.apache.hadoop.ozone.om.OMConfigKeys;
-
-import static org.apache.hadoop.ozone.OzoneConsts.SCM_ID;
 
 /**
  * OMStorage is responsible for management of the StorageDirectories used by
@@ -89,20 +83,5 @@ public class OMStorage extends Storage {
    */
   public String getOmCertSerialId() {
     return getProperty(OM_CERT_SERIAL_ID);
-  }
-
-  @Override
-  protected Properties getNodeProperties() {
-    String omId = getOmId();
-    if (omId == null) {
-      omId = UUID.randomUUID().toString();
-    }
-    Properties omProperties = new Properties();
-    omProperties.setProperty(OM_ID, omId);
-
-    if (getOmCertSerialId() != null) {
-      omProperties.setProperty(OM_CERT_SERIAL_ID, getOmCertSerialId());
-    }
-    return omProperties;
   }
 }

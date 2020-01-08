@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdds.scm.server;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
-import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.ozone.common.Storage;
 
 import java.io.File;
@@ -63,16 +61,4 @@ public class SCMStorageConfig extends Storage {
   public String getScmId() {
     return getProperty(SCM_ID);
   }
-
-  @Override
-  protected Properties getNodeProperties() {
-    String scmId = getScmId();
-    if (scmId == null) {
-      scmId = UUID.randomUUID().toString();
-    }
-    Properties scmProperties = new Properties();
-    scmProperties.setProperty(SCM_ID, scmId);
-    return scmProperties;
-  }
-
 }

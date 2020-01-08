@@ -19,7 +19,9 @@ import java.util.Properties;
 
 public class TestStorage {
 
-  @Rule public ExpectedException ex = ExpectedException.none();
+  @Rule
+  public ExpectedException ex = ExpectedException.none();
+
   private final NodeType testNodeType = NodeType.DATANODE;
 
   @Test
@@ -114,7 +116,6 @@ public class TestStorage {
 
     assertEquals(testNodeType, storage.getNodeType());
     assertEquals("1", storage.getClusterID());
-    assertEquals(0, storage.getCreationTime());
   }
 
   @Test
@@ -127,8 +128,6 @@ public class TestStorage {
 
     assertEquals(props.getProperty("nodeType"), storage.getNodeType().name());
     assertEquals(props.getProperty("clusterID"), storage.getClusterID());
-    assertEquals(
-        props.getProperty("cTime"), Long.toString(storage.getCreationTime()));
   }
 
   @Test
@@ -162,7 +161,6 @@ public class TestStorage {
 
     Properties props = loadPropertiesFromVersionFile(workingDir);
 
-    assertEquals(t, storage.getCreationTime());
     assertEquals(t, Long.parseLong(props.getProperty("cTime")));
     assertEquals("aValue", props.getProperty("aPropertyKey"));
   }
@@ -225,17 +223,7 @@ public class TestStorage {
   }
 
   private Storage aStorageImplWith(File workingDir) throws Exception {
-    return aStorageImplWith(workingDir, null);
-  }
-
-  private Storage aStorageImplWith(File workingDir, Properties props)
-      throws IOException {
-    return new Storage(testNodeType, workingDir) {
-      @Override
-      protected Properties getNodeProperties() {
-        return props;
-      }
-    };
+    return new Storage(testNodeType, workingDir){};
   }
 
   private Storage aStorageImplWithRealVersionFile(
@@ -245,7 +233,7 @@ public class TestStorage {
     File versionFile = Storage.versionFileFor(workingDir, testNodeType);
     props.store(new FileWriter(versionFile), null);
 
-    return aStorageImplWith(workingDir, props);
+    return aStorageImplWith(workingDir);
   }
 
   private Properties loadPropertiesFromVersionFile(File workingDir)

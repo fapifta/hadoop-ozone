@@ -106,10 +106,7 @@ class StorageInfo {
 
   public Long  getCreationTime() {
     String creationTime = properties.getProperty(CREATION_TIME);
-    if(creationTime != null) {
-      return Long.parseLong(creationTime);
-    }
-    return null;
+    return Long.parseLong(creationTime);
   }
 
   public String getProperty(String key) {

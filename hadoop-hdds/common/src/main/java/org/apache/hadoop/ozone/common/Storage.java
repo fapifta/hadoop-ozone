@@ -202,11 +202,21 @@ public abstract class Storage {
     storageInfo.writeTo(versionFileFor(root, nodeType));
   }
 
-  protected void setProperty(String key, String value) {
+  protected synchronized boolean setProperty(String key, String value) {
+    String oldValue = storageInfo.getProperty(key);
     storageInfo.setProperty(key, value);
+    try {
+      persistCurrentState();
+    } catch (IOException e) {
+      LOG.warn("In storage directory {}. Changing {} key in VERSION file "
+          + "failed. Rolling back the change.", key, e);
+      storageInfo.setProperty(key, oldValue);
+      return false;
+    }
+    return true;
   }
 
-  protected String getProperty(String key) {
+  protected synchronized String getProperty(String key) {
     return storageInfo.getProperty(key);
   }
 

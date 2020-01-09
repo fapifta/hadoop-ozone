@@ -26,7 +26,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * Represents the VERSION file inside a Storage directory.
@@ -53,6 +55,13 @@ class StorageInfo {
    * Property key to hold the last update time of the VERSION file.
    */
   private static final String LAST_UPDATE_TIME = "uTime";
+
+  private static final Set<String> immutableKeys = new HashSet<>();
+  {
+    immutableKeys.add(NODE_TYPE);
+    immutableKeys.add(CLUSTER_ID);
+    immutableKeys.add(CREATION_TIME);
+  }
 
 
   /**
@@ -108,11 +117,11 @@ class StorageInfo {
   }
 
   public void setProperty(String key, String value) {
+    if (immutableKeys.contains(key)){
+      throw new IllegalArgumentException("The property " + key + " can not be"
+          + "modified.");
+    }
     properties.setProperty(key, value);
-  }
-
-  public void setClusterId(String clusterId) {
-    properties.setProperty(CLUSTER_ID, clusterId);
   }
 
   private void verifyNodeType(NodeType type)

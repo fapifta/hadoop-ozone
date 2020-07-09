@@ -436,14 +436,17 @@ public class InnerNodeImpl extends NodeImpl implements InnerNode {
     }
     for(Node node : childrenMap.values()) {
       if (excludedNodes != null && excludedNodes.contains(node)) {
+//        leafIndex--;
         continue;
       }
       if (excludedScopes != null && excludedScopes.size() > 0) {
         if (excludedScopes.stream().anyMatch(scope ->
             node.getNetworkFullPath().startsWith(scope))) {
+//          leafIndex--;
           continue;
         }
       }
+//      if (leafIndex <= 0) {
       if (leafIndex == 0) {
         return node;
       }

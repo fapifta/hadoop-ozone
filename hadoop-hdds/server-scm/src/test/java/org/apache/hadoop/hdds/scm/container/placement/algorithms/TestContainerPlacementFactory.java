@@ -16,121 +16,91 @@
  */
 package org.apache.hadoop.hdds.scm.container.placement.algorithms;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
+import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.MockDatanodeDetails;
 import org.apache.hadoop.hdds.scm.ContainerPlacementStatus;
 import org.apache.hadoop.hdds.scm.PlacementPolicy;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
-import org.apache.hadoop.hdds.scm.net.NetworkTopologyImpl;
-import org.apache.hadoop.hdds.scm.net.NodeSchema;
-import org.apache.hadoop.hdds.scm.net.NodeSchemaManager;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.hdds.scm.node.NodeStatus;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.runner.RunWith;
+import org.mockito.runners.MockitoJUnitRunner;
 
-import static org.apache.hadoop.hdds.scm.net.NetConstants.LEAF_SCHEMA;
-import static org.apache.hadoop.hdds.scm.net.NetConstants.RACK_SCHEMA;
-import static org.apache.hadoop.hdds.scm.net.NetConstants.ROOT_SCHEMA;
+import java.util.List;
 
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Mockito.when;
+import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.FAILED_TO_INIT_CONTAINER_PLACEMENT_POLICY;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
 
 /**
  * Test for scm container placement factory.
  */
-public class TestContainerPlacementFactory {
-  // network topology cluster
-  private NetworkTopology cluster;
-  // datanodes array list
-  private List<DatanodeDetails> datanodes = new ArrayList<>();
-  // node storage capacity
-  private final long storageCapacity = 100L;
-  // configuration
-  private OzoneConfiguration conf;
-  // node manager
-  private NodeManager nodeManager;
+@RunWith(MockitoJUnitRunner.class)
+public class TestContainerPlacementFactory
+    extends TestScmContainerPlacementPolicyBase {
 
-  @Before
-  public void setup() {
-    //initialize network topology instance
-    conf = new OzoneConfiguration();
+  @Test
+  public void testDefaultPolicyLoads() throws Exception {
+    PlacementPolicy policy = configuredPolicy(new OzoneConfiguration());
+    assertThat(policy, instanceOf(SCMContainerPlacementRandom.class));
   }
 
   @Test
-  public void testRackAwarePolicy() throws IOException {
-    conf.set(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
-        SCMContainerPlacementRackAware.class.getName());
+  public void testRackAwarePolicyLoads() throws Exception {
+    configurePolicy(SCMContainerPlacementRackAware.class);
 
-    NodeSchema[] schemas = new NodeSchema[]
-        {ROOT_SCHEMA, RACK_SCHEMA, LEAF_SCHEMA};
-    NodeSchemaManager.getInstance().init(schemas, true);
-    cluster = new NetworkTopologyImpl(NodeSchemaManager.getInstance());
-
-    // build datanodes, and network topology
-    String rack = "/rack";
-    String hostname = "node";
-    for (int i = 0; i < 15; i++) {
-      // Totally 3 racks, each has 5 datanodes
-      DatanodeDetails node = MockDatanodeDetails.createDatanodeDetails(
-          hostname + i, rack + (i / 5));
-      datanodes.add(node);
-      cluster.add(node);
-    }
-
-    // create mock node manager
-    nodeManager = Mockito.mock(NodeManager.class);
-    when(nodeManager.getNodes(NodeStatus.inServiceHealthy()))
-        .thenReturn(new ArrayList<>(datanodes));
-    when(nodeManager.getNodeStat(anyObject()))
-        .thenReturn(new SCMNodeMetric(storageCapacity, 0L, 100L));
-    when(nodeManager.getNodeStat(datanodes.get(2)))
-        .thenReturn(new SCMNodeMetric(storageCapacity, 90L, 10L));
-    when(nodeManager.getNodeStat(datanodes.get(3)))
-        .thenReturn(new SCMNodeMetric(storageCapacity, 80L, 20L));
-    when(nodeManager.getNodeStat(datanodes.get(4)))
-        .thenReturn(new SCMNodeMetric(storageCapacity, 70L, 30L));
-
-    PlacementPolicy policy = ContainerPlacementPolicyFactory
-        .getPolicy(conf, nodeManager, cluster, true,
-            SCMContainerPlacementMetrics.create());
-
-    int nodeNum = 3;
-    List<DatanodeDetails> datanodeDetails =
-        policy.chooseDatanodes(null, null, nodeNum, 15);
-    Assert.assertEquals(nodeNum, datanodeDetails.size());
-    Assert.assertTrue(cluster.isSameParent(datanodeDetails.get(0),
-        datanodeDetails.get(1)));
-    Assert.assertFalse(cluster.isSameParent(datanodeDetails.get(0),
-        datanodeDetails.get(2)));
-    Assert.assertFalse(cluster.isSameParent(datanodeDetails.get(1),
-        datanodeDetails.get(2)));
+    PlacementPolicy policy = configuredPolicy();
+    assertThat(policy, instanceOf(SCMContainerPlacementRackAware.class));
   }
 
   @Test
-  public void testDefaultPolicy() throws IOException {
-    PlacementPolicy policy = ContainerPlacementPolicyFactory
-        .getPolicy(conf, null, null, true, null);
-    Assert.assertSame(SCMContainerPlacementRandom.class, policy.getClass());
+  public void testCapacityPolicyLoads() throws Exception {
+    configurePolicy(SCMContainerPlacementCapacity.class);
+
+    PlacementPolicy policy = configuredPolicy();
+    assertThat(policy, instanceOf(SCMContainerPlacementCapacity.class));
+  }
+
+  @Test
+  public void testPolicyClassNotImplemented() throws Exception {
+    expectExceptionCausedBy(ClassNotFoundException.class);
+
+    configurePolicy("org.apache.hadoop.DummyClass");
+
+    // instantiate the policy
+    configuredPolicy();
+  }
+
+  @Test
+  public void testExpectedPolicyConstuctorNotFound() throws Exception {
+    expectSCMExceptionWith(FAILED_TO_INIT_CONTAINER_PLACEMENT_POLICY);
+
+    configurePolicy(DummyImpl.class);
+
+    // instantiate the policy
+    configuredPolicy();
+  }
+
+  @Test
+  public void testPolicyConsturctorFails() throws Exception {
+    expectExceptionCausedBy("Failed to instantiate class");
+
+    configurePolicy(ExcetpionThrowingDummyImpl.class);
+
+    // instantiate the policy
+    configuredPolicy();
   }
 
   /**
-   * A dummy container placement implementation for test.
+   * A dummy container placement implementation for testing.
    */
-  public static class DummyImpl implements PlacementPolicy {
+  protected static class DummyImpl implements PlacementPolicy {
+
     @Override
     public List<DatanodeDetails> chooseDatanodes(
-        List<DatanodeDetails> excludedNodes, List<DatanodeDetails> favoredNodes,
+        List<DatanodeDetails> excludedNodes,
+        List<DatanodeDetails> favouredNodes,
         int nodesRequired, long sizeRequired) {
       return null;
     }
@@ -142,19 +112,13 @@ public class TestContainerPlacementFactory {
     }
   }
 
-  @Test(expected = SCMException.class)
-  public void testConstuctorNotFound() throws SCMException {
-    // set a placement class which does't have the right constructor implemented
-    conf.set(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
-        DummyImpl.class.getName());
-    ContainerPlacementPolicyFactory.getPolicy(conf, null, null, true, null);
-  }
+  protected static class ExcetpionThrowingDummyImpl extends DummyImpl {
 
-  @Test(expected = RuntimeException.class)
-  public void testClassNotImplemented() throws SCMException {
-    // set a placement class not implemented
-    conf.set(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
-        "org.apache.hadoop.hdds.scm.container.placement.algorithm.HelloWorld");
-    ContainerPlacementPolicyFactory.getPolicy(conf, null, null, true, null);
+    ExcetpionThrowingDummyImpl(final NodeManager nodeManager,
+        final ConfigurationSource conf,
+        final NetworkTopology networkTopology, final boolean fallback,
+        final SCMContainerPlacementMetrics metrics) {
+      throw new RuntimeException();
+    }
   }
 }

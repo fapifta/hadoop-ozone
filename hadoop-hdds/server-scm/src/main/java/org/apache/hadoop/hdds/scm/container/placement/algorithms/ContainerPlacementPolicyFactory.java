@@ -73,7 +73,7 @@ public final class ContainerPlacementPolicyFactory {
           metrics);
     } catch (Exception e) {
       throw new RuntimeException("Failed to instantiate class " +
-          placementClass.getCanonicalName() + " for " + e.getMessage());
+          placementClass.getCanonicalName() + " for " + e.getMessage(), e);
     }
   }
 }

@@ -16,115 +16,162 @@
  */
 package org.apache.hadoop.hdds.scm.container.placement.algorithms;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.hadoop.hdds.conf.ConfigurationSource;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.MockDatanodeDetails;
 import org.apache.hadoop.hdds.scm.ContainerPlacementStatus;
+import org.apache.hadoop.hdds.scm.PlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.node.NodeManager;
-
-import org.apache.hadoop.hdds.scm.node.NodeStatus;
-import org.junit.Assert;
 import org.junit.Test;
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertTrue;
+import org.junit.runner.RunWith;
+import org.mockito.runners.MockitoJUnitRunner;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.mockito.Matchers.anyObject;
-import org.mockito.Mockito;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.assertTrue;
 
 /**
- * Test for the random container placement.
+ * Tests for the random container placement policy implementation.
  */
-public class TestSCMContainerPlacementRandom {
+@RunWith(MockitoJUnitRunner.class)
+public class TestSCMContainerPlacementRandom
+    extends TestScmContainerPlacementPolicyBase {
 
+  /**
+   * Test the placement policy with a few nodes full, and a few excluded with
+   * various number of requested nodes.
+   * At the end test the distribution of the selections between datanodes,
+   * and verify metrics is updated properly.
+   * @throws Exception
+   */
   @Test
-  public void chooseDatanodes() throws SCMException {
-    //given
-    ConfigurationSource conf = new OzoneConfiguration();
+  public void testdistributionOfChoosenDatanodesWithExcludesAndLowSpaceNodes()
+      throws Exception {
+    List<DatanodeDetails> nodes = createSomeDatanodeDetails(10);
+    setupNodeManagerWith(nodes);
 
-    List<DatanodeDetails> datanodes = new ArrayList<>();
-    for (int i = 0; i < 5; i++) {
-      datanodes.add(MockDatanodeDetails.randomDatanodeDetails());
+    Map<DatanodeDetails, SCMNodeMetric> capacities = new HashMap<>();
+    capacities.put(nodes.get(2), lowFreeSpaceMetric());
+    capacities.put(nodes.get(5), lowFreeSpaceMetric());
+    capacities.put(nodes.get(7), lowFreeSpaceMetric());
+    setupNodesCapacity(baseMetric(), capacities);
+
+    List<DatanodeDetails> excludedNodes = new ArrayList<>(2);
+    excludedNodes.add(nodes.get(0));
+    excludedNodes.add(nodes.get(1));
+
+    PlacementPolicy policy = configuredPolicy();
+
+    Map<DatanodeDetails, Integer> nodeSelections = new HashMap<>();
+    for (int i = 0; i < nodes.size(); i++) {
+      nodeSelections.put(nodes.get(i), 0);
+    }
+    Random r = new Random();
+    for (int i = 0; i < 1000; i++) {
+      int requiredNodes = r.nextInt(4)+1;
+      List<DatanodeDetails> selectedNodes =
+          policy.chooseDatanodes(excludedNodes, null, requiredNodes, 15);
+
+      assertEquals(requiredNodes, selectedNodes.size());
+
+      for (DatanodeDetails dn : selectedNodes) {
+        nodeSelections.put(dn, nodeSelections.get(dn) + 1);
+      }
     }
 
-    NodeManager mockNodeManager = Mockito.mock(NodeManager.class);
-    when(mockNodeManager.getNodes(NodeStatus.inServiceHealthy()))
-        .thenReturn(new ArrayList<>(datanodes));
+    // excluded nodes
+    assertEquals(0, nodeSelections.get(nodes.get(0)).intValue());
+    assertEquals(0, nodeSelections.get(nodes.get(1)).intValue());
+    assertEquals(0, nodeSelections.get(nodes.get(2)).intValue());
+    assertEquals(0, nodeSelections.get(nodes.get(5)).intValue());
+    assertEquals(0, nodeSelections.get(nodes.get(7)).intValue());
 
-    when(mockNodeManager.getNodeStat(anyObject()))
-        .thenReturn(new SCMNodeMetric(100L, 0L, 100L));
-    when(mockNodeManager.getNodeStat(datanodes.get(2)))
-        .thenReturn(new SCMNodeMetric(100L, 90L, 10L));
+    int avg = (nodeSelections.get(nodes.get(3))
+        + nodeSelections.get(nodes.get(4))
+        + nodeSelections.get(nodes.get(6))
+        + nodeSelections.get(nodes.get(8))
+        + nodeSelections.get(nodes.get(9))) / 5;
+    // empirical value determined based on 30k test runs
+    // the furthest we got from average in this 30k runs is 54
+    // so with this threshold value we should not see flakiness anytime soon.
+    int threshold = 75;
+    int expectedMin = avg - threshold;
+    int expectedMax = avg + threshold;
 
-    SCMContainerPlacementRandom scmContainerPlacementRandom =
-        new SCMContainerPlacementRandom(mockNodeManager, conf, null, true,
-            null);
+    // roughly equal distribution is expected on all nodes
+    assertRange(expectedMin, expectedMax, nodeSelections.get(nodes.get(3)));
+    assertRange(expectedMin, expectedMax, nodeSelections.get(nodes.get(4)));
+    assertRange(expectedMin, expectedMax, nodeSelections.get(nodes.get(6)));
+    assertRange(expectedMin, expectedMax, nodeSelections.get(nodes.get(8)));
+    assertRange(expectedMin, expectedMax, nodeSelections.get(nodes.get(9)));
 
-    List<DatanodeDetails> existingNodes = new ArrayList<>();
-    existingNodes.add(datanodes.get(0));
-    existingNodes.add(datanodes.get(1));
-
-    for (int i = 0; i < 100; i++) {
-      //when
-      List<DatanodeDetails> datanodeDetails = scmContainerPlacementRandom
-          .chooseDatanodes(existingNodes, null, 1, 15);
-
-      //then
-      Assert.assertEquals(1, datanodeDetails.size());
-      DatanodeDetails datanode0Details = datanodeDetails.get(0);
-
-      Assert.assertNotEquals(
-          "Datanode 0 should not been selected: excluded by parameter",
-          datanodes.get(0), datanode0Details);
-      Assert.assertNotEquals(
-          "Datanode 1 should not been selected: excluded by parameter",
-          datanodes.get(1), datanode0Details);
-      Assert.assertNotEquals(
-          "Datanode 2 should not been selected: not enough space there",
-          datanodes.get(2), datanode0Details);
-
-    }
+    metricsVerification.skip();
   }
 
   @Test
-  public void testPlacementPolicySatisified() {
-    //given
-    ConfigurationSource conf = new OzoneConfiguration();
+  public void testChooseThreeNodesFromThreeNodes() throws Exception {
+    List<DatanodeDetails> nodes = createSomeDatanodeDetails(3);
+    setupNodeManagerWith(nodes);
+    setupNodesCapacity(baseMetric(), null);
+    PlacementPolicy policy = configuredPolicy();
 
-    List<DatanodeDetails> datanodes = new ArrayList<>();
-    for (int i = 0; i < 3; i++) {
-      datanodes.add(MockDatanodeDetails.randomDatanodeDetails());
-    }
+    int requiredNodes = 3;
+    List<DatanodeDetails> selectedNodes =
+        policy.chooseDatanodes(null, null, requiredNodes, 15);
 
-    NodeManager mockNodeManager = Mockito.mock(NodeManager.class);
-    SCMContainerPlacementRandom scmContainerPlacementRandom =
-        new SCMContainerPlacementRandom(mockNodeManager, conf, null, true,
-            null);
-    ContainerPlacementStatus status =
-        scmContainerPlacementRandom.validateContainerPlacement(datanodes, 3);
-    assertTrue(status.isPolicySatisfied());
-    assertEquals(0, status.misReplicationCount());
+    assertEquals(requiredNodes, selectedNodes.size());
+    assertArrayEquals(nodes.toArray(), selectedNodes.toArray());
+  }
 
-    status = scmContainerPlacementRandom.validateContainerPlacement(
-        new ArrayList<DatanodeDetails>(), 3);
-    assertFalse(status.isPolicySatisfied());
+  @Test
+  public void testThreeReplicaSatisfiesPolicyAndHasAllReplicas()
+      throws Exception {
+    List<DatanodeDetails> nodes = createSomeDatanodeDetails(3);
 
-    // Only expect 1 more replica to give us one rack on this policy.
-    assertEquals(1, status.misReplicationCount(), 3);
+    setupNodeManagerWith(nodes);
 
-    datanodes = new ArrayList<DatanodeDetails>();
-    datanodes.add(MockDatanodeDetails.randomDatanodeDetails());
-    status = scmContainerPlacementRandom.validateContainerPlacement(
-        datanodes, 3);
-    assertTrue(status.isPolicySatisfied());
+    PlacementPolicy policy = configuredPolicy();
+    ContainerPlacementStatus placementStatus =
+        policy.validateContainerPlacement(nodes, 3);
 
-    // Only expect 1 more replica to give us one rack on this policy.
-    assertEquals(0, status.misReplicationCount(), 3);
+    assertTrue(placementStatus.isPolicySatisfied());
+    assertEquals(0, placementStatus.misReplicationCount());
+  }
+
+  // this test is about placement not about replica counts!
+  @Test
+  public void
+      testZeroReplicaDoesNotSatisfyPolicyAndOneReplicaNeededToSatisfyPlacement()
+      throws Exception {
+    List<DatanodeDetails> noNodes = createSomeDatanodeDetails(0);
+    setupNodeManagerWith(noNodes);
+
+    PlacementPolicy policy = configuredPolicy();
+    ContainerPlacementStatus placementStatus =
+        policy.validateContainerPlacement(noNodes, 3);
+
+    assertFalse(placementStatus.isPolicySatisfied());
+    assertEquals(1, placementStatus.misReplicationCount());
+  }
+
+  // this test is about placement not about replica counts!
+  @Test
+  public void
+      testOneReplicaSatisfyPolicyAndNoReplicaIsNeededToSatisfyPlacement()
+      throws Exception {
+    List<DatanodeDetails> nodes = createSomeDatanodeDetails(1);
+    setupNodeManagerWith(nodes);
+
+    PlacementPolicy policy = configuredPolicy();
+    ContainerPlacementStatus placementStatus =
+        policy.validateContainerPlacement(nodes, 3);
+
+    assertTrue(placementStatus.isPolicySatisfied());
+    assertEquals(0, placementStatus.misReplicationCount());
   }
 }

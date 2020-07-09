@@ -133,7 +133,7 @@ public final class SCMContainerPlacementCapacity
           getNodeManager().getNodeStat(firstNodeDetails);
       SCMNodeMetric secondNodeMetric =
           getNodeManager().getNodeStat(secondNodeDetails);
-      datanodeDetails = firstNodeMetric.isGreater(secondNodeMetric.get())
+      datanodeDetails = firstNodeMetric.isLess(secondNodeMetric.get())
           ? firstNodeDetails : secondNodeDetails;
     }
     healthyNodes.remove(datanodeDetails);

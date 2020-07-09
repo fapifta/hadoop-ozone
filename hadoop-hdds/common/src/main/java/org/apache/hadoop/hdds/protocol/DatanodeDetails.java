@@ -403,11 +403,11 @@ public class DatanodeDetails extends NodeImpl implements
 
   @Override
   public String toString() {
-    return uuid.toString() + "{" +
+    return getUuidString() + "{" +
         "ip: " +
-        ipAddress +
+        getIpAddress() +
         ", host: " +
-        hostName +
+        getHostName() +
         ", networkLocation: " +
         getNetworkLocation() +
         ", certSerialId: " + certSerialId +

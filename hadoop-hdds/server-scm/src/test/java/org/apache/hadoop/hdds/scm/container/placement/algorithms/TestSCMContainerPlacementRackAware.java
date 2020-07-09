@@ -207,6 +207,12 @@ public class TestSCMContainerPlacementRackAware {
     datanodeDetails = policy.chooseDatanodes(
         excludedNodes, null, nodeNum, 15);
     Assert.assertEquals(nodeNum, datanodeDetails.size());
+    // NOTE: this test is wrong...
+    // it checks if the first returned node is in the same rack as
+    // the only excluded node, and this yields to true always, however it does
+    // not do any assumption about the second choosen node, while it fails with
+    // an ArrayIndexOutOfBoundsException when the first condition is false, as
+    // excludedNodes's size is 1...
     Assert.assertTrue(cluster.isSameParent(
         datanodeDetails.get(0), excludedNodes.get(0)) ||
         cluster.isSameParent(datanodeDetails.get(0), excludedNodes.get(1)));
@@ -343,10 +349,9 @@ public class TestSCMContainerPlacementRackAware {
     long tryCount = metrics.getDatanodeChooseAttemptCount();
     long compromiseCount = metrics.getDatanodeChooseFallbackCount();
 
-    Assert.assertEquals(totalRequest, nodeNum);
+    Assert.assertEquals(totalRequest, 0);
     Assert.assertEquals(successCount, 0);
-    MatcherAssert.assertThat("Not enough try", tryCount,
-        greaterThanOrEqualTo((long) nodeNum));
+    Assert.assertEquals(tryCount, 0);
     Assert.assertEquals(compromiseCount, 0);
   }
 

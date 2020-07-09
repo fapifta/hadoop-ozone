@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.hdds.scm.container.placement.algorithms;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -34,6 +33,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.FAILED_TO_FIND_NODES_WITH_SPACE;
+import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.FAILED_TO_FIND_SUITABLE_NODE;
+
 /**
  * Container placement policy that choose datanodes with network topology
  * awareness, together with the space to satisfy the size constraints.
@@ -48,8 +50,7 @@ import java.util.List;
  */
 public final class SCMContainerPlacementRackAware
     extends SCMCommonPlacementPolicy {
-  @VisibleForTesting
-  static final Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(SCMContainerPlacementRackAware.class);
   private final NetworkTopology networkTopology;
   private boolean fallback;
@@ -98,6 +99,8 @@ public final class SCMContainerPlacementRackAware
   public List<DatanodeDetails> chooseDatanodes(
       List<DatanodeDetails> excludedNodes, List<DatanodeDetails> favoredNodes,
       int nodesRequired, final long sizeRequired) throws SCMException {
+    super.chooseDatanodes(
+        excludedNodes, favoredNodes, nodesRequired, sizeRequired);
     Preconditions.checkArgument(nodesRequired > 0);
     metrics.incrDatanodeRequestCount(nodesRequired);
     int datanodeCount = networkTopology.getNumOfLeafNode(NetConstants.ROOT);
@@ -250,8 +253,12 @@ public final class SCMContainerPlacementRackAware
     boolean isFallbacked = false;
     while(true) {
       metrics.incrDatanodeChooseAttemptCount();
+      LOG.info("Selecting node with chooseRandom({}, {}, {}, {}, {})",
+          NetConstants.ROOT, excludedNodesForCapacity,
+          excludedNodes, affinityNode, ancestorGen);
       Node node = networkTopology.chooseRandom(NetConstants.ROOT,
           excludedNodesForCapacity, excludedNodes, affinityNode, ancestorGen);
+      LOG.info("Node selected: {}", node);
       if (node == null) {
         // cannot find the node which meets all constrains
         LOG.warn("Failed to find the datanode for container. excludedNodes:" +
@@ -273,7 +280,8 @@ public final class SCMContainerPlacementRackAware
         }
         // there is no constrains to reduce or fallback is true
         throw new SCMException("No satisfied datanode to meet the" +
-            " excludedNodes and affinityNode constrains.", null);
+            " excludedNodes and affinityNode constrains.",
+            FAILED_TO_FIND_SUITABLE_NODE);
       }
       if (super.hasEnoughSpace((DatanodeDetails)node, sizeRequired)) {
         LOG.debug("Datanode {} is chosen. Required size is {}",
@@ -282,6 +290,7 @@ public final class SCMContainerPlacementRackAware
         if (isFallbacked) {
           metrics.incrDatanodeChooseFallbackCount();
         }
+        LOG.info("Returning selected node: {}", node);
         return node;
       } else {
         maxRetry--;
@@ -290,11 +299,12 @@ public final class SCMContainerPlacementRackAware
           String errMsg = "No satisfied datanode to meet the space constrains. "
               + " sizeRequired: " + sizeRequired;
           LOG.info(errMsg);
-          throw new SCMException(errMsg, null);
+          throw new SCMException(errMsg, FAILED_TO_FIND_NODES_WITH_SPACE);
         }
         if (excludedNodesForCapacity == null) {
           excludedNodesForCapacity = new ArrayList<>();
         }
+        LOG.info("Excluding selected ndode: {}", node);
         excludedNodesForCapacity.add(node.getNetworkFullPath());
       }
     }

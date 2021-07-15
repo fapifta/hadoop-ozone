@@ -45,6 +45,7 @@
     <module>csi</module>
     <module>fault-injection-test</module>
     <module>insight</module>
+    <module>hadoop-hdfs-httpfs</module>
   </modules>
 
   <repositories>

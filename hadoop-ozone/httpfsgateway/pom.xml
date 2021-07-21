@@ -24,12 +24,12 @@
     <artifactId>ozone</artifactId>
     <version>1.2.0-SNAPSHOT</version>
   </parent>
-  <artifactId>hadoop-hdfs-httpfs</artifactId>
+  <artifactId>ozone-httpfsgateway</artifactId>
   <version>1.2.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>Apache Hadoop HttpFS</name>
-  <description>Apache Hadoop HttpFS</description>
+  <name>Apache Ozone HttpFS</name>
+  <description>Apache Ozone HttpFS</description>
 
   <properties>
     <httpfs.source.repository>REPO NOT AVAIL</httpfs.source.repository>

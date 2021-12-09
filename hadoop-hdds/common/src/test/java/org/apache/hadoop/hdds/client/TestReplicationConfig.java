@@ -50,15 +50,19 @@ public class TestReplicationConfig {
   @Parameterized.Parameter(1)
   public String factor;
 
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   @Parameterized.Parameter(2)
   public String codec;
 
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   @Parameterized.Parameter(3)
   public int data;
 
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   @Parameterized.Parameter(4)
   public int parity;
 
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   @Parameterized.Parameter(5)
   public int chunkSize;
 
@@ -73,8 +77,10 @@ public class TestReplicationConfig {
     return new Object[][] {
         {"RATIS", "ONE", null, 0, 0, 0, RatisReplicationConfig.class },
         {"RATIS", "THREE", null, 0, 0, 0, RatisReplicationConfig.class},
-        {"STAND_ALONE", "ONE", null, 0, 0, 0, StandaloneReplicationConfig.class},
-        {"STAND_ALONE", "THREE", null, 0, 0, 0, StandaloneReplicationConfig.class},
+        {"STAND_ALONE", "ONE", null, 0, 0, 0,
+            StandaloneReplicationConfig.class},
+        {"STAND_ALONE", "THREE", null, 0, 0, 0,
+            StandaloneReplicationConfig.class},
         {"EC", "RS-3-2-1024K", "RS", 3, 2, MB, ECReplicationConfig.class},
         {"EC", "RS-3-2-1024", "RS", 3, 2, KB, ECReplicationConfig.class},
         {"EC", "RS-6-3-1024K", "RS", 6, 3, MB, ECReplicationConfig.class},
@@ -119,7 +125,8 @@ public class TestReplicationConfig {
 
     ReplicationConfig replicationConfig = ReplicationConfig.getDefault(conf);
 
-    validate(replicationConfig, EcCodec.valueOf(codec), data, parity,chunkSize);
+    validate(replicationConfig,
+        EcCodec.valueOf(codec), data, parity, chunkSize);
   }
 
   @Test

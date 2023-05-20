@@ -109,7 +109,6 @@ public class DatanodeStateMachine implements Closeable {
   private final ReplicationSupervisor supervisor;
 
   private JvmPauseMonitor jvmPauseMonitor;
-  private CertificateClient dnCertClient;
   private final HddsDatanodeStopService hddsDatanodeStopService;
 
   private HDDSLayoutVersionManager layoutVersionManager;
@@ -176,7 +175,6 @@ public class DatanodeStateMachine implements Closeable {
     } finally {
       constructionLock.writeLock().unlock();
     }
-    dnCertClient = certClient;
     nextHB = new AtomicLong(Time.monotonicNow());
 
     ContainerImporter importer = new ContainerImporter(conf,
@@ -186,10 +184,10 @@ public class DatanodeStateMachine implements Closeable {
     ContainerReplicator pullReplicator = new DownloadAndImportReplicator(
         conf, container.getContainerSet(),
         importer,
-        new SimpleContainerDownloader(conf, dnCertClient));
+        new SimpleContainerDownloader(conf, certClient));
     ContainerReplicator pushReplicator = new PushReplicator(conf,
         new OnDemandContainerReplicationSource(container.getController()),
-        new GrpcContainerUploader(conf, dnCertClient)
+        new GrpcContainerUploader(conf, certClient)
     );
 
     pullReplicatorWithMetrics = new MeasuredReplicator(pullReplicator, "pull");

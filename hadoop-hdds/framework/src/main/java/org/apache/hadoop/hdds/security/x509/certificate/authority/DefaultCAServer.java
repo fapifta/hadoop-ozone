@@ -588,8 +588,7 @@ public class DefaultCAServer implements CertificateServer {
             }
           });
     } catch (IOException e) {
-      throw new org.apache.hadoop.hdds.security.x509
-          .exception.CertificateException(
+      throw new org.apache.hadoop.hdds.security.x509.exception.CertificateException(
           "Error while adding ip to CA self signed certificate", e,
           CSR_ERROR);
     }

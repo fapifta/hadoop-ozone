@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
@@ -198,8 +197,8 @@ public final class CertificateSignRequest {
     private boolean digitalEncryption;
 
     public CertificateSignRequest.Builder setConfiguration(
-        ConfigurationSource configuration) {
-      this.config = new SecurityConfig(configuration);
+        SecurityConfig configuration) {
+      this.config = configuration;
       return this;
     }
 

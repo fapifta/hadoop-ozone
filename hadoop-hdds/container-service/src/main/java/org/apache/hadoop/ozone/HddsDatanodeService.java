@@ -71,9 +71,11 @@ import com.google.common.base.Preconditions;
 
 import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name.HTTP;
 import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name.HTTPS;
+import static org.apache.hadoop.hdds.utils.HddsServerUtil.getScmSecurityClientWithMaxRetry;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.HDDS_DATANODE_PLUGINS_KEY;
 import static org.apache.hadoop.ozone.conf.OzoneServiceConfig.DEFAULT_SHUTDOWN_HOOK_PRIORITY;
 import static org.apache.hadoop.ozone.common.Storage.StorageState.INITIALIZED;
+import static org.apache.hadoop.security.UserGroupInformation.getCurrentUser;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import org.slf4j.Logger;
@@ -255,7 +257,9 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
         component = "dn-" + datanodeDetails.getUuidString();
 
         secConf = new SecurityConfig(conf);
-        dnCertClient = new DNCertificateClient(secConf, datanodeDetails,
+        dnCertClient = new DNCertificateClient(secConf,
+            getScmSecurityClientWithMaxRetry(conf, getCurrentUser()),
+            datanodeDetails,
             datanodeDetails.getCertSerialId(), this::saveNewCertId,
             this::terminateDatanode);
 
@@ -369,8 +373,9 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
     if (response.equals(CertificateClient.InitResponse.REINIT)) {
       certClient.close();
       LOG.info("Re-initialize certificate client.");
-      certClient = new DNCertificateClient(secConf, datanodeDetails, null,
-          this::saveNewCertId, this::terminateDatanode);
+      certClient = new DNCertificateClient(secConf,
+          getScmSecurityClientWithMaxRetry(conf, getCurrentUser()),
+          datanodeDetails, null, this::saveNewCertId, this::terminateDatanode);
       response = certClient.init();
     }
     LOG.info("Init response: {}", response);

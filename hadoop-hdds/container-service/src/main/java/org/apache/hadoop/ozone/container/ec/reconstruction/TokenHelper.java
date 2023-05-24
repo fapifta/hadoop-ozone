@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.container.ec.reconstruction;
 
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.BlockTokenSecretProto.AccessModeProto;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.security.token.ContainerTokenIdentifier;
@@ -32,10 +31,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.EnumSet;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.BlockTokenSecretProto.AccessModeProto.DELETE;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.BlockTokenSecretProto.AccessModeProto.READ;
@@ -52,10 +49,9 @@ class TokenHelper {
   private static final Set<AccessModeProto> MODES =
       EnumSet.of(READ, WRITE, DELETE);
 
-  TokenHelper(ConfigurationSource conf, CertificateClient certClient)
+  TokenHelper(SecurityConfig securityConfig, CertificateClient certClient)
       throws IOException {
 
-    SecurityConfig securityConfig = new SecurityConfig(conf);
     boolean blockTokenEnabled = securityConfig.isBlockTokenEnabled();
     boolean containerTokenEnabled = securityConfig.isContainerTokenEnabled();
 
@@ -66,14 +62,9 @@ class TokenHelper {
     if (securityEnabled && (blockTokenEnabled || containerTokenEnabled)) {
       user = UserGroupInformation.getCurrentUser().getShortUserName();
 
-      long expiryTime = conf.getTimeDuration(
-          HddsConfigKeys.HDDS_BLOCK_TOKEN_EXPIRY_TIME,
-          HddsConfigKeys.HDDS_BLOCK_TOKEN_EXPIRY_TIME_DEFAULT,
-          TimeUnit.MILLISECONDS);
-      long certificateGracePeriod = Duration.parse(
-          conf.get(HddsConfigKeys.HDDS_X509_RENEW_GRACE_DURATION,
-              HddsConfigKeys.HDDS_X509_RENEW_GRACE_DURATION_DEFAULT))
-          .toMillis();
+      long expiryTime = securityConfig.getBlockTokenExpiryDurationMs();
+      long certificateGracePeriod =
+          securityConfig.getRenewalGracePeriod().toMillis();
       if (expiryTime > certificateGracePeriod) {
         throw new IllegalArgumentException("Certificate grace period " +
             HddsConfigKeys.HDDS_X509_RENEW_GRACE_DURATION +

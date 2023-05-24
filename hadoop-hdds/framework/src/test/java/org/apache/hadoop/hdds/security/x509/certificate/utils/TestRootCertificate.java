@@ -55,11 +55,11 @@ import static org.apache.hadoop.hdds.security.x509.exception.CertificateExceptio
  * Test Class for Root Certificate generation.
  */
 public class TestRootCertificate {
-  private static OzoneConfiguration conf = new OzoneConfiguration();
   private SecurityConfig securityConfig;
 
   @BeforeEach
   public void init(@TempDir Path tempDir) {
+    OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(OZONE_METADATA_DIRS, tempDir.toString());
     securityConfig = new SecurityConfig(conf);
   }
@@ -75,7 +75,7 @@ public class TestRootCertificate {
     String scmID = UUID.randomUUID().toString();
     String subject = "testRootCert";
     HDDSKeyGenerator keyGen =
-        new HDDSKeyGenerator(securityConfig.getConfiguration());
+        new HDDSKeyGenerator(securityConfig);
     KeyPair keyPair = keyGen.generateKey();
 
     SelfSignedCertificate.Builder builder =
@@ -86,7 +86,7 @@ public class TestRootCertificate {
             .setScmID(scmID)
             .setSubject(subject)
             .setKey(keyPair)
-            .setConfiguration(conf);
+            .setConfiguration(securityConfig);
 
     X509CertificateHolder certificateHolder = builder.build();
 
@@ -138,7 +138,7 @@ public class TestRootCertificate {
     String scmID = UUID.randomUUID().toString();
     String subject = "testRootCert";
     HDDSKeyGenerator keyGen =
-        new HDDSKeyGenerator(securityConfig.getConfiguration());
+        new HDDSKeyGenerator(securityConfig);
     KeyPair keyPair = keyGen.generateKey();
 
     SelfSignedCertificate.Builder builder =
@@ -149,7 +149,7 @@ public class TestRootCertificate {
             .setScmID(scmID)
             .setSubject(subject)
             .setKey(keyPair)
-            .setConfiguration(conf)
+            .setConfiguration(securityConfig)
             .makeCA();
 
     try {
@@ -163,7 +163,8 @@ public class TestRootCertificate {
             }
           });
     } catch (IOException e) {
-      throw new org.apache.hadoop.hdds.security.x509.exception.CertificateException(
+      throw new
+          org.apache.hadoop.hdds.security.x509.exception.CertificateException(
           "Error while adding ip to CA self signed certificate", e,
           CSR_ERROR);
     }
@@ -206,7 +207,7 @@ public class TestRootCertificate {
     String scmID = UUID.randomUUID().toString();
     String subject = "testRootCert";
     HDDSKeyGenerator keyGen =
-        new HDDSKeyGenerator(securityConfig.getConfiguration());
+        new HDDSKeyGenerator(securityConfig);
     KeyPair keyPair = keyGen.generateKey();
 
     SelfSignedCertificate.Builder builder =
@@ -216,7 +217,7 @@ public class TestRootCertificate {
             .setClusterID(clusterID)
             .setScmID(scmID)
             .setSubject(subject)
-            .setConfiguration(conf)
+            .setConfiguration(securityConfig)
             .setKey(keyPair)
             .makeCA();
     try {

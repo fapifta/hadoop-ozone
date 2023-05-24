@@ -115,7 +115,7 @@ public class TestOzoneBlockTokenSecretManager {
     Logger log = mock(Logger.class);
     DefaultCertificateClient toStub =
         new DefaultCertificateClient(
-            securityConfig, log, null, "test", null, null) {
+            securityConfig, null, log, null, "test", null, null) {
           @Override
           protected String signAndStoreCertificate(
               PKCS10CertificationRequest request, Path certificatePath) {

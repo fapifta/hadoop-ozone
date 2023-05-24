@@ -63,7 +63,6 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getCreateContainerSecureRequest;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getTestContainerID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -154,11 +153,6 @@ public class TestSecureOzoneContainer {
       UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
           user,  new String[] {"usergroup"});
 
-      int port = dn.getPort(DatanodeDetails.Port.Name.STANDALONE).getValue();
-      if (port == 0) {
-        port = secConfig.getConfiguration().getInt(OzoneConfigKeys
-                .DFS_CONTAINER_IPC_PORT, DFS_CONTAINER_IPC_PORT_DEFAULT);
-      }
       secretManager.start(caClient);
 
       ugi.doAs((PrivilegedAction<Void>) () -> {

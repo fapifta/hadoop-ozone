@@ -84,6 +84,7 @@ public class TestHddsSecureDatanodeInit {
 
   private DNCertificateClient client;
   private static DatanodeDetails datanodeDetails;
+  private static SCMSecurityProtocolClientSideTranslatorPB scmClient;
 
   @BeforeAll
   public static void setUp() throws Exception {
@@ -120,6 +121,8 @@ public class TestHddsSecureDatanodeInit {
     certHolder = generateX509CertHolder(new KeyPair(publicKey, privateKey),
         null, Duration.ofSeconds(CERT_LIFETIME));
     datanodeDetails = MockDatanodeDetails.randomDatanodeDetails();
+
+    scmClient = mock(SCMSecurityProtocolClientSideTranslatorPB.class);
   }
 
   @AfterAll
@@ -140,9 +143,8 @@ public class TestHddsSecureDatanodeInit {
         .getCertificateLocation(DN_COMPONENT).toString(),
         securityConfig.getCertificateFileName()).toFile());
     dnLogs.clearOutput();
-    client = new DNCertificateClient(securityConfig, datanodeDetails,
+    client = new DNCertificateClient(securityConfig, scmClient, datanodeDetails,
         certHolder.getSerialNumber().toString(), null, null);
-    service.setCertificateClient(client);
   }
 
   @AfterEach
@@ -284,11 +286,6 @@ public class TestHddsSecureDatanodeInit {
     // save the certificate on dn
     certCodec.writeCertificate(certHolder);
 
-    // prepare a mocked scmClient to certificate signing
-    SCMSecurityProtocolClientSideTranslatorPB scmClient =
-        mock(SCMSecurityProtocolClientSideTranslatorPB.class);
-    client.setSecureScmClient(scmClient);
-
     Duration gracePeriod = securityConfig.getRenewalGracePeriod();
     X509CertificateHolder newCertHolder = generateX509CertHolder(null,
         LocalDateTime.now().plus(gracePeriod),
@@ -360,11 +357,6 @@ public class TestHddsSecureDatanodeInit {
     // save the certificate on dn
     certCodec.writeCertificate(certHolder);
 
-    // prepare a mocked scmClient to certificate signing
-    SCMSecurityProtocolClientSideTranslatorPB scmClient =
-        mock(SCMSecurityProtocolClientSideTranslatorPB.class);
-    client.setSecureScmClient(scmClient);
-
     Duration gracePeriod = securityConfig.getRenewalGracePeriod();
     X509CertificateHolder newCertHolder = generateX509CertHolder(null,
         LocalDateTime.now().plus(gracePeriod),
@@ -433,7 +425,7 @@ public class TestHddsSecureDatanodeInit {
         .setClusterID("cluster")
         .setKey(keyPair)
         .setSubject("localhost")
-        .setConfiguration(conf)
+        .setConfiguration(securityConfig)
         .setScmID("test")
         .build();
   }

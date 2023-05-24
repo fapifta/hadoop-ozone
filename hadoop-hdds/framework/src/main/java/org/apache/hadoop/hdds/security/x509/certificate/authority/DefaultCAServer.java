@@ -574,7 +574,7 @@ public class DefaultCAServer implements CertificateServer {
         .setBeginDate(beginDate)
         .setEndDate(endDate)
         .makeCA()
-        .setConfiguration(securityConfig.getConfiguration())
+        .setConfiguration(securityConfig)
         .setKey(key);
 
     try {
@@ -588,8 +588,9 @@ public class DefaultCAServer implements CertificateServer {
             }
           });
     } catch (IOException e) {
-      throw new org.apache.hadoop.hdds.security.x509.exception.CertificateException(
-          "Error while adding ip to CA self signed certificate", e,
+      throw new
+          org.apache.hadoop.hdds.security.x509.exception.CertificateException(
+              "Error while adding ip to CA self signed certificate", e,
           CSR_ERROR);
     }
     X509CertificateHolder selfSignedCertificate = builder.build();

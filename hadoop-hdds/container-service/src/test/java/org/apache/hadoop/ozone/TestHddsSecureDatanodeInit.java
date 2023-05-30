@@ -102,7 +102,13 @@ public class TestHddsSecureDatanodeInit {
     conf.set(HDDS_X509_RENEW_GRACE_DURATION, "PT5S"); // 5s
     securityConfig = new SecurityConfig(conf);
 
-    service = HddsDatanodeService.createHddsDatanodeService(args);
+    service = new HddsDatanodeService(args) {
+      @Override
+      SCMSecurityProtocolClientSideTranslatorPB createScmSecurityClient()
+          throws IOException {
+        return mock(SCMSecurityProtocolClientSideTranslatorPB.class);
+      }
+    };
     dnLogs = GenericTestUtils.LogCapturer.captureLogs(getLogger());
     callQuietly(() -> {
       service.start(conf);
@@ -277,6 +283,7 @@ public class TestHddsSecureDatanodeInit {
     try {
       closure.call();
     } catch (Throwable e) {
+      e.printStackTrace();
       // Ignore all Throwable,
     }
   }

@@ -405,8 +405,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       waitForHddsDatanodeToStop(datanodeService.getDatanodeDetails());
     }
     String[] args = new String[] {};
-    HddsDatanodeService service =
-        HddsDatanodeService.createHddsDatanodeService(args);
+    HddsDatanodeService service = new HddsDatanodeService(args);
     hddsDatanodes.add(i, service);
     service.start(config);
     if (waitForDatanode) {
@@ -863,8 +862,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
                   reconScm.getDatanodeRpcAddress().getPort());
         }
 
-        HddsDatanodeService datanode
-            = HddsDatanodeService.createHddsDatanodeService(args);
+        HddsDatanodeService datanode = new HddsDatanodeService(args);
         datanode.setConfiguration(dnConf);
         hddsDatanodes.add(datanode);
       }

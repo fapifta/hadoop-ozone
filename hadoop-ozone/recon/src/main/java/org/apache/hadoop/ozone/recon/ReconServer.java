@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.StringUtils;
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.recon.ReconConfig;
 import org.apache.hadoop.hdds.scm.server.OzoneStorageContainerManager;
 import org.apache.hadoop.hdds.security.SecurityConfig;
@@ -55,8 +56,10 @@ import java.net.InetSocketAddress;
 
 import static org.apache.hadoop.hdds.recon.ReconConfig.ConfigStrings.OZONE_RECON_KERBEROS_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdds.recon.ReconConfig.ConfigStrings.OZONE_RECON_KERBEROS_PRINCIPAL_KEY;
+import static org.apache.hadoop.hdds.utils.HddsServerUtil.getScmSecurityClientWithMaxRetry;
 import static org.apache.hadoop.ozone.common.Storage.StorageState.INITIALIZED;
 import static org.apache.hadoop.ozone.conf.OzoneServiceConfig.DEFAULT_SHUTDOWN_HOOK_PRIORITY;
+import static org.apache.hadoop.security.UserGroupInformation.getCurrentUser;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 /**
@@ -168,8 +171,10 @@ public class ReconServer extends GenericCli {
   private void initializeCertificateClient(OzoneConfiguration conf)
       throws IOException {
     LOG.info("Initializing secure Recon.");
+    SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
+        getScmSecurityClientWithMaxRetry(configuration, getCurrentUser());
     certClient = new ReconCertificateClient(new SecurityConfig(configuration),
-        reconStorage, this::saveNewCertId, null);
+        scmSecurityClient, reconStorage, this::saveNewCertId, null);
 
     CertificateClient.InitResponse response = certClient.init();
     if (response.equals(CertificateClient.InitResponse.REINIT)) {
@@ -178,7 +183,8 @@ public class ReconServer extends GenericCli {
       reconStorage.unsetReconCertSerialId();
       reconStorage.persistCurrentState();
       certClient = new ReconCertificateClient(new SecurityConfig(configuration),
-          reconStorage, this::saveNewCertId, this::terminateRecon);
+          scmSecurityClient, reconStorage, this::saveNewCertId,
+          this::terminateRecon);
       response = certClient.init();
     }
     LOG.info("Init response: {}", response);

@@ -50,7 +50,7 @@ import org.apache.commons.io.FileUtils;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_RENEW_GRACE_DURATION;
 import static org.apache.hadoop.ozone.HddsDatanodeService.getLogger;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
-import static org.mockito.ArgumentMatchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -102,11 +102,16 @@ public class TestHddsSecureDatanodeInit {
     conf.set(HDDS_X509_RENEW_GRACE_DURATION, "PT5S"); // 5s
     securityConfig = new SecurityConfig(conf);
 
+    scmClient = mock(SCMSecurityProtocolClientSideTranslatorPB.class);
     service = new HddsDatanodeService(args) {
       @Override
-      SCMSecurityProtocolClientSideTranslatorPB createScmSecurityClient()
-          throws IOException {
+      SCMSecurityProtocolClientSideTranslatorPB createScmSecurityClient() {
         return mock(SCMSecurityProtocolClientSideTranslatorPB.class);
+      }
+
+      @Override
+      void loginDatanodeUser(String hostname) {
+        // we do not do kerberos login for this test.
       }
     };
     dnLogs = GenericTestUtils.LogCapturer.captureLogs(getLogger());
@@ -127,8 +132,6 @@ public class TestHddsSecureDatanodeInit {
     certHolder = generateX509CertHolder(new KeyPair(publicKey, privateKey),
         null, Duration.ofSeconds(CERT_LIFETIME));
     datanodeDetails = MockDatanodeDetails.randomDatanodeDetails();
-
-    scmClient = mock(SCMSecurityProtocolClientSideTranslatorPB.class);
   }
 
   @AfterAll
@@ -160,7 +163,6 @@ public class TestHddsSecureDatanodeInit {
 
   @Test
   public void testSecureDnStartupCase0() throws Exception {
-
     // Case 0: When keypair as well as certificate is missing. Initial keypair
     // boot-up. Get certificate will fail as no SCM is not running.
     LambdaTestUtils.intercept(Exception.class, "",
@@ -306,7 +308,7 @@ public class TestHddsSecureDatanodeInit {
             .setX509CACertificate(pemCert)
             .setX509RootCACertificate(pemCert)
             .build();
-    when(scmClient.getDataNodeCertificateChain(anyObject(), anyString()))
+    when(scmClient.getDataNodeCertificateChain(any(), anyString()))
         .thenReturn(responseProto);
 
     // check that new cert ID should not equal to current cert ID
@@ -339,7 +341,7 @@ public class TestHddsSecureDatanodeInit {
         .setX509CACertificate(pemCert)
         .setX509RootCACertificate(pemCert)
         .build();
-    when(scmClient.getDataNodeCertificateChain(anyObject(), anyString()))
+    when(scmClient.getDataNodeCertificateChain(any(), anyString()))
         .thenReturn(responseProto);
     String certId2 = newCertHolder.getSerialNumber().toString();
 
@@ -377,7 +379,7 @@ public class TestHddsSecureDatanodeInit {
                 .SCMGetCertResponseProto.ResponseCode.success)
             .setX509Certificate(pemCert)
             .build();
-    when(scmClient.getDataNodeCertificateChain(anyObject(), anyString()))
+    when(scmClient.getDataNodeCertificateChain(any(), anyString()))
         .thenReturn(responseProto);
 
     // check that new cert ID should not equal to current cert ID
@@ -408,7 +410,7 @@ public class TestHddsSecureDatanodeInit {
         .setX509Certificate(pemCert)
         .setX509CACertificate(pemCert)
         .build();
-    when(scmClient.getDataNodeCertificateChain(anyObject(), anyString()))
+    when(scmClient.getDataNodeCertificateChain(any(), anyString()))
         .thenReturn(responseProto);
     String certId2 = newCertHolder.getSerialNumber().toString();
 

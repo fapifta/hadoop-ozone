@@ -250,26 +250,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
       if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
         component = "dn-" + datanodeDetails.getUuidString();
 
-        if (SecurityUtil.getAuthenticationMethod(conf).equals(
-            UserGroupInformation.AuthenticationMethod.KERBEROS)) {
-          LOG.info("Ozone security is enabled. Attempting login for Hdds " +
-                  "Datanode user. Principal: {},keytab: {}", conf.get(
-              DFSConfigKeysLegacy.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY),
-              conf.get(
-                  DFSConfigKeysLegacy.DFS_DATANODE_KERBEROS_KEYTAB_FILE_KEY));
-
-          UserGroupInformation.setConfiguration(conf);
-
-          SecurityUtil
-              .login(conf,
-                  DFSConfigKeysLegacy.DFS_DATANODE_KERBEROS_KEYTAB_FILE_KEY,
-                  DFSConfigKeysLegacy.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY,
-                  hostname);
-        } else {
-          throw new AuthenticationException(SecurityUtil.
-              getAuthenticationMethod(conf) + " authentication method not " +
-              "supported. Datanode user" + " login " + "failed.");
-        }
+        loginDatanodeUser(hostname);
         LOG.info("Hdds Datanode login successful.");
 
         secConf = new SecurityConfig(conf);
@@ -329,6 +310,31 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
     } catch (AuthenticationException ex) {
       throw new RuntimeException("Fail to authentication when starting" +
           " HDDS datanode plugin", ex);
+    }
+  }
+
+  @VisibleForTesting
+  void loginDatanodeUser(String hostname)
+      throws IOException, AuthenticationException {
+    if (SecurityUtil.getAuthenticationMethod(conf).equals(
+        UserGroupInformation.AuthenticationMethod.KERBEROS)) {
+      LOG.info("Ozone security is enabled. Attempting login for Hdds " +
+              "Datanode user. Principal: {},keytab: {}", conf.get(
+          DFSConfigKeysLegacy.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY),
+          conf.get(
+              DFSConfigKeysLegacy.DFS_DATANODE_KERBEROS_KEYTAB_FILE_KEY));
+
+      UserGroupInformation.setConfiguration(conf);
+
+      SecurityUtil
+          .login(conf,
+              DFSConfigKeysLegacy.DFS_DATANODE_KERBEROS_KEYTAB_FILE_KEY,
+              DFSConfigKeysLegacy.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY,
+              hostname);
+    } else {
+      throw new AuthenticationException(SecurityUtil.
+          getAuthenticationMethod(conf) + " authentication method not " +
+          "supported. Datanode user" + " login " + "failed.");
     }
   }
 

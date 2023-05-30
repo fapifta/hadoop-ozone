@@ -40,6 +40,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hdds.scm.pipeline.MockPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.security.connection.Connections;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.RatisTestHelper;
@@ -195,7 +196,7 @@ public class TestCSMMetrics {
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
     return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher,
         new ContainerController(new ContainerSet(1000), Maps.newHashMap()),
-        null, null);
+        Connections.configurator(null, null), null);
   }
 
   private static class TestContainerDispatcher implements ContainerDispatcher {

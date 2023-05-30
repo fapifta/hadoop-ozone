@@ -250,13 +250,6 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
       if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
         component = "dn-" + datanodeDetails.getUuidString();
 
-        secConf = new SecurityConfig(conf);
-        dnCertClient = new DNCertificateClient(secConf,
-            createScmSecurityClient(),
-            datanodeDetails,
-            datanodeDetails.getCertSerialId(), this::saveNewCertId,
-            this::terminateDatanode);
-
         if (SecurityUtil.getAuthenticationMethod(conf).equals(
             UserGroupInformation.AuthenticationMethod.KERBEROS)) {
           LOG.info("Ozone security is enabled. Attempting login for Hdds " +
@@ -278,6 +271,13 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
               "supported. Datanode user" + " login " + "failed.");
         }
         LOG.info("Hdds Datanode login successful.");
+
+        secConf = new SecurityConfig(conf);
+        dnCertClient = new DNCertificateClient(secConf,
+            createScmSecurityClient(),
+            datanodeDetails,
+            datanodeDetails.getCertSerialId(), this::saveNewCertId,
+            this::terminateDatanode);
       }
 
       DatanodeLayoutStorage layoutStorage = new DatanodeLayoutStorage(conf,

@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.pipeline.MockPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.security.connection.Connections;
 import org.apache.hadoop.hdds.upgrade.HDDSLayoutFeature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -222,7 +223,7 @@ public class TestDatanodeUpgradeToSchemaV3 {
         HDDSLayoutFeature.ERASURE_CODED_STORAGE_SUPPORT.layoutVersion());
     layoutStorage.initialize();
     dsm = new DatanodeStateMachine(ContainerTestUtils.createDatanodeDetails(),
-        conf, null, null, null, null);
+        conf, null, Connections.configurator(null, null), null, null);
     HddsVolume dataVolume = (
         HddsVolume) dsm.getContainer().getVolumeSet().getVolumesList().get(0);
     // Format HddsVolume to mimic the real cluster upgrade situation
@@ -493,7 +494,7 @@ public class TestDatanodeUpgradeToSchemaV3 {
         HDDSLayoutFeature.ERASURE_CODED_STORAGE_SUPPORT.layoutVersion());
     layoutStorage.initialize();
     dsm = new DatanodeStateMachine(ContainerTestUtils.createDatanodeDetails(),
-        conf, null, null, null, null);
+        conf, null, Connections.configurator(null, null), null, null);
     HddsVolume dataVolume = (
         HddsVolume) dsm.getContainer().getVolumeSet().getVolumesList().get(0);
     // Format HddsVolume to mimic the real cluster upgrade situation
@@ -593,7 +594,7 @@ public class TestDatanodeUpgradeToSchemaV3 {
     // Build and start the datanode.
     DatanodeDetails dd = ContainerTestUtils.createDatanodeDetails();
     DatanodeStateMachine newDsm = new DatanodeStateMachine(dd,
-        conf, null, null, null, null);
+        conf, null, Connections.configurator(null, null), null, null);
     int actualMlv = newDsm.getLayoutVersionManager().getMetadataLayoutVersion();
     Assert.assertEquals(
         HDDSLayoutFeature.ERASURE_CODED_STORAGE_SUPPORT.layoutVersion(),
@@ -614,7 +615,7 @@ public class TestDatanodeUpgradeToSchemaV3 {
 
     // Start new datanode with the same configuration.
     dsm = new DatanodeStateMachine(dd,
-        conf, null, null, null, null);
+        conf, null, Connections.configurator(null, null), null, null);
     int mlv = dsm.getLayoutVersionManager().getMetadataLayoutVersion();
     if (exactMatch) {
       Assert.assertEquals(expectedMlv, mlv);

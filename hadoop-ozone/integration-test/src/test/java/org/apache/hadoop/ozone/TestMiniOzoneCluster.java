@@ -30,6 +30,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.security.connection.Connections;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.EndpointStateMachine;
@@ -138,7 +139,8 @@ public class TestMiniOzoneCluster {
 
       for (int i = 0; i < 3; i++) {
         stateMachines.add(new DatanodeStateMachine(
-            randomDatanodeDetails(), ozoneConf, null, null, null, null));
+            randomDatanodeDetails(), ozoneConf, null,
+            Connections.configurator(null, null), null, null));
       }
 
       //we need to start all the servers to get the fix ports
@@ -183,11 +185,14 @@ public class TestMiniOzoneCluster {
     ozoneConf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
     try (
         DatanodeStateMachine sm1 = new DatanodeStateMachine(
-            randomDatanodeDetails(), ozoneConf,  null, null, null, null);
+            randomDatanodeDetails(), ozoneConf,  null,
+            Connections.configurator(null, null), null, null);
         DatanodeStateMachine sm2 = new DatanodeStateMachine(
-            randomDatanodeDetails(), ozoneConf,  null, null, null, null);
+            randomDatanodeDetails(), ozoneConf,  null,
+            Connections.configurator(null, null), null, null);
         DatanodeStateMachine sm3 = new DatanodeStateMachine(
-            randomDatanodeDetails(), ozoneConf,  null, null, null, null);
+            randomDatanodeDetails(), ozoneConf,  null,
+            Connections.configurator(null, null), null, null);
     ) {
       HashSet<Integer> ports = new HashSet<Integer>();
       assertTrue(ports.add(sm1.getContainer().getReadChannel().getIPCPort()));

@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.pipeline.MockPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.security.connection.Connections;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
@@ -117,7 +118,8 @@ public class TestContainerMetrics {
           volumeSet, handlers, context, metrics, null);
       dispatcher.setClusterId(UUID.randomUUID().toString());
 
-      server = new XceiverServerGrpc(datanodeDetails, conf, dispatcher, null);
+      server = new XceiverServerGrpc(datanodeDetails, conf, dispatcher,
+          Connections.configurator(null, null));
       client = new XceiverClientGrpc(pipeline, conf);
 
       server.start();

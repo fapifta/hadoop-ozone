@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.security.connection.Connections;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -157,8 +158,8 @@ public class TestDatanodeStateMachine {
   public void testStartStopDatanodeStateMachine() throws IOException,
       InterruptedException, TimeoutException {
     try (DatanodeStateMachine stateMachine =
-        new DatanodeStateMachine(getNewDatanodeDetails(), conf, null, null,
-            null, null)) {
+        new DatanodeStateMachine(getNewDatanodeDetails(), conf, null,
+            Connections.configurator(null, null), null, null)) {
       stateMachine.startDaemon();
       SCMConnectionManager connectionManager =
           stateMachine.getConnectionManager();
@@ -220,8 +221,9 @@ public class TestDatanodeStateMachine {
     datanodeDetails.setPort(port);
     ContainerUtils.writeDatanodeDetailsTo(datanodeDetails, idPath, conf);
     try (DatanodeStateMachine stateMachine =
-             new DatanodeStateMachine(datanodeDetails, conf, null, null,
-                 null, null)) {
+             new DatanodeStateMachine(datanodeDetails, conf, null,
+                 Connections.configurator(null, null), null, null)
+    ) {
       DatanodeStateMachine.DatanodeStates currentState =
           stateMachine.getContext().getState();
       Assertions.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
@@ -343,8 +345,8 @@ public class TestDatanodeStateMachine {
     datanodeDetails.setPort(port);
 
     try (DatanodeStateMachine stateMachine =
-             new DatanodeStateMachine(datanodeDetails, conf, null, null,
-                 null, null)) {
+             new DatanodeStateMachine(datanodeDetails, conf, null,
+                 Connections.configurator(null, null), null, null)) {
       DatanodeStateMachine.DatanodeStates currentState =
           stateMachine.getContext().getState();
       Assertions.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
@@ -402,7 +404,9 @@ public class TestDatanodeStateMachine {
       perTestConf.setStrings(entry.getKey(), entry.getValue());
       LOG.info("Test with {} = {}", entry.getKey(), entry.getValue());
       try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(
-          getNewDatanodeDetails(), perTestConf, null, null, null, null)) {
+          getNewDatanodeDetails(), perTestConf, null,
+          Connections.configurator(null, null), null, null)
+      ) {
         DatanodeStateMachine.DatanodeStates currentState =
             stateMachine.getContext().getState();
         Assertions.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,

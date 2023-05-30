@@ -49,7 +49,7 @@ class SecureConnection implements ConnectionConfigurator {
   private KeyStoresFactory clientKeyStores;
   private List<X509Certificate> trustedCerts;
 
-  public SecureConnection(
+  SecureConnection(
       SecurityConfig securityConfig,
       KeyStoresFactory serverKeyStores,
       KeyStoresFactory clientKeyStores) {

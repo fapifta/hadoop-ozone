@@ -246,4 +246,5 @@ public interface CertificateClient extends Closeable {
     RECOVER,
     REINIT
   }
+
 }

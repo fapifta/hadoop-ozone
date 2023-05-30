@@ -45,6 +45,7 @@ import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.pipeline.WritableECContainerProvider.WritableECContainerProviderConfig;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.security.connection.Connections;
 import org.apache.hadoop.hdds.security.token.ContainerTokenIdentifier;
 import org.apache.hadoop.hdds.security.token.ContainerTokenSecretManager;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenSecretManager;
@@ -340,7 +341,6 @@ public class TestContainerCommandsEC {
         }
       }, 500, 30000);
     }
-
     // Create a reconstruction command to create a new copy of indexes 4 and 5
     // which means 1 to 3 must be available. However we know the block
     // information is missing for index 2. As all containers in the stripe must
@@ -365,7 +365,8 @@ public class TestContainerCommandsEC {
     }
 
     try (ECReconstructionCoordinator coordinator =
-        new ECReconstructionCoordinator(config, certClient, null,
+        new ECReconstructionCoordinator(config, certClient,
+            Connections.configurator(new SecurityConfig(config), certClient),
             ECReconstructionMetrics.create())) {
 
       // Attempt to reconstruct the container.
@@ -583,7 +584,9 @@ public class TestContainerCommandsEC {
             new XceiverClientManager(config);
         ECReconstructionCoordinator coordinator =
             new ECReconstructionCoordinator(config, certClient,
-                 null, ECReconstructionMetrics.create())) {
+                Connections.configurator(
+                    new SecurityConfig(config), certClient),
+                ECReconstructionMetrics.create())) {
 
       ECReconstructionMetrics metrics =
           coordinator.getECReconstructionMetrics();
@@ -632,7 +635,10 @@ public class TestContainerCommandsEC {
       List<org.apache.hadoop.ozone.container.common.helpers.BlockData[]>
           blockDataArrList = new ArrayList<>();
       try (ECContainerOperationClient ecContainerOperationClient =
-               new ECContainerOperationClient(config, certClient)) {
+               new ECContainerOperationClient(config,
+                   Connections.configurator(
+                       new SecurityConfig(config), certClient))
+      ) {
         for (int j = 0; j < containerToDeletePipeline.size(); j++) {
           Pipeline p = containerToDeletePipeline.get(j);
           org.apache.hadoop.ozone.container.common.helpers.BlockData[]
@@ -779,7 +785,8 @@ public class TestContainerCommandsEC {
     Assert.assertThrows(IOException.class, () -> {
       try (ECReconstructionCoordinator coordinator =
           new ECReconstructionCoordinator(config, certClient,
-              null, ECReconstructionMetrics.create())) {
+              Connections.configurator(new SecurityConfig(config), certClient),
+              ECReconstructionMetrics.create())) {
         coordinator.reconstructECContainerGroup(conID,
             (ECReplicationConfig) containerPipeline.getReplicationConfig(),
             sourceNodeMap, targetNodeMap);
@@ -789,7 +796,10 @@ public class TestContainerCommandsEC {
     StorageContainerException ex =
         Assert.assertThrows(StorageContainerException.class, () -> {
           try (ECContainerOperationClient client =
-              new ECContainerOperationClient(config, certClient)) {
+              new ECContainerOperationClient(config,
+                  Connections.configurator(
+                      new SecurityConfig(config), certClient))
+          ) {
             client.listBlock(conID, targetDNToCheckContainerCLeaned,
                 new ECReplicationConfig(3, 2), cToken);
           }

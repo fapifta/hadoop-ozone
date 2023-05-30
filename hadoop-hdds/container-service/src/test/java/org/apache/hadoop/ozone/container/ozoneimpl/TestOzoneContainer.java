@@ -28,6 +28,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdds.security.connection.Connections;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.ozone.container.common.ContainerTestUtils;
@@ -177,8 +178,10 @@ public class TestOzoneContainer {
     // When OzoneContainer is started, the containers from disk should be
     // loaded into the containerSet.
     // Also expected to initialize committed space for each volume.
-    OzoneContainer ozoneContainer = new
-        OzoneContainer(datanodeDetails, conf, context, null);
+    OzoneContainer ozoneContainer = new OzoneContainer(
+        datanodeDetails, conf, context, null,
+        Connections.configurator(null, null)
+    );
 
     ContainerSet containerset = ozoneContainer.getContainerSet();
     assertEquals(numTestContainers, containerset.containerCount());
@@ -212,8 +215,10 @@ public class TestOzoneContainer {
     // When OzoneContainer is started, the containers from disk should be
     // loaded into the containerSet.
     // Also expected to initialize committed space for each volume.
-    OzoneContainer ozoneContainer = new
-            OzoneContainer(datanodeDetails, conf, context, null);
+    OzoneContainer ozoneContainer = new OzoneContainer(
+        datanodeDetails, conf, context, null,
+        Connections.configurator(null, null)
+    );
     Assert.assertEquals(volumeSet.getVolumesList().size(),
             ozoneContainer.getNodeReport().getStorageReportList().size());
     Assert.assertEquals(3,
@@ -233,8 +238,10 @@ public class TestOzoneContainer {
     // When OzoneContainer is started, the containers from disk should be
     // loaded into the containerSet.
     // Also expected to initialize committed space for each volume.
-    OzoneContainer ozoneContainer = new
-            OzoneContainer(datanodeDetails, conf, context, null);
+    OzoneContainer ozoneContainer = new OzoneContainer(
+        datanodeDetails, conf, context, null,
+        Connections.configurator(null, null)
+    );
     Assert.assertEquals(volumeSet.getVolumesList().size(),
             ozoneContainer.getNodeReport().getStorageReportList().size());
     Assert.assertEquals(1,

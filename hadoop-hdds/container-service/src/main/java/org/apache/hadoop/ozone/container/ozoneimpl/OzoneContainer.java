@@ -28,6 +28,7 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.IncrementalContainerReportProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.security.connection.ConnectionConfigurator;
 import org.apache.hadoop.hdds.security.token.TokenVerifier;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
@@ -115,7 +116,6 @@ public class OzoneContainer {
   private final AtomicReference<InitializingStatus> initializingStatus;
   private final ReplicationServer replicationServer;
   private DatanodeDetails datanodeDetails;
-  private StateContext context;
 
 
   private final ContainerMetrics metrics;
@@ -134,11 +134,14 @@ public class OzoneContainer {
    * @throws IOException
    */
   public OzoneContainer(
-      DatanodeDetails datanodeDetails, ConfigurationSource conf,
-      StateContext context, CertificateClient certClient) throws IOException {
+      DatanodeDetails datanodeDetails,
+      ConfigurationSource conf,
+      StateContext context,
+      CertificateClient certClient,
+      ConnectionConfigurator connectionConfigurator
+  ) throws IOException {
     config = conf;
     this.datanodeDetails = datanodeDetails;
-    this.context = context;
     this.volumeChecker = getVolumeChecker(conf);
 
     volumeSet = new MutableVolumeSet(datanodeDetails.getUuidString(), conf,
@@ -199,19 +202,18 @@ public class OzoneContainer {
     controller = new ContainerController(containerSet, handlers);
 
     writeChannel = XceiverServerRatis.newXceiverServerRatis(
-        datanodeDetails, config, hddsDispatcher, controller, certClient,
-        context);
+        datanodeDetails, config, hddsDispatcher, controller,
+        connectionConfigurator, context);
 
     replicationServer = new ReplicationServer(
         controller,
         conf.getObject(ReplicationConfig.class),
-        secConf,
-        certClient,
+        connectionConfigurator,
         new ContainerImporter(conf, containerSet, controller,
             volumeSet));
 
     readChannel = new XceiverServerGrpc(
-        datanodeDetails, config, hddsDispatcher, certClient);
+        datanodeDetails, config, hddsDispatcher, connectionConfigurator);
     Duration blockDeletingSvcInterval = conf.getObject(
         DatanodeConfiguration.class).getBlockDeletionInterval();
 
@@ -248,13 +250,8 @@ public class OzoneContainer {
             recoveringContainerScrubbingServiceTimeout,
             containerSet);
 
-    if (certClient != null && secConf.isGrpcTlsEnabled()) {
-      tlsClientConfig = new GrpcTlsConfig(
-          certClient.getClientKeyStoresFactory().getKeyManagers()[0],
-          certClient.getClientKeyStoresFactory().getTrustManagers()[0], true);
-    } else {
-      tlsClientConfig = null;
-    }
+    tlsClientConfig =
+        connectionConfigurator.secureClientGrpcTlsConfigWithMTLS();
 
     initializingStatus =
         new AtomicReference<>(InitializingStatus.UNINITIALIZED);

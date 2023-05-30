@@ -104,6 +104,7 @@ import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_OM
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_SCM_DB_DIR;
 import org.hadoop.ozone.recon.codegen.ReconSqlDbConfig;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -476,7 +477,11 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   public void startHddsDatanodes() {
     hddsDatanodes.forEach((datanode) -> {
       try {
-        datanode.setCertificateClient(getCAClient());
+        if (getCAClient() != null) {
+          datanode.setCertificateClient(getCAClient());
+        } else {
+          datanode.setCertificateClient(Mockito.mock(CertificateClient.class));
+        }
       } catch (IOException e) {
         LOG.error("Exception while setting certificate client to DataNode.", e);
       }

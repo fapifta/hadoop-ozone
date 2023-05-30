@@ -221,8 +221,8 @@ public class TestDatanodeUpgradeToSchemaV3 {
         UUID.randomUUID().toString(),
         HDDSLayoutFeature.ERASURE_CODED_STORAGE_SUPPORT.layoutVersion());
     layoutStorage.initialize();
-    dsm = new DatanodeStateMachine(
-        ContainerTestUtils.createDatanodeDetails(), conf, null, null, null);
+    dsm = new DatanodeStateMachine(ContainerTestUtils.createDatanodeDetails(),
+        conf, null, null, null, null);
     HddsVolume dataVolume = (
         HddsVolume) dsm.getContainer().getVolumeSet().getVolumesList().get(0);
     // Format HddsVolume to mimic the real cluster upgrade situation
@@ -492,8 +492,8 @@ public class TestDatanodeUpgradeToSchemaV3 {
         UUID.randomUUID().toString(),
         HDDSLayoutFeature.ERASURE_CODED_STORAGE_SUPPORT.layoutVersion());
     layoutStorage.initialize();
-    dsm = new DatanodeStateMachine(
-        ContainerTestUtils.createDatanodeDetails(), conf, null, null, null);
+    dsm = new DatanodeStateMachine(ContainerTestUtils.createDatanodeDetails(),
+        conf, null, null, null, null);
     HddsVolume dataVolume = (
         HddsVolume) dsm.getContainer().getVolumeSet().getVolumesList().get(0);
     // Format HddsVolume to mimic the real cluster upgrade situation
@@ -593,7 +593,7 @@ public class TestDatanodeUpgradeToSchemaV3 {
     // Build and start the datanode.
     DatanodeDetails dd = ContainerTestUtils.createDatanodeDetails();
     DatanodeStateMachine newDsm = new DatanodeStateMachine(dd,
-        conf, null, null, null);
+        conf, null, null, null, null);
     int actualMlv = newDsm.getLayoutVersionManager().getMetadataLayoutVersion();
     Assert.assertEquals(
         HDDSLayoutFeature.ERASURE_CODED_STORAGE_SUPPORT.layoutVersion(),
@@ -614,7 +614,7 @@ public class TestDatanodeUpgradeToSchemaV3 {
 
     // Start new datanode with the same configuration.
     dsm = new DatanodeStateMachine(dd,
-        conf, null, null, null);
+        conf, null, null, null, null);
     int mlv = dsm.getLayoutVersionManager().getMetadataLayoutVersion();
     if (exactMatch) {
       Assert.assertEquals(expectedMlv, mlv);

@@ -38,6 +38,7 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.security.connection.ConnectionConfigurator;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.upgrade.HDDSLayoutVersionManager;
 import org.apache.hadoop.hdds.utils.IOUtils;
@@ -136,11 +137,14 @@ public class DatanodeStateMachine implements Closeable {
    * @param certClient - Datanode Certificate client, required if security is
    *                     enabled
    */
-  public DatanodeStateMachine(DatanodeDetails datanodeDetails,
-                              ConfigurationSource conf,
-                              CertificateClient certClient,
-                              HddsDatanodeStopService hddsDatanodeStopService,
-                              DatanodeCRLStore crlStore) throws IOException {
+  public DatanodeStateMachine(
+      DatanodeDetails datanodeDetails,
+      ConfigurationSource conf,
+      CertificateClient certClient,
+      ConnectionConfigurator connectionConfigurator,
+      HddsDatanodeStopService hddsDatanodeStopService,
+      DatanodeCRLStore crlStore
+  ) throws IOException {
     DatanodeConfiguration dnConf =
         conf.getObject(DatanodeConfiguration.class);
 
@@ -171,7 +175,7 @@ public class DatanodeStateMachine implements Closeable {
     constructionLock.writeLock().lock();
     try {
       container = new OzoneContainer(this.datanodeDetails,
-          conf, context, certClient);
+          conf, context, certClient, connectionConfigurator);
     } finally {
       constructionLock.writeLock().unlock();
     }
@@ -208,7 +212,7 @@ public class DatanodeStateMachine implements Closeable {
     ecReconstructionMetrics = ECReconstructionMetrics.create();
 
     ecReconstructionCoordinator = new ECReconstructionCoordinator(
-        conf, certClient, context, ecReconstructionMetrics);
+        conf, certClient, connectionConfigurator, ecReconstructionMetrics);
 
     // This is created as an instance variable as Mockito needs to access it in
     // a test. The test mocks it in a running mini-cluster.

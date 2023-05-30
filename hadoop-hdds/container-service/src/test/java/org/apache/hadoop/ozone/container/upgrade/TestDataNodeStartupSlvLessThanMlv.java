@@ -66,7 +66,7 @@ public class TestDataNodeStartupSlvLessThanMlv {
 
     try {
       new DatanodeStateMachine(getNewDatanodeDetails(), conf, null,
-                   null, null);
+                   null, null, null);
       Assert.fail("Expected IOException due to incorrect MLV on DataNode " +
           "creation.");
     } catch (IOException e) {

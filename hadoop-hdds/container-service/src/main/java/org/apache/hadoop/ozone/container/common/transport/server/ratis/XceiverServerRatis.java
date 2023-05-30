@@ -56,9 +56,7 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.ratis.ContainerCommandRequestMessage;
 import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
-import org.apache.hadoop.hdds.security.ssl.KeyStoresFactory;
-import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.connection.ConnectionConfigurator;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdds.utils.HddsServerUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -79,7 +77,6 @@ import io.opentracing.util.GlobalTracer;
 import org.apache.ratis.conf.Parameters;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
-import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.netty.NettyConfigKeys;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.proto.RaftProtos.RoleInfoProto;
@@ -478,11 +475,14 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   }
 
   public static XceiverServerRatis newXceiverServerRatis(
-      DatanodeDetails datanodeDetails, ConfigurationSource ozoneConf,
-      ContainerDispatcher dispatcher, ContainerController containerController,
-      CertificateClient caClient, StateContext context) throws IOException {
-    Parameters parameters = createTlsParameters(
-        new SecurityConfig(ozoneConf), caClient);
+      DatanodeDetails datanodeDetails,
+      ConfigurationSource ozoneConf,
+      ContainerDispatcher dispatcher,
+      ContainerController containerController,
+      ConnectionConfigurator configurator,
+      StateContext context
+  ) throws IOException {
+    Parameters parameters = configurator.secureRaftConnectionParameters();
 
     return new XceiverServerRatis(datanodeDetails, dispatcher,
         containerController, context, ozoneConf, parameters);
@@ -494,22 +494,6 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   // authenticate from client to server is via block token (or container token).
   // DN Ratis server act as both SSL client and server and we must pass TLS
   // configuration for both.
-  private static Parameters createTlsParameters(SecurityConfig conf,
-      CertificateClient caClient) throws IOException {
-    if (conf.isSecurityEnabled() && conf.isGrpcTlsEnabled()) {
-      KeyStoresFactory managerFactory =
-          caClient.getServerKeyStoresFactory();
-      GrpcTlsConfig serverConfig = new GrpcTlsConfig(
-          managerFactory.getKeyManagers()[0],
-          managerFactory.getTrustManagers()[0], true);
-      GrpcTlsConfig clientConfig = new GrpcTlsConfig(
-          managerFactory.getKeyManagers()[0],
-          managerFactory.getTrustManagers()[0], false);
-      return RatisHelper.setServerTlsConf(serverConfig, clientConfig);
-    }
-
-    return null;
-  }
 
   @Override
   public void start() throws IOException {

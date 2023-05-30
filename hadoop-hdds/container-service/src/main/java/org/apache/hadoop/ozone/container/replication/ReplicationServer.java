@@ -27,18 +27,14 @@ import org.apache.hadoop.hdds.conf.Config;
 import org.apache.hadoop.hdds.conf.ConfigGroup;
 import org.apache.hadoop.hdds.conf.ConfigType;
 import org.apache.hadoop.hdds.conf.PostConstruct;
-import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.connection.ConnectionConfigurator;
 import org.apache.hadoop.hdds.tracing.GrpcServerInterceptor;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 
 import org.apache.ratis.thirdparty.io.grpc.Server;
 import org.apache.ratis.thirdparty.io.grpc.ServerInterceptors;
-import org.apache.ratis.thirdparty.io.grpc.netty.GrpcSslContexts;
 import org.apache.ratis.thirdparty.io.grpc.netty.NettyServerBuilder;
-import org.apache.ratis.thirdparty.io.netty.handler.ssl.ClientAuth;
-import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,10 +52,6 @@ public class ReplicationServer {
 
   private Server server;
 
-  private SecurityConfig secConf;
-
-  private CertificateClient caClient;
-
   private ContainerController controller;
 
   private int port;
@@ -67,11 +59,12 @@ public class ReplicationServer {
 
   private ThreadPoolExecutor executor;
 
-  public ReplicationServer(ContainerController controller,
-      ReplicationConfig replicationConfig, SecurityConfig secConf,
-      CertificateClient caClient, ContainerImporter importer) {
-    this.secConf = secConf;
-    this.caClient = caClient;
+  public ReplicationServer(
+      ContainerController controller,
+      ReplicationConfig replicationConfig,
+      ConnectionConfigurator connection,
+      ContainerImporter importer
+  ) {
     this.controller = controller;
     this.importer = importer;
     this.port = replicationConfig.getPort();
@@ -87,10 +80,10 @@ public class ReplicationServer {
                 .setNameFormat("ReplicationContainerReader-%d")
                 .build());
 
-    init();
+    init(connection);
   }
 
-  public void init() {
+  private void init(ConnectionConfigurator connection) {
     NettyServerBuilder nettyServerBuilder = NettyServerBuilder.forPort(port)
         .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE)
         .addService(ServerInterceptors.intercept(new GrpcReplicationService(
@@ -99,25 +92,7 @@ public class ReplicationServer {
         ), new GrpcServerInterceptor()))
         .executor(executor);
 
-    if (secConf.isSecurityEnabled() && secConf.isGrpcTlsEnabled()) {
-      try {
-        SslContextBuilder sslContextBuilder = SslContextBuilder.forServer(
-            caClient.getServerKeyStoresFactory().getKeyManagers()[0]);
-
-        sslContextBuilder = GrpcSslContexts.configure(
-            sslContextBuilder, secConf.getGrpcSslProvider());
-
-        sslContextBuilder.clientAuth(ClientAuth.REQUIRE);
-        sslContextBuilder.trustManager(
-            caClient.getServerKeyStoresFactory().getTrustManagers()[0]);
-
-        nettyServerBuilder.sslContext(sslContextBuilder.build());
-      } catch (IOException ex) {
-        throw new IllegalArgumentException(
-            "Unable to setup TLS for secure datanode replication GRPC "
-                + "endpoint.", ex);
-      }
-    }
+    connection.secureReplicationServerConditionally(nettyServerBuilder);
 
     server = nettyServerBuilder.build();
   }

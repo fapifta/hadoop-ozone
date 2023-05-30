@@ -274,7 +274,7 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
     return tokenSequenceNumber;
   }
 
-  public CertificateClient getCertClient() {
+  protected CertificateClient getCertClient() {
     return certClient;
   }
 

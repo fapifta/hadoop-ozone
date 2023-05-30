@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.pipeline.MockPipeline;
+import org.apache.hadoop.hdds.security.connection.ConnectionConfigurator;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -49,6 +50,7 @@ import java.util.concurrent.CompletableFuture;
 import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 import static org.apache.hadoop.hdds.protocol.MockDatanodeDetails.randomDatanodeDetails;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests ozone containers.
@@ -76,11 +78,13 @@ public class TestOzoneContainer {
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
 
       DatanodeDetails datanodeDetails = randomDatanodeDetails();
-      StateContext context = Mockito.mock(StateContext.class);
-      DatanodeStateMachine dsm = Mockito.mock(DatanodeStateMachine.class);
+      StateContext context = mock(StateContext.class);
+      DatanodeStateMachine dsm = mock(DatanodeStateMachine.class);
       Mockito.when(dsm.getDatanodeDetails()).thenReturn(datanodeDetails);
       Mockito.when(context.getParent()).thenReturn(dsm);
-      container = new OzoneContainer(datanodeDetails, conf, context, null);
+      container =
+          new OzoneContainer(datanodeDetails, conf, context, null,
+              mock(ConnectionConfigurator.class));
       //Set clusterId and manually start ozone container.
       container.start(UUID.randomUUID().toString());
 
@@ -109,12 +113,12 @@ public class TestOzoneContainer {
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
 
       DatanodeDetails datanodeDetails = randomDatanodeDetails();
-      StateContext context = Mockito.mock(StateContext.class);
-      DatanodeStateMachine dsm = Mockito.mock(DatanodeStateMachine.class);
+      StateContext context = mock(StateContext.class);
+      DatanodeStateMachine dsm = mock(DatanodeStateMachine.class);
       Mockito.when(dsm.getDatanodeDetails()).thenReturn(datanodeDetails);
       Mockito.when(context.getParent()).thenReturn(dsm);
       container = new OzoneContainer(datanodeDetails, conf,
-          context, null);
+          context, null, mock(ConnectionConfigurator.class));
 
       String clusterId = UUID.randomUUID().toString();
       container.start(clusterId);

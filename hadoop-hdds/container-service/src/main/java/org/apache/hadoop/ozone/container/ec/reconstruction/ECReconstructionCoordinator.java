@@ -36,6 +36,7 @@ import org.apache.hadoop.hdds.scm.storage.BlockLocationInfo;
 import org.apache.hadoop.hdds.scm.storage.BufferPool;
 import org.apache.hadoop.hdds.scm.storage.ECBlockOutputStream;
 import org.apache.hadoop.hdds.security.SecurityConfig;
+import org.apache.hadoop.hdds.security.connection.ConnectionConfigurator;
 import org.apache.hadoop.hdds.security.token.ContainerTokenIdentifier;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.utils.IOUtils;
@@ -47,7 +48,6 @@ import org.apache.hadoop.ozone.client.io.BlockInputStreamFactoryImpl;
 import org.apache.hadoop.ozone.client.io.ECBlockInputStreamProxy;
 import org.apache.hadoop.ozone.client.io.ECBlockReconstructedStripeInputStream;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
-import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.security.token.Token;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,8 +60,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
@@ -108,15 +106,13 @@ public class ECReconstructionCoordinator implements Closeable {
   private final TokenHelper tokenHelper;
   private final ContainerClientMetrics clientMetrics;
   private final ECReconstructionMetrics metrics;
-  private final StateContext context;
 
   public ECReconstructionCoordinator(ConfigurationSource conf,
       CertificateClient certificateClient,
-      StateContext context,
+      ConnectionConfigurator connection,
       ECReconstructionMetrics metrics) throws IOException {
-    this.context = context;
     this.containerOperationClient = new ECContainerOperationClient(conf,
-        certificateClient);
+        connection);
     this.byteBufferPool = new ElasticByteBufferPool();
     this.ecReconstructExecutor =
         new ThreadPoolExecutor(EC_RECONSTRUCT_STRIPE_READ_POOL_MIN_SIZE,
@@ -512,11 +508,5 @@ public class ECReconstructionCoordinator implements Closeable {
 
   public ECReconstructionMetrics getECReconstructionMetrics() {
     return this.metrics;
-  }
-
-  OptionalLong getTermOfLeaderSCM() {
-    return Optional.ofNullable(context)
-        .map(StateContext::getTermOfLeaderSCM)
-        .orElse(OptionalLong.empty());
   }
 }

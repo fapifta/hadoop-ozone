@@ -36,8 +36,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
-import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.connection.ConnectionConfigurator;
 import org.apache.hadoop.hdds.tracing.GrpcServerInterceptor;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdds.utils.HddsServerUtil;
@@ -53,7 +52,6 @@ import io.opentracing.util.GlobalTracer;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeConfiguration;
 import org.apache.ratis.thirdparty.io.grpc.Server;
 import org.apache.ratis.thirdparty.io.grpc.ServerInterceptors;
-import org.apache.ratis.thirdparty.io.grpc.netty.GrpcSslContexts;
 import org.apache.ratis.thirdparty.io.grpc.netty.NettyServerBuilder;
 import org.apache.ratis.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.ratis.thirdparty.io.netty.channel.ServerChannel;
@@ -62,7 +60,6 @@ import org.apache.ratis.thirdparty.io.netty.channel.epoll.EpollEventLoopGroup;
 import org.apache.ratis.thirdparty.io.netty.channel.epoll.EpollServerSocketChannel;
 import org.apache.ratis.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.ratis.thirdparty.io.netty.channel.socket.nio.NioServerSocketChannel;
-import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,7 +88,7 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
    */
   public XceiverServerGrpc(DatanodeDetails datanodeDetails,
       ConfigurationSource conf,
-      ContainerDispatcher dispatcher, CertificateClient caClient) {
+      ContainerDispatcher dispatcher, ConnectionConfigurator configurator) {
     Preconditions.checkNotNull(conf);
 
     this.id = datanodeDetails.getUuid();
@@ -139,18 +136,8 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
         .addService(ServerInterceptors.intercept(
             new GrpcXceiverService(dispatcher), new GrpcServerInterceptor()));
 
-    SecurityConfig secConf = new SecurityConfig(conf);
-    if (secConf.isSecurityEnabled() && secConf.isGrpcTlsEnabled()) {
-      try {
-        SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(
-            caClient.getServerKeyStoresFactory().getKeyManagers()[0]);
-        SslContextBuilder sslContextBuilder = GrpcSslContexts.configure(
-            sslClientContextBuilder, secConf.getGrpcSslProvider());
-        nettyServerBuilder.sslContext(sslContextBuilder.build());
-      } catch (Exception ex) {
-        LOG.error("Unable to setup TLS for secure datanode GRPC endpoint.", ex);
-      }
-    }
+    configurator.secureXceiverServerGrpcConditionally(nettyServerBuilder, LOG);
+
     server = nettyServerBuilder.build();
     storageContainer = dispatcher;
   }

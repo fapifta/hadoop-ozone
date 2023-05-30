@@ -503,27 +503,13 @@ public final class HAUtils {
    * Build CA List in the format of X509Certificate.
    * If certificate client is null, obtain the list of CA using SCM
    * security client, else it uses certificate client.
-   * @param certClient
    * @param conf
    * @return list of CA X509Certificates.
    * @throws IOException
    */
   public static List<X509Certificate> buildCAX509List(
-      CertificateClient certClient,
       ConfigurationSource conf) throws IOException {
-    if (certClient != null) {
-      // Do this here to avoid extra conversion of X509 to pem and again to
-      // X509 by buildCAList.
-      if (!SCMHAUtils.isSCMHAEnabled(conf)) {
-        List<X509Certificate> x509Certificates = new ArrayList<>();
-        if (certClient.getRootCACertificate() != null) {
-          x509Certificates.add(certClient.getRootCACertificate());
-        }
-        x509Certificates.add(certClient.getCACertificate());
-        return x509Certificates;
-      }
-    }
-    List<String> pemEncodedCerts = HAUtils.buildCAList(certClient, conf);
+    List<String> pemEncodedCerts = HAUtils.buildCAList(null, conf);
     return OzoneSecurityUtil.convertToX509(pemEncodedCerts);
   }
 

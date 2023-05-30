@@ -45,6 +45,7 @@ import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.pipeline.MockPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
+import org.apache.hadoop.hdds.security.connection.Connections;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.hdds.security.token.ContainerTokenSecretManager;
 import org.apache.hadoop.hdds.security.token.TokenVerifier;
@@ -159,13 +160,18 @@ public class TestSecureContainerServer {
     DatanodeDetails dd = MockDatanodeDetails.randomDatanodeDetails();
     HddsDispatcher hddsDispatcher = createDispatcher(dd,
         UUID.randomUUID(), CONF);
-    runTestClientServer(1, (pipeline, conf) -> conf
+    runTestClientServer(1,
+        (pipeline, conf) -> conf
             .setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
                 pipeline.getFirstNode()
                     .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue()),
         XceiverClientGrpc::new,
         (dn, conf) -> new XceiverServerGrpc(dd, conf,
-            hddsDispatcher, caClient), (dn, p) -> {  }, (p) -> { });
+            hddsDispatcher,
+            Connections.configurator(new SecurityConfig(conf), caClient)),
+        (dn, p) -> {  },
+        (p) -> { }
+    );
   }
 
   private static HddsDispatcher createDispatcher(DatanodeDetails dd, UUID scmId,
@@ -224,7 +230,7 @@ public class TestSecureContainerServer {
         UUID.randomUUID(), conf);
     return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher,
         new ContainerController(new ContainerSet(1000), Maps.newHashMap()),
-        caClient, null);
+        Connections.configurator(new SecurityConfig(conf), caClient), null);
   }
 
   private static void runTestClientServerRatis(RpcType rpc, int numNodes)

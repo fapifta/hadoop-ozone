@@ -38,6 +38,8 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerExcep
 import org.apache.hadoop.hdds.scm.pipeline.MockPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.security.SecurityConfig;
+import org.apache.hadoop.hdds.security.connection.ConnectionConfigurator;
+import org.apache.hadoop.hdds.security.connection.Connections;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClient;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -106,8 +108,9 @@ public class TestContainerServer {
                     .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue()),
         XceiverClientGrpc::new,
         (dn, conf) -> new XceiverServerGrpc(datanodeDetails, conf,
-            new TestContainerDispatcher(), caClient), (dn, p) -> {
-        });
+            new TestContainerDispatcher(), mock(ConnectionConfigurator.class)),
+        (dn, p) -> { }
+    );
   }
 
   @FunctionalInterface
@@ -131,7 +134,7 @@ public class TestContainerServer {
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
     return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher,
         new ContainerController(new ContainerSet(1000), Maps.newHashMap()),
-        caClient, null);
+        mock(ConnectionConfigurator.class), null);
   }
 
   static void runTestClientServerRatis(RpcType rpc, int numNodes)
@@ -224,7 +227,7 @@ public class TestContainerServer {
       dispatcher.init();
 
       server = new XceiverServerGrpc(datanodeDetails, conf, dispatcher,
-          caClient);
+          Connections.configurator(null, null));
       client = new XceiverClientGrpc(pipeline, conf);
 
       server.start();

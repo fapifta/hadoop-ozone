@@ -98,6 +98,8 @@ final class ServiceInfoProvider {
     if (config.isSecurityEnabled() && !skipInitializationForTesting) {
       this.certClient = certClient;
       Set<X509Certificate> certs = getCACertificates();
+      LOG.info("Initialized with the following certificates:");
+      logCertificates(certs);
       caCertPEM = toPEMEncodedString(newestOf(certs));
       caCertPEMList = toPEMEncodedStrings(certs);
       this.certClient.registerRootCARotationListener(onRootCAChange());
@@ -113,6 +115,8 @@ final class ServiceInfoProvider {
     return certs -> {
       CompletableFuture<Void> returnedFuture = new CompletableFuture<>();
       try {
+        LOG.info("Certificates are renewed, updated list:");
+        logCertificates(certs);
         synchronized (this) {
           caCertPEM = toPEMEncodedString(newestOf(certs));
           caCertPEMList = toPEMEncodedStrings(certs);
@@ -160,5 +164,17 @@ final class ServiceInfoProvider {
     return certs.stream()
         .map(this::toPEMEncodedString)
         .collect(Collectors.toList());
+  }
+
+  private void logCertificates(Collection<X509Certificate> certs) {
+    for (X509Certificate cert : certs) {
+      LOG.info("CertificateSerialID: {}\n" +
+              "SubjectDN: {}\n" +
+              "IssuerDN: {}\n" +
+              "NotBefore: {}'\n" +
+              "NotAfter: {}",
+          cert.getSerialNumber(), cert.getSubjectDN(), cert.getIssuerDN(),
+          cert.getNotBefore(), cert.getNotAfter());
+    }
   }
 }

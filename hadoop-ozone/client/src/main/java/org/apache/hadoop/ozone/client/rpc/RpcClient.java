@@ -283,6 +283,16 @@ public class RpcClient implements ClientProtocol {
         caCertPems = Collections.singletonList(caCertPem);
       }
       x509Certificates = OzoneSecurityUtil.convertToX509(caCertPems);
+      LOG.error("Certificates we got from OM:");
+      for (X509Certificate cert : x509Certificates) {
+        LOG.error("CertificateSerialID: {}\n" +
+                "SubjectDN: {}\n" +
+                "IssuerDN: {}\n" +
+                "NotBefore: {}'\n" +
+                "NotAfter: {}",
+            cert.getSerialNumber(), cert.getSubjectDN(), cert.getIssuerDN(),
+            cert.getNotBefore(), cert.getNotAfter());
+      }
     }
 
     this.xceiverClientManager =

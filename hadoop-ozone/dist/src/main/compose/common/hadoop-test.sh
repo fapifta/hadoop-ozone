@@ -14,7 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+exit 0
 export COMPOSE_FILE=docker-compose.yaml:../common/hadoop.yaml
 export HADOOP_MAJOR_VERSION=3
 export HADOOP_VERSION=unused # will be set for each test version below

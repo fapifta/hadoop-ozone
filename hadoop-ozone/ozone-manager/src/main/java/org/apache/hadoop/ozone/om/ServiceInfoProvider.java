@@ -98,7 +98,7 @@ final class ServiceInfoProvider {
     if (config.isSecurityEnabled() && !skipInitializationForTesting) {
       this.certClient = certClient;
       Set<X509Certificate> certs = getCACertificates();
-      LOG.info("Initialized with the following certificates:");
+      LOG.info("Initialized with the following certificates: ");
       logCertificates(certs);
       caCertPEM = toPEMEncodedString(newestOf(certs));
       caCertPEMList = toPEMEncodedStrings(certs);

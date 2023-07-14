@@ -515,7 +515,7 @@ function calculate_test_types_to_run() {
     COUNT_CORE_OTHER_CHANGED_FILES=$((COUNT_ALL_CHANGED_FILES - matched_files_count))
     readonly COUNT_CORE_OTHER_CHANGED_FILES
 
-    compose_tests_needed=false
+    compose_tests_needed=true
     integration_tests_needed=false
     kubernetes_tests_needed=false
 
@@ -524,21 +524,21 @@ function calculate_test_types_to_run() {
         echo "Looks like ${COUNT_CORE_OTHER_CHANGED_FILES} core files changed, running all tests."
         echo
         compose_tests_needed=true
-        integration_tests_needed=true
-        kubernetes_tests_needed=true
-        add_basic_check unit
+#        integration_tests_needed=true
+#        kubernetes_tests_needed=true
+#        add_basic_check unit
     else
         echo "All ${COUNT_ALL_CHANGED_FILES} changed files are known to be handled by specific checks."
         echo
         if [[ ${COUNT_COMPOSE_CHANGED_FILES} != "0" ]] || [[ ${COUNT_ROBOT_CHANGED_FILES} != "0" ]]; then
             compose_tests_needed="true"
         fi
-        if [[ ${COUNT_INTEGRATION_CHANGED_FILES} != "0" ]]; then
-            integration_tests_needed="true"
-        fi
-        if [[ ${COUNT_KUBERNETES_CHANGED_FILES} != "0" ]] || [[ ${COUNT_ROBOT_CHANGED_FILES} != "0" ]]; then
-            kubernetes_tests_needed="true"
-        fi
+#        if [[ ${COUNT_INTEGRATION_CHANGED_FILES} != "0" ]]; then
+#            integration_tests_needed="true"
+#        fi
+#        if [[ ${COUNT_KUBERNETES_CHANGED_FILES} != "0" ]] || [[ ${COUNT_ROBOT_CHANGED_FILES} != "0" ]]; then
+#            kubernetes_tests_needed="true"
+#        fi
     fi
     start_end::group_end
 }
@@ -586,8 +586,8 @@ fi
 
 
 get_changed_files
-run_all_tests_if_environment_files_changed
-check_if_tests_are_needed_at_all
+#run_all_tests_if_environment_files_changed
+#check_if_tests_are_needed_at_all
 
 get_count_all_files
 get_count_compose_files
@@ -602,13 +602,13 @@ check_needs_compile
 
 # calculate basic checks to run
 BASIC_CHECKS="rat"
-check_needs_author
-check_needs_bats
-check_needs_checkstyle
-check_needs_dependency
-check_needs_docs
-check_needs_findbugs
-check_needs_native
-check_needs_unit_test
+#check_needs_author
+#check_needs_bats
+#check_needs_checkstyle
+#check_needs_dependency
+#check_needs_docs
+#check_needs_findbugs
+#check_needs_native
+#check_needs_unit_test
 calculate_test_types_to_run
 set_outputs

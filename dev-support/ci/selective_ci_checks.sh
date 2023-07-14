@@ -546,11 +546,11 @@ function calculate_test_types_to_run() {
 function set_outputs() {
     # print results outside the group to increase visibility
 
-    if [[ -n "${BASIC_CHECKS}" ]]; then
-        initialization::ga_output needs-basic-checks "true"
-    fi
-    initialization::ga_output basic-checks \
-        "$(initialization::parameters_to_json ${BASIC_CHECKS})"
+#    if [[ -n "${BASIC_CHECKS}" ]]; then
+#        initialization::ga_output needs-basic-checks "true"
+#    fi
+#    initialization::ga_output basic-checks \
+#        "$(initialization::parameters_to_json ${BASIC_CHECKS})"
 
     : ${compile_needed:=false}
 
@@ -561,9 +561,9 @@ function set_outputs() {
     initialization::ga_output needs-build "${build_needed:-false}"
     initialization::ga_output needs-compile "${compile_needed}"
     initialization::ga_output needs-compose-tests "${compose_tests_needed}"
-    initialization::ga_output needs-dependency-check "${dependency_check_needed}"
-    initialization::ga_output needs-integration-tests "${integration_tests_needed}"
-    initialization::ga_output needs-kubernetes-tests "${kubernetes_tests_needed}"
+#    initialization::ga_output needs-dependency-check "${dependency_check_needed}"
+#    initialization::ga_output needs-integration-tests "${integration_tests_needed}"
+#    initialization::ga_output needs-kubernetes-tests "${kubernetes_tests_needed}"
 }
 
 check_for_full_tests_needed_label

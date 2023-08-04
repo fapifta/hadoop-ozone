@@ -27,21 +27,27 @@ import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
+import java.util.List;
+import java.util.Set;
 
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.FAILURE;
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.GETCERT;
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.RECOVER;
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.SUCCESS;
+import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec.getPEMEncodedString;
 import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest.getEncodedString;
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_SUB_CA_PREFIX;
+import static org.apache.hadoop.ozone.OzoneSecurityUtil.convertToX509;
 
 /**
  * SCM Certificate Client which is used for generating public/private Key pair,
@@ -227,5 +233,29 @@ public class SCMCertificateClient extends DefaultCertificateClient {
       LOG.error("Error while fetching/storing SCM signed certificate.", e);
       throw new RuntimeException(e);
     }
+  }
+
+  public void refreshCACertificates() throws IOException {
+    List<String> rootCAPems = scmSecurityClient.getAllRootCaCertificates();
+
+    // SCM certificate client sets root CA as CA cert instead of root CA cert
+    Set<X509Certificate> certList = getAllRootCaCerts();
+    certList = certList.isEmpty() ? getAllCaCerts() : certList;
+
+    List<X509Certificate> rootCAsFromLeaderSCM = convertToX509(rootCAPems);
+    rootCAsFromLeaderSCM.removeAll(certList);
+
+    if (rootCAsFromLeaderSCM.isEmpty()) {
+      return;
+    }
+
+    for (X509Certificate cert : rootCAsFromLeaderSCM) {
+      LOG.info("Fetched new root CA certificate {} from leader SCM",
+          cert.getSerialNumber().toString());
+      storeCertificate(getPEMEncodedString(cert), CAType.SUBORDINATE);
+    }
+
+    String scmCertId = getCertificate().getSerialNumber().toString();
+    notifyNotificationReceivers(scmCertId, scmCertId);
   }
 }

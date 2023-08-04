@@ -112,8 +112,4 @@ public interface SCMHAManager extends AutoCloseable {
    */
   TermIndex installCheckpoint(DBCheckpoint dbCheckpoint) throws Exception;
 
-  /**
-   * Refresh Root CA certificate.
-   */
-  void refreshRootCACertificates() throws IOException;
 }

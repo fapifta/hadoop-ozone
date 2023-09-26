@@ -894,6 +894,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       rootCertificateServer =
           HASecurityUtils.initializeRootCertificateServer(securityConfig,
               certificateStore, scmStorageConfig, new DefaultProfile());
+      scmStorageConfig.setPrimaryScmNodeId(scmStorageConfig.getScmId());
+      scmStorageConfig.persistCurrentState();
     }
 
     SecretKeyManager secretKeyManager = secretKeyManagerService != null ?

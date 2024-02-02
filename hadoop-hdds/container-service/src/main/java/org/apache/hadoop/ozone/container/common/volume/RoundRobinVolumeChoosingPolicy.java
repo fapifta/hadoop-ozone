@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.common.volume;
 
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.ozone.container.common.interfaces.VolumeChoosingPolicy;
@@ -34,6 +35,7 @@ import static org.apache.hadoop.ozone.container.common.volume.VolumeChoosingUtil
  * Choose volumes in round-robin order.
  * The caller should synchronize access to the list of volumes.
  */
+@PluggableByConfiguration("hdds.datanode.volume.choosing.policy")
 public class RoundRobinVolumeChoosingPolicy implements VolumeChoosingPolicy {
 
   public static final Logger LOG = LoggerFactory.getLogger(

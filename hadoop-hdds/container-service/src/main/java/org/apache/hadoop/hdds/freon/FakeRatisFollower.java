@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hdds.freon;
 
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.apache.ratis.proto.RaftProtos.AppendEntriesReplyProto;
 import org.apache.ratis.proto.RaftProtos.AppendEntriesReplyProto.AppendResult;
 import org.apache.ratis.proto.RaftProtos.AppendEntriesRequestProto;
@@ -32,6 +33,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Helper class to use it to replace original Ratis GRPC outgoing calls.
  */
+@PluggableByConfiguration("Byteman scripts can use this class to mock a Ratis follower.")
 public final class FakeRatisFollower {
 
   private static final Logger LOG =

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.container.placement.algorithms;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.apache.hadoop.hdds.scm.PlacementPolicy;
 import org.apache.hadoop.hdds.scm.SCMCommonPlacementPolicy;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
@@ -39,6 +40,8 @@ import java.util.List;
  * Balancer will need to support containers as a feature before this class
  * can be practically used.
  */
+@PluggableByConfiguration("ozone.scm.container.placement.impl")
+@PluggableByConfiguration("ozone.scm.container.placement.ec.impl")
 public final class SCMContainerPlacementRandom extends SCMCommonPlacementPolicy
     implements PlacementPolicy {
   @VisibleForTesting

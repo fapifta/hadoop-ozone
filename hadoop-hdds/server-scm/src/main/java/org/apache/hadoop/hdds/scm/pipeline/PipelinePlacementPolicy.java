@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.client.RatisReplicationConfig;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -49,6 +50,7 @@ import java.util.stream.Collectors;
  * 4. Choose an anchor node among the viable nodes.
  * 5. Choose other nodes around the anchor node based on network topology
  */
+@PluggableByConfiguration(value = "ozone.scm.pipeline.placement.impl", isDefault = true)
 public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
   @VisibleForTesting
   static final Logger LOG =

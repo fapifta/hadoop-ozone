@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.security.acl;
 
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.apache.hadoop.ozone.OFSPath;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 
@@ -24,6 +25,7 @@ import java.util.Objects;
 /**
  * SharedTmp implementation of {@link IAccessAuthorizer}.
  */
+@PluggableByConfiguration(value = "ozone.acl.authorizer.class")
 public class SharedTmpDirAuthorizer implements IAccessAuthorizer {
 
   private final OzoneNativeAuthorizer ozoneNativeAuthorizer;

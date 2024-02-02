@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.ozone;
 import java.io.IOException;
 
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.apache.hadoop.ozone.om.protocolPB.OmTransport;
 import org.apache.hadoop.ozone.om.protocolPB.OmTransportFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -27,6 +28,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 /**
  * OM Transport factory to create OM transport client with failover support.
  */
+@PluggableByConfiguration("ozone.om.transport.class")
 public class Hadoop27OmTransportFactory implements OmTransportFactory {
 
   @Override

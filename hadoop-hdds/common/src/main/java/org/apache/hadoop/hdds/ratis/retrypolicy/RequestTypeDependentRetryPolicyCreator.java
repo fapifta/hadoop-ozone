@@ -19,6 +19,8 @@
 package org.apache.hadoop.hdds.ratis.retrypolicy;
 
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
+import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.hadoop.hdds.ratis.conf.RatisClientConfig;
 import org.apache.ratis.client.retry.RequestTypeDependentRetryPolicy;
 import org.apache.ratis.proto.RaftProtos;
@@ -58,6 +60,7 @@ import java.util.concurrent.TimeUnit;
  * |                             | _RETRY             | _RETRY               |
  * ---------------------------------------------------------------------------
  */
+@PluggableByConfiguration(value = RatisHelper.HDDS_DATANODE_RATIS_PREFIX_KEY + "client.retry.policy", isDefault = true)
 public class RequestTypeDependentRetryPolicyCreator
     implements RetryPolicyCreator {
 

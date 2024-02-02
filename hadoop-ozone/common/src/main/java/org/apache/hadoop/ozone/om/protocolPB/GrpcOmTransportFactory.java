@@ -20,11 +20,13 @@ package org.apache.hadoop.ozone.om.protocolPB;
 import java.io.IOException;
 
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Factory to create the default GrpcOm transport.
  */
+@PluggableByConfiguration("ozone.om.transport.class")
 public class GrpcOmTransportFactory implements OmTransportFactory {
   @Override
   public OmTransport createOmTransport(ConfigurationSource source,

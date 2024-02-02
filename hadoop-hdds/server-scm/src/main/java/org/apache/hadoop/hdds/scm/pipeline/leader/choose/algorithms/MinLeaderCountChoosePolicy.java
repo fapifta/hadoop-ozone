@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.hdds.scm.pipeline.leader.choose.algorithms;
 
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -35,6 +36,7 @@ import java.util.Set;
  * The minimum leader count choose policy that chooses leader
  * which has the minimum exist leader count.
  */
+@PluggableByConfiguration("ozone.scm.pipeline.leader-choose.policy")
 public class MinLeaderCountChoosePolicy extends LeaderChoosePolicy {
 
   private static final Logger LOG =

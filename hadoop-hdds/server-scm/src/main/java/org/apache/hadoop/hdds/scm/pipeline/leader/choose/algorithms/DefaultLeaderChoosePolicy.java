@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.hdds.scm.pipeline.leader.choose.algorithms;
 
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineStateManager;
@@ -28,6 +29,7 @@ import java.util.List;
  * Do not choose leader here, so that all nodes have the same priority
  * and ratis elects leader without depending on priority.
  */
+@PluggableByConfiguration("ozone.scm.pipeline.leader-choose.policy")
 public class DefaultLeaderChoosePolicy extends LeaderChoosePolicy {
 
   public DefaultLeaderChoosePolicy(

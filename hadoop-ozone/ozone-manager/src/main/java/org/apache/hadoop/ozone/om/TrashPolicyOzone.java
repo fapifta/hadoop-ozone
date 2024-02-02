@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.conf.OMClientConfig;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
@@ -57,6 +58,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CHECKP
  *  of TrashPolicy ozone-specific trash optimizations are/will be made such as
  *  having a multithreaded TrashEmptier.
  */
+@PluggableByConfiguration("fs.trash.classname")
 public class TrashPolicyOzone extends TrashPolicyDefault {
 
   private static final Logger LOG =

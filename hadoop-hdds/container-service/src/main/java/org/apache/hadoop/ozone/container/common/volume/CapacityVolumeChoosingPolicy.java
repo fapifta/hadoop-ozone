@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.common.volume;
 
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import org.apache.hadoop.ozone.container.common.interfaces.VolumeChoosingPolicy;
@@ -41,6 +42,7 @@ import static org.apache.hadoop.ozone.container.common.volume.VolumeChoosingUtil
  * <p>
  * Same algorithm as the SCMContainerPlacementCapacity.
  */
+@PluggableByConfiguration("hdds.datanode.volume.choosing.policy")
 public class CapacityVolumeChoosingPolicy implements VolumeChoosingPolicy {
 
   public static final Logger LOG = LoggerFactory.getLogger(

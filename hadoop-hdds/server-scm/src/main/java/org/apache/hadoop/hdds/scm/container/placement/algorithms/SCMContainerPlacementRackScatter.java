@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.container.placement.algorithms;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.ContainerPlacementStatus;
 import org.apache.hadoop.hdds.scm.SCMCommonPlacementPolicy;
@@ -53,6 +54,8 @@ import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.FAI
  * recommend to use this if the network topology has more layers.
  * <p>
  */
+@PluggableByConfiguration("ozone.scm.container.placement.impl")
+@PluggableByConfiguration(value = "ozone.scm.container.placement.ec.impl", isDefault = true)
 public final class SCMContainerPlacementRackScatter
     extends SCMCommonPlacementPolicy {
   @VisibleForTesting

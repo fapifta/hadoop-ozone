@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,24 +15,21 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.hadoop.ozone.container.common.impl;
+package org.apache.hadoop.hdds.conf;
 
-import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
-import org.apache.hadoop.ozone.container.common.interfaces.ContainerDeletionChoosingPolicyTemplate;
-
-import java.util.Collections;
-import java.util.List;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * Randomly choosing containers for block deletion.
+ * This annotation is defined only for convenience, to enable to repeat the {@link PluggableByConfiguration}
+ * annotation on classes with ease.
+ *
+ * For intent and usage see @{@link PluggableByConfiguration}'s API doc.
  */
-@PluggableByConfiguration("ozone.scm.keyvalue.container.deletion-choosing.policy")
-public class RandomContainerDeletionChoosingPolicy
-    extends ContainerDeletionChoosingPolicyTemplate {
-
-  @Override
-  protected void orderByDescendingPriority(
-      List<ContainerData> candidateContainers) {
-    Collections.shuffle(candidateContainers);
-  }
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.SOURCE)
+public @interface PluggableByConfigurations {
+  PluggableByConfiguration[] value();
 }

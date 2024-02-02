@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.security.acl;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.annotation.InterfaceStability;
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.apache.hadoop.hdds.server.OzoneAdmins;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.BucketManager;
@@ -41,6 +42,7 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVA
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "Yarn", "Ranger", "Hive", "HBase"})
 @InterfaceStability.Evolving
+@PluggableByConfiguration(value = "ozone.acl.authorizer.class", isDefault = true)
 public class OzoneNativeAuthorizer implements IAccessAuthorizer {
 
   private static final Logger LOG =

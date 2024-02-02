@@ -16,11 +16,13 @@
  */
 package org.apache.hadoop.ozone.security.acl;
 
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 
 /**
  * Default implementation for {@link IAccessAuthorizer}.
  * */
+@PluggableByConfiguration(value = "ozone.acl.authorizer.class", isDefault = true)
 public class OzoneAccessAuthorizer implements IAccessAuthorizer {
 
   private static final OzoneAccessAuthorizer INSTANCE =

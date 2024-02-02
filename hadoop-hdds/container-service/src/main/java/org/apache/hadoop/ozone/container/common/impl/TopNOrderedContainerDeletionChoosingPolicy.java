@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.container.common.impl;
 
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDeletionChoosingPolicyTemplate;
 
@@ -27,6 +28,7 @@ import java.util.List;
  * TopN Ordered choosing policy that choosing containers based on pending
  * deletion blocks' number.
  */
+@PluggableByConfiguration("ozone.scm.keyvalue.container.deletion-choosing.policy")
 public class TopNOrderedContainerDeletionChoosingPolicy
     extends ContainerDeletionChoosingPolicyTemplate {
   /** customized comparator used to compare differentiate container data. **/

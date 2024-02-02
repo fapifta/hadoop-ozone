@@ -20,11 +20,13 @@ package org.apache.hadoop.ozone.om.protocolPB;
 import java.io.IOException;
 
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
+import org.apache.hadoop.hdds.conf.PluggableByConfiguration;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Factory to create the default Hadoop 3 transport with failover support.
  */
+@PluggableByConfiguration(value = "ozone.om.transport.class", isDefault = true)
 public class Hadoop3OmTransportFactory implements OmTransportFactory {
   @Override
   public OmTransport createOmTransport(ConfigurationSource source,

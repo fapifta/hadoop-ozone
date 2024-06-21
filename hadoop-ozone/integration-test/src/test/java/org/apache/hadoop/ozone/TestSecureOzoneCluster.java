@@ -154,7 +154,6 @@ import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMeth
 
 import org.apache.ozone.test.LambdaTestUtils;
 import org.apache.ozone.test.tag.Flaky;
-import org.apache.ozone.test.tag.Unhealthy;
 import org.apache.ratis.protocol.ClientId;
 import org.apache.ratis.util.ExitUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -1267,7 +1266,6 @@ final class TestSecureOzoneCluster {
    * Test functionality to get SCM signed certificate for OM.
    */
   @Test
-  @Unhealthy("HDDS-8764")
   void testOMGrpcServerCertificateRenew() throws Exception {
     initSCM();
     try {

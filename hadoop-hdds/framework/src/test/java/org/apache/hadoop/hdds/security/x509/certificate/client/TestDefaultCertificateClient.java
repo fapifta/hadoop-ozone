@@ -26,7 +26,7 @@ import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslator
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
-import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
+import org.apache.hadoop.hdds.security.x509.keys.KeyStorage;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -91,7 +91,7 @@ public class TestDefaultCertificateClient {
   private SecurityConfig dnSecurityConfig;
   private SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient;
   private static final String DN_COMPONENT = DNCertificateClient.COMPONENT_NAME;
-  private KeyCodec dnKeyCodec;
+  private KeyStorage dnKeyStorage;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -103,7 +103,7 @@ public class TestDefaultCertificateClient {
     dnSecurityConfig = new SecurityConfig(config);
 
     keyGenerator = new HDDSKeyGenerator(dnSecurityConfig);
-    dnKeyCodec = new KeyCodec(dnSecurityConfig, DN_COMPONENT);
+    dnKeyStorage = new KeyStorage(dnSecurityConfig, DN_COMPONENT);
 
     Files.createDirectories(dnSecurityConfig.getKeyLocation(DN_COMPONENT));
     x509Certificate = generateX509Cert(null);
@@ -153,8 +153,8 @@ public class TestDefaultCertificateClient {
   private KeyPair generateKeyPairFiles() throws Exception {
     cleanupOldKeyPair();
     KeyPair keyPair = keyGenerator.generateKey();
-    dnKeyCodec.writePrivateKey(keyPair.getPrivate());
-    dnKeyCodec.writePublicKey(keyPair.getPublic());
+    dnKeyStorage.writePrivateKey(keyPair.getPrivate());
+    dnKeyStorage.writePublicKey(keyPair.getPublic());
     return keyPair;
   }
 
@@ -388,8 +388,8 @@ public class TestDefaultCertificateClient {
     FileUtils.deleteQuietly(Paths.get(
         dnSecurityConfig.getKeyLocation(DN_COMPONENT).toString(),
         dnSecurityConfig.getPublicKeyFileName()).toFile());
-    dnKeyCodec.writePrivateKey(keyPair.getPrivate());
-    dnKeyCodec.writePublicKey(keyPair1.getPublic());
+    dnKeyStorage.writePrivateKey(keyPair.getPrivate());
+    dnKeyStorage.writePublicKey(keyPair1.getPublic());
 
     // Check for DN.
     assertEquals(FAILURE, dnCertClient.init());
@@ -418,7 +418,7 @@ public class TestDefaultCertificateClient {
         dnSecurityConfig.getKeyLocation(DN_COMPONENT).toString(),
         dnSecurityConfig.getPublicKeyFileName()).toFile());
     getCertClient();
-    dnKeyCodec.writePublicKey(keyPair.getPublic());
+    dnKeyStorage.writePublicKey(keyPair.getPublic());
 
     // Check for DN.
     assertEquals(FAILURE, dnCertClient.init());
@@ -513,8 +513,8 @@ public class TestDefaultCertificateClient {
     Files.createDirectories(newKeyDir.toPath());
     Files.createDirectories(newCertDir.toPath());
     KeyPair keyPair = KeyStoreTestUtil.generateKeyPair("RSA");
-    KeyCodec newKeyCodec = new KeyCodec(dnSecurityConfig, newKeyDir.toPath());
-    newKeyCodec.writeKey(keyPair);
+    KeyStorage newKeyStorage = new KeyStorage(dnSecurityConfig, newKeyDir.toPath());
+    newKeyStorage.writeKey(keyPair);
 
     X509Certificate cert = KeyStoreTestUtil.generateCertificate(
         "CN=OzoneMaster", keyPair, 30, "SHA256withRSA");

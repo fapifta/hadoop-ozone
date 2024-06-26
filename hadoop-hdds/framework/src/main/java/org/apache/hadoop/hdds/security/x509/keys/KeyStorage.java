@@ -81,6 +81,7 @@ public class KeyStorage {
     this.securityConfig = config;
     this.location = keyDir;
     isPosixFileSystem = KeyStorage::isPosix;
+    keyCodec = new KeyCodec(config);
     if (!location.toFile().exists()) {
       if (!location.toFile().mkdirs()) {
         throw new RuntimeException("Failed to create directory " + location);

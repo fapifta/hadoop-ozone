@@ -216,7 +216,7 @@ public class TestKeyCodec {
     IOException ioException = assertThrows(IOException.class,
         () -> keyStorage.storeKey(kp));
     assertThat(ioException.getMessage())
-        .contains("Unsupported File System for pem file.");
+        .contains("Unsupported File System.");
   }
 
   @Test

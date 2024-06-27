@@ -855,7 +855,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     try {
 
       if (validateKeyPair(pubKey)) {
-        keyStorage.writePublicKey(pubKey);
+        keyStorage.storePublicKey(pubKey);
         publicKey = pubKey;
       } else {
         getLogger().error("Can't recover public key " +
@@ -885,7 +885,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         PublicKey pubKey = KeyFactory.getInstance(securityConfig.getKeyAlgo())
             .generatePublic(rsaPublicKeySpec);
         if (validateKeyPair(pubKey)) {
-          keyStorage.writePublicKey(pubKey);
+          keyStorage.storePublicKey(pubKey);
           publicKey = pubKey;
           getLogger().info("Public key is recovered from the private key.");
           return true;
@@ -939,8 +939,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     KeyPair keyPair;
     try {
       keyPair = keyGenerator.generateKey();
-      storage.writePublicKey(keyPair.getPublic());
-      storage.writePrivateKey(keyPair.getPrivate());
+      storage.storePublicKey(keyPair.getPublic());
+      storage.storePrivateKey(keyPair.getPrivate());
     } catch (NoSuchProviderException | NoSuchAlgorithmException
              | IOException e) {
       getLogger().error("Error while bootstrapping certificate client.", e);

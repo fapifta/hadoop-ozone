@@ -111,7 +111,7 @@ public class TestDnCertificateClientInit {
   public void testInitDatanode(boolean pvtKeyPresent, boolean pubKeyPresent,
       boolean certPresent, InitResponse expectedResult) throws Exception {
     if (pvtKeyPresent) {
-      dnKeyStorage.writePrivateKey(keyPair.getPrivate());
+      dnKeyStorage.storePrivateKey(keyPair.getPrivate());
     } else {
       FileUtils.deleteQuietly(Paths.get(
           securityConfig.getKeyLocation(DN_COMPONENT).toString(),
@@ -120,7 +120,7 @@ public class TestDnCertificateClientInit {
 
     if (pubKeyPresent) {
       if (dnCertificateClient.getPublicKey() == null) {
-        dnKeyStorage.writePublicKey(keyPair.getPublic());
+        dnKeyStorage.storePublicKey(keyPair.getPublic());
       }
     } else {
       FileUtils.deleteQuietly(

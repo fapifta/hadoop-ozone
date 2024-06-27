@@ -286,7 +286,7 @@ public class TestDefaultCAServer {
       KeyPair keyPair = KeyStoreTestUtil.generateKeyPair("RSA");
       KeyStorage keyStorage = new KeyStorage(securityConfig, scmCertificateClient.getComponentName());
 
-      keyStorage.writeKey(tempDir, keyPair, true);
+      keyStorage.storeKey(tempDir, keyPair, true);
       X509Certificate externalCert = generateExternalCert(keyPair);
 
       CertificateCodec certificateCodec = new CertificateCodec(securityConfig,
@@ -337,7 +337,7 @@ public class TestDefaultCAServer {
       String clusterId = RandomStringUtils.randomAlphabetic(4);
       KeyPair keyPair = new HDDSKeyGenerator(securityConfig).generateKey();
       KeyStorage keyStorage = new KeyStorage(securityConfig, scmCertificateClient.getComponentName());
-      keyStorage.writeKey(tempDir, keyPair, true);
+      keyStorage.storeKey(tempDir, keyPair, true);
       LocalDate beginDate = LocalDate.now().atStartOfDay().toLocalDate();
       LocalDate endDate =
           LocalDate.from(LocalDate.now().atStartOfDay().plusDays(10));

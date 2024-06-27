@@ -153,8 +153,8 @@ public class TestDefaultCertificateClient {
   private KeyPair generateKeyPairFiles() throws Exception {
     cleanupOldKeyPair();
     KeyPair keyPair = keyGenerator.generateKey();
-    dnKeyStorage.writePrivateKey(keyPair.getPrivate());
-    dnKeyStorage.writePublicKey(keyPair.getPublic());
+    dnKeyStorage.storePrivateKey(keyPair.getPrivate());
+    dnKeyStorage.storePublicKey(keyPair.getPublic());
     return keyPair;
   }
 
@@ -388,8 +388,8 @@ public class TestDefaultCertificateClient {
     FileUtils.deleteQuietly(Paths.get(
         dnSecurityConfig.getKeyLocation(DN_COMPONENT).toString(),
         dnSecurityConfig.getPublicKeyFileName()).toFile());
-    dnKeyStorage.writePrivateKey(keyPair.getPrivate());
-    dnKeyStorage.writePublicKey(keyPair1.getPublic());
+    dnKeyStorage.storePrivateKey(keyPair.getPrivate());
+    dnKeyStorage.storePublicKey(keyPair1.getPublic());
 
     // Check for DN.
     assertEquals(FAILURE, dnCertClient.init());
@@ -418,7 +418,7 @@ public class TestDefaultCertificateClient {
         dnSecurityConfig.getKeyLocation(DN_COMPONENT).toString(),
         dnSecurityConfig.getPublicKeyFileName()).toFile());
     getCertClient();
-    dnKeyStorage.writePublicKey(keyPair.getPublic());
+    dnKeyStorage.storePublicKey(keyPair.getPublic());
 
     // Check for DN.
     assertEquals(FAILURE, dnCertClient.init());
@@ -514,7 +514,7 @@ public class TestDefaultCertificateClient {
     Files.createDirectories(newCertDir.toPath());
     KeyPair keyPair = KeyStoreTestUtil.generateKeyPair("RSA");
     KeyStorage newKeyStorage = new KeyStorage(dnSecurityConfig, newKeyDir.toPath());
-    newKeyStorage.writeKey(keyPair);
+    newKeyStorage.storeKey(keyPair);
 
     X509Certificate cert = KeyStoreTestUtil.generateCertificate(
         "CN=OzoneMaster", keyPair, 30, "SHA256withRSA");

@@ -169,7 +169,7 @@ class TestSecureOzoneManager {
             securityConfig, null, omStorage, omInfo, "", scmId, null, null);
     FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
-    keyStorage.writePrivateKey(privateKey);
+    keyStorage.storePrivateKey(privateKey);
     assertEquals(CertificateClient.InitResponse.SUCCESS, client.init());
     assertNotNull(client.getPrivateKey());
     assertNotNull(client.getPublicKey());

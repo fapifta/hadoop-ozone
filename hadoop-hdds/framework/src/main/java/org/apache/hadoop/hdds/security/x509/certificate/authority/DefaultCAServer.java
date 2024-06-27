@@ -476,7 +476,7 @@ public class DefaultCAServer implements CertificateServer {
     HDDSKeyGenerator keyGenerator = new HDDSKeyGenerator(securityConfig);
     KeyPair keys = keyGenerator.generateKey();
     KeyStorage keyStorage = new KeyStorage(securityConfig, componentName);
-    keyStorage.writeKey(keys);
+    keyStorage.storeKey(keys);
     return keys;
   }
 
@@ -541,7 +541,7 @@ public class DefaultCAServer implements CertificateServer {
       PublicKey publicKey;
       publicKey = readPublicKeyWithExternalData(
           externalPublicKeyLocation, keyStorage, certificate);
-      keyStorage.writeKey(new KeyPair(publicKey, privateKey));
+      keyStorage.storeKey(new KeyPair(publicKey, privateKey));
       certificateCodec.writeCertificate(certificate);
     } catch (IOException | CertificateException | NoSuchAlgorithmException |
              InvalidKeySpecException e) {

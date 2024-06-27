@@ -86,7 +86,7 @@ public class TestKeyCodec {
       IOException, InvalidKeySpecException {
     KeyPair keys = keyGenerator.generateKey();
     KeyStorage keyStorage = new KeyStorage(securityConfig, component);
-    keyStorage.writeKey(keys);
+    keyStorage.storeKey(keys);
 
     // Assert that locations have been created.
     Path keyLocation = securityConfig.getKeyLocation(component);
@@ -177,18 +177,18 @@ public class TestKeyCodec {
     KeyPair kp = keyGenerator.generateKey();
     SecurityConfig secConfig = securityConfig;
     KeyStorage keyStorage = new KeyStorage(securityConfig, component);
-    keyStorage.writeKey(kp);
+    keyStorage.storeKey(kp);
 
     // Assert that rewriting of keys throws exception with valid messages.
     IOException ioException = assertThrows(IOException.class,
-        () -> keyStorage.writeKey(kp));
+        () -> keyStorage.storeKey(kp));
     assertThat(ioException.getMessage())
         .contains("Private Key file already exists.");
     FileUtils.deleteQuietly(Paths.get(
         secConfig.getKeyLocation(component).toString() + "/" + secConfig
             .getPrivateKeyFileName()).toFile());
     ioException = assertThrows(IOException.class,
-        () -> keyStorage.writeKey(kp));
+        () -> keyStorage.storeKey(kp));
     assertThat(ioException.getMessage())
         .contains("Public Key file already exists.");
     FileUtils.deleteQuietly(Paths.get(
@@ -196,9 +196,9 @@ public class TestKeyCodec {
             .getPublicKeyFileName()).toFile());
 
     // Should succeed now as both public and private key are deleted.
-    keyStorage.writeKey(kp);
+    keyStorage.storeKey(kp);
     // Should succeed with overwrite flag as true.
-    keyStorage.writeKey(kp, true);
+    keyStorage.storeKey(kp, true);
 
   }
 
@@ -214,7 +214,7 @@ public class TestKeyCodec {
 
     // Assert key rewrite fails in non Posix file system.
     IOException ioException = assertThrows(IOException.class,
-        () -> keyStorage.writeKey(kp));
+        () -> keyStorage.storeKey(kp));
     assertThat(ioException.getMessage())
         .contains("Unsupported File System for pem file.");
   }
@@ -226,7 +226,7 @@ public class TestKeyCodec {
 
     KeyPair kp = keyGenerator.generateKey();
     KeyStorage keyStorage = new KeyStorage(securityConfig, component);
-    keyStorage.writeKey(kp);
+    keyStorage.storeKey(kp);
 
     PublicKey pubKey = keyStorage.readPublicKey();
     assertNotNull(pubKey);

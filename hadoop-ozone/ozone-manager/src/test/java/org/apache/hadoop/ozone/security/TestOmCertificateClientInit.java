@@ -117,7 +117,7 @@ public class TestOmCertificateClientInit {
   public void testInitOzoneManager(boolean pvtKeyPresent, boolean pubKeyPresent,
       boolean certPresent, InitResponse expectedResult) throws Exception {
     if (pvtKeyPresent) {
-      omKeyCodec.writePrivateKey(keyPair.getPrivate());
+      omKeyCodec.storePrivateKey(keyPair.getPrivate());
     } else {
       FileUtils.deleteQuietly(Paths.get(
           securityConfig.getKeyLocation(OM_COMPONENT).toString(),
@@ -126,7 +126,7 @@ public class TestOmCertificateClientInit {
 
     if (pubKeyPresent) {
       if (omCertificateClient.getPublicKey() == null) {
-        omKeyCodec.writePublicKey(keyPair.getPublic());
+        omKeyCodec.storePublicKey(keyPair.getPublic());
       }
     } else {
       FileUtils.deleteQuietly(Paths.get(

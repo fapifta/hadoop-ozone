@@ -25,7 +25,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.FileWriterWithEncoding;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.bouncycastle.util.io.pem.PemObject;
-import org.bouncycastle.util.io.pem.PemReader;
 import org.bouncycastle.util.io.pem.PemWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.StringReader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
@@ -46,7 +44,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 
@@ -95,24 +92,24 @@ public class KeyStorage {
   }
 
   /**
-   * Writes a given key using the default config options.
+   * Stores a given key using the default config options.
    *
    * @param keyPair - Key Pair to write to file.
    * @throws IOException - On I/O failure.
    */
-  public void writeKey(KeyPair keyPair) throws IOException {
-    writeKey(location, keyPair, securityConfig.getPrivateKeyFileName(),
+  public void storeKey(KeyPair keyPair) throws IOException {
+    storeKey(location, keyPair, securityConfig.getPrivateKeyFileName(),
         securityConfig.getPublicKeyFileName(), false);
   }
 
 
   /**
-   * Writes a given private key using the default config options.
+   * Stores a given private key using the default config options.
    *
    * @param key - Key to write to file.
    * @throws IOException - On I/O failure.
    */
-  public void writePrivateKey(PrivateKey key) throws IOException {
+  public void storePrivateKey(PrivateKey key) throws IOException {
     File privateKeyFile =
         Paths.get(location.toString(),
             securityConfig.getPrivateKeyFileName()).toFile();
@@ -130,12 +127,12 @@ public class KeyStorage {
   }
 
   /**
-   * Writes a given public key using the default config options.
+   * Stores a given public key using the default config options.
    *
    * @param key - Key to write to file.
    * @throws IOException - On I/O failure.
    */
-  public void writePublicKey(PublicKey key) throws IOException {
+  public void storePublicKey(PublicKey key) throws IOException {
     File publicKeyFile = Paths.get(location.toString(),
         securityConfig.getPublicKeyFileName()).toFile();
 
@@ -152,14 +149,14 @@ public class KeyStorage {
   }
 
   /**
-   * Writes a given key using default config options.
+   * Stores a given keyPair using default config options.
    *
    * @param keyPair   - Key pair to write
    * @param overwrite - Overwrites the keys if they already exist.
    * @throws IOException - On I/O failure.
    */
-  public void writeKey(KeyPair keyPair, boolean overwrite) throws IOException {
-    writeKey(location, keyPair, securityConfig.getPrivateKeyFileName(),
+  public void storeKey(KeyPair keyPair, boolean overwrite) throws IOException {
+    storeKey(location, keyPair, securityConfig.getPrivateKeyFileName(),
         securityConfig.getPublicKeyFileName(), overwrite);
   }
 
@@ -171,40 +168,19 @@ public class KeyStorage {
    * @param overwrite - Overwrites the keys if they already exist.
    * @throws IOException - On I/O failure.
    */
-  public void writeKey(Path basePath, KeyPair keyPair, boolean overwrite)
+  public void storeKey(Path basePath, KeyPair keyPair, boolean overwrite)
       throws IOException {
-    writeKey(basePath, keyPair, securityConfig.getPrivateKeyFileName(),
+    storeKey(basePath, keyPair, securityConfig.getPrivateKeyFileName(),
         securityConfig.getPublicKeyFileName(), overwrite);
-  }
-
-  /**
-   * Reads a Private Key from the PEM Encoded Store.
-   *
-   * @param basePath    - Base Path, Directory where the Key is stored.
-   * @param keyFileName - File Name of the private key
-   * @return PrivateKey Object.
-   * @throws IOException - on Error.
-   */
-  private PKCS8EncodedKeySpec readKey(Path basePath, String keyFileName)
-      throws IOException {
-    String keyData = readKeyFromFile(basePath, keyFileName);
-
-    final byte[] pemContent;
-    try (PemReader pemReader = new PemReader(new StringReader(keyData))) {
-      PemObject keyObject = pemReader.readPemObject();
-      pemContent = keyObject.getContent();
-    }
-    return new PKCS8EncodedKeySpec(pemContent);
   }
 
   private String readKeyFromFile(Path basePath, String keyFileName) throws IOException {
     File fileName = Paths.get(basePath.toString(), keyFileName).toFile();
-    String keyData = FileUtils.readFileToString(fileName, DEFAULT_CHARSET);
-    return keyData;
+    return FileUtils.readFileToString(fileName, DEFAULT_CHARSET);
   }
 
   /**
-   * Returns a Private Key from a PEM encoded file.
+   * Returns a Private Key from an encoded file.
    *
    * @param basePath           - base path
    * @param privateKeyFileName - private key file name.
@@ -233,7 +209,7 @@ public class KeyStorage {
   }
 
   /**
-   * Returns a public key from a PEM encoded file.
+   * Returns a public key from an encoded file.
    *
    * @param basePath          - base path.
    * @param publicKeyFileName - public key file name.
@@ -250,7 +226,7 @@ public class KeyStorage {
 
 
   /**
-   * Returns the private key  using defaults.
+   * Returns the private key using defaults.
    *
    * @return PrivateKey.
    * @throws InvalidKeySpecException  - On Error.
@@ -274,7 +250,7 @@ public class KeyStorage {
    * @param force              - forces overwriting the keys.
    * @throws IOException - On I/O failure.
    */
-  private synchronized void writeKey(Path basePath, KeyPair keyPair,
+  private synchronized void storeKey(Path basePath, KeyPair keyPair,
                                      String privateKeyFileName, String publicKeyFileName, boolean force)
       throws IOException {
     checkPreconditions(basePath);
@@ -342,7 +318,7 @@ public class KeyStorage {
     if (!isPosixFileSystem.getAsBoolean()) {
       LOG.error("Keys cannot be stored securely without POSIX file system "
           + "support for now.");
-      throw new IOException("Unsupported File System for pem file.");
+      throw new IOException("Unsupported File System.");
     }
 
     if (Files.exists(basePath)) {

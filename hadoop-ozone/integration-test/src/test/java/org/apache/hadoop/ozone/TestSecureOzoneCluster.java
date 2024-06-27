@@ -644,7 +644,7 @@ final class TestSecureOzoneCluster {
     HDDSKeyGenerator keyGenerator = new HDDSKeyGenerator(securityConfig);
     keyPair = keyGenerator.generateKey();
     KeyStorage keyStorage = new KeyStorage(securityConfig, COMPONENT);
-    keyStorage.writeKey(keyPair, true);
+    keyStorage.storeKey(keyPair, true);
   }
 
   /**

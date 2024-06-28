@@ -567,8 +567,7 @@ public class RootCARotationManager extends StatefulService {
             HDDSKeyGenerator keyGenerator =
                 new HDDSKeyGenerator(securityConfig);
             newKeyPair = keyGenerator.generateKey();
-            keyStorage.storePublicKey(newKeyPair.getPublic());
-            keyStorage.storePrivateKey(newKeyPair.getPrivate());
+            keyStorage.storeKey(newKeyPair);
             LOG.info("SubCARotationPrepareTask[rootCertId = {}] - " +
                 "scm key generated.", rootCACertId);
           } catch (Exception e) {

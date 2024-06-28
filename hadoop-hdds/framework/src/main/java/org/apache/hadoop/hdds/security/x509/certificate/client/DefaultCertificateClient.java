@@ -939,8 +939,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     KeyPair keyPair;
     try {
       keyPair = keyGenerator.generateKey();
-      storage.storePublicKey(keyPair.getPublic());
-      storage.storePrivateKey(keyPair.getPrivate());
+      storage.storeKey(keyPair);
     } catch (NoSuchProviderException | NoSuchAlgorithmException
              | IOException e) {
       getLogger().error("Error while bootstrapping certificate client.", e);

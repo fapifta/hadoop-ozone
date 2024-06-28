@@ -960,8 +960,7 @@ final class TestSecureOzoneCluster {
 
     // save first cert
     final int certificateLifetime = 20; // seconds
-    KeyStorage keyStorage =
-        new KeyStorage(securityConfig, securityConfig.getKeyLocation("om"));
+    KeyStorage keyStorage = new KeyStorage(securityConfig, "om");
     X509Certificate cert = generateSelfSignedX509Cert(securityConfig,
         new KeyPair(keyStorage.readPublicKey(), keyStorage.readPrivateKey()),
         null, Duration.ofSeconds(certificateLifetime));
@@ -1044,7 +1043,7 @@ final class TestSecureOzoneCluster {
     // save first cert
     final int certificateLifetime = 20; // seconds
     KeyStorage keyCodec =
-        new KeyStorage(securityConfig, securityConfig.getKeyLocation("om"));
+        new KeyStorage(securityConfig, "om");
     X509Certificate certHolder = generateSelfSignedX509Cert(securityConfig,
         new KeyPair(keyCodec.readPublicKey(), keyCodec.readPrivateKey()),
         null, Duration.ofSeconds(certificateLifetime));

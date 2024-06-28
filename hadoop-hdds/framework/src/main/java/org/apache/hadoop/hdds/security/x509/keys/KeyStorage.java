@@ -22,10 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.output.FileWriterWithEncoding;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.bouncycastle.util.io.pem.PemObject;
-import org.bouncycastle.util.io.pem.PemWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,8 +52,6 @@ import static java.nio.file.attribute.PosixFilePermission.OWNER_WRITE;
  * Class for storing key material.
  */
 public class KeyStorage {
-  public static final String PRIVATE_KEY = "PRIVATE KEY";
-  public static final String PUBLIC_KEY = "PUBLIC KEY";
   public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
   private static final Logger LOG = LoggerFactory.getLogger(KeyStorage.class);
   public static final Set<PosixFilePermission> DIR_PERMISSION_SET =
@@ -117,12 +112,8 @@ public class KeyStorage {
     if (Files.exists(privateKeyFile.toPath())) {
       throw new IOException("Private key already exist.");
     }
-
-    try (PemWriter privateKeyWriter = new PemWriter(new
-        FileWriterWithEncoding(privateKeyFile, DEFAULT_CHARSET))) {
-      privateKeyWriter.writeObject(
-          new PemObject(PRIVATE_KEY, key.getEncoded()));
-    }
+    String encodedPrivateKey = keyCodec.encodePrivateKey(key);
+    writeToFile(privateKeyFile, encodedPrivateKey);
     Files.setPosixFilePermissions(privateKeyFile.toPath(), FILE_PERMISSION_SET);
   }
 
@@ -140,11 +131,8 @@ public class KeyStorage {
       throw new IOException("Public key already exist.");
     }
 
-    try (PemWriter keyWriter = new PemWriter(new
-        FileWriterWithEncoding(publicKeyFile, DEFAULT_CHARSET))) {
-      keyWriter.writeObject(
-          new PemObject(PUBLIC_KEY, key.getEncoded()));
-    }
+    String encodedPublicKey = keyCodec.encodePublicKey(key);
+    writeToFile(publicKeyFile, encodedPublicKey);
     Files.setPosixFilePermissions(publicKeyFile.toPath(), FILE_PERMISSION_SET);
   }
 

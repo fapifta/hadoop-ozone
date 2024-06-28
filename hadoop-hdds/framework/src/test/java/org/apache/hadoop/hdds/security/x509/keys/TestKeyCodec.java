@@ -175,8 +175,7 @@ public class TestKeyCodec {
   public void testReWriteKey()
       throws Exception {
     KeyPair kp = keyGenerator.generateKey();
-    SecurityConfig secConfig = securityConfig;
-    KeyStorage keyStorage = new KeyStorage(securityConfig, component);
+    KeyStorage keyStorage = new KeyStorage(this.securityConfig, component);
     keyStorage.storeKey(kp);
 
     // Assert that rewriting of keys throws exception with valid messages.
@@ -185,14 +184,14 @@ public class TestKeyCodec {
     assertThat(ioException.getMessage())
         .contains("Private Key file already exists.");
     FileUtils.deleteQuietly(Paths.get(
-        secConfig.getKeyLocation(component).toString() + "/" + secConfig
+        securityConfig.getKeyLocation(component).toString() + "/" + securityConfig
             .getPrivateKeyFileName()).toFile());
     ioException = assertThrows(IOException.class,
         () -> keyStorage.storeKey(kp));
     assertThat(ioException.getMessage())
         .contains("Public Key file already exists.");
     FileUtils.deleteQuietly(Paths.get(
-        secConfig.getKeyLocation(component).toString() + "/" + secConfig
+        securityConfig.getKeyLocation(component).toString() + "/" + securityConfig
             .getPublicKeyFileName()).toFile());
 
     // Should succeed now as both public and private key are deleted.

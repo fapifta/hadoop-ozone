@@ -153,8 +153,7 @@ public class TestDefaultCertificateClient {
   private KeyPair generateKeyPairFiles() throws Exception {
     cleanupOldKeyPair();
     KeyPair keyPair = keyGenerator.generateKey();
-    dnKeyStorage.storePrivateKey(keyPair.getPrivate());
-    dnKeyStorage.storePublicKey(keyPair.getPublic());
+    dnKeyStorage.storeKey(keyPair);
     return keyPair;
   }
 
@@ -390,7 +389,6 @@ public class TestDefaultCertificateClient {
         dnSecurityConfig.getPublicKeyFileName()).toFile());
     dnKeyStorage.storePrivateKey(keyPair.getPrivate());
     dnKeyStorage.storePublicKey(keyPair1.getPublic());
-
     // Check for DN.
     assertEquals(FAILURE, dnCertClient.init());
     assertThat(dnClientLog.getOutput()).contains("Keypair validation failed");

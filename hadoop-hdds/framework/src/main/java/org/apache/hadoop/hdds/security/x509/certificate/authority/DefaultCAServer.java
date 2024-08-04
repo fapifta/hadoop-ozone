@@ -112,7 +112,6 @@ public class DefaultCAServer implements CertificateServer {
   private final String clusterID;
   private final String scmID;
   private String componentName;
-  private Path caRootX509Path;
   private SecurityConfig config;
   /**
    * TODO: We will make these configurable in the future.
@@ -153,7 +152,6 @@ public class DefaultCAServer implements CertificateServer {
   @Override
   public void init(SecurityConfig securityConfig, CAType type)
       throws IOException {
-    caRootX509Path = securityConfig.getCertificateLocation(componentName);
     this.config = securityConfig;
     this.approver = new DefaultApprover(profile, this.config);
 
@@ -319,24 +317,19 @@ public class DefaultCAServer implements CertificateServer {
     | True         | False  | False  | Missing Key  |
     | False        | True   | False  | Missing Cert |
     +--------------+--------+--------+--------------+
+    */
 
-    This truth table maps to ~(certs xor keys) or certs == keys
-     */
     boolean keyStatus = checkIfKeysExist();
-    boolean certStatus = checkIfCertificatesExist();
+    boolean certStatus = checkIfCertificatesExist(securityConfig.getCertificateLocation(componentName));
 
-    // Check if both certStatus and keyStatus is set to true and return success.
-    if ((certStatus == keyStatus) && (certStatus)) {
+    if (certStatus && keyStatus) {
       return VerificationStatus.SUCCESS;
     }
 
-    // At this point both certStatus and keyStatus should be false if they
-    // are equal
-    if ((certStatus == keyStatus)) {
+    if (!certStatus && !keyStatus) {
       return VerificationStatus.INITIALIZE;
     }
 
-    // At this point certStatus is not equal to keyStatus.
     if (certStatus) {
       return VerificationStatus.MISSING_KEYS;
     }
@@ -371,11 +364,11 @@ public class DefaultCAServer implements CertificateServer {
    *
    * @return True if the Certificate files exist.
    */
-  private boolean checkIfCertificatesExist() {
-    if (!Files.exists(caRootX509Path)) {
+  private boolean checkIfCertificatesExist(Path rootCACertPath) {
+    if (!Files.exists(rootCACertPath)) {
       return false;
     }
-    return Files.exists(Paths.get(caRootX509Path.toString(),
+    return Files.exists(Paths.get(rootCACertPath.toString(),
         this.config.getCertificateFileName()));
   }
 

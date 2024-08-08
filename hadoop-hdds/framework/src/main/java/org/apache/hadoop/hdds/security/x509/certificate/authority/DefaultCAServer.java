@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
@@ -28,7 +27,6 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.bouncycastle.operator.OperatorCreationException;
@@ -44,8 +42,6 @@ import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -58,7 +54,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
 
 import static org.apache.hadoop.hdds.security.exception.SCMSecurityException.ErrorCode.UNABLE_TO_ISSUE_CERTIFICATE;
 
@@ -115,7 +110,9 @@ public class DefaultCAServer implements CertificateServer {
   private final String clusterID;
   private final String scmID;
   private String componentName;
+
   private SecurityConfig config;
+
   /**
    * TODO: We will make these configurable in the future.
    */
@@ -123,33 +120,37 @@ public class DefaultCAServer implements CertificateServer {
   private CertificateApprover approver;
   private CertificateStore store;
   private Lock lock;
-  private BigInteger rootCertificateId;
+
+  public String getSubject() {
+    return subject;
+  }
+
+  public String getClusterID() {
+    return clusterID;
+  }
+
+  public String getScmID() {
+    return scmID;
+  }
 
   /**
    * Create an Instance of DefaultCAServer.
-   *  @param subject - String Subject
-   * @param clusterID - String ClusterID
-   * @param scmID - String SCMID.
+   *
+   * @param subject          - String Subject
+   * @param clusterID        - String ClusterID
+   * @param scmID            - String SCMID.
    * @param certificateStore - A store used to persist Certificates.
    */
   public DefaultCAServer(String subject, String clusterID, String scmID,
-      CertificateStore certificateStore, BigInteger rootCertId,
+      CertificateStore certificateStore,
       PKIProfile pkiProfile, String componentName) {
     this.subject = subject;
     this.clusterID = clusterID;
     this.scmID = scmID;
     this.store = certificateStore;
-    this.rootCertificateId = rootCertId;
     this.profile = pkiProfile;
     this.componentName = componentName;
     lock = new ReentrantLock();
-  }
-
-  public DefaultCAServer(String subject, String clusterID, String scmID,
-      CertificateStore certificateStore, PKIProfile pkiProfile,
-      String componentName) {
-    this(subject, clusterID, scmID, certificateStore, BigInteger.ONE,
-        pkiProfile, componentName);
   }
 
   @Override
@@ -157,15 +158,7 @@ public class DefaultCAServer implements CertificateServer {
       throws IOException {
     this.config = securityConfig;
     this.approver = new DefaultApprover(profile, this.config);
-
-    /* In future we will split this code to have different kind of CAs.
-     * Right now, we have only self-signed CertificateServer.
-     */
-
-    VerificationStatus status = verifySelfSignedCA(securityConfig);
-    Consumer<SecurityConfig> caInitializer =
-        processVerificationStatus(status, type);
-    caInitializer.accept(securityConfig);
+    verifySelfSignedCA();
   }
 
   @Override
@@ -293,28 +286,13 @@ public class DefaultCAServer implements CertificateServer {
   }
 
   /**
-   * Generates a Self Signed CertificateServer. These are the steps in
-   * generating a Self-Signed CertificateServer.
-   * <p>
-   * 1. Generate a Private/Public Key Pair. 2. Persist to a protected location.
-   * 3. Generate a SelfSigned Root CertificateServer certificate.
-   *
-   * @param securityConfig - Config.
-   */
-  private void generateSelfSignedCA(SecurityConfig securityConfig) throws
-      NoSuchAlgorithmException, NoSuchProviderException, IOException {
-    KeyPair keyPair = generateKeys(securityConfig);
-    generateRootCertificate(securityConfig, keyPair);
-  }
-
-  /**
    * Verify Self-Signed CertificateServer. 1. Check if the Certificate exist. 2.
    * Check if the key pair exists.
    *
-   * @param securityConfig -- Config
-   * @return Verification Status
+   * @return true if certificates and keys are present, false if all of them are missing
+   * @throws IllegalStateException at least one key or certificate is present but not all of them
    */
-  private VerificationStatus verifySelfSignedCA(SecurityConfig securityConfig) {
+  boolean verifySelfSignedCA() {
     /*
     The following is the truth table for the States.
     True means we have that file False means it is missing.
@@ -328,22 +306,37 @@ public class DefaultCAServer implements CertificateServer {
     +--------------+--------+--------+--------------+
     */
 
-    boolean keyStatus = checkIfKeysExist(securityConfig.getKeyLocation(componentName));
-    boolean certStatus = checkIfCertificatesExist(securityConfig.getCertificateLocation(componentName));
+    boolean keyStatus = checkIfKeysExist(config.getKeyLocation(componentName));
+    boolean certStatus = checkIfCertificatesExist(config.getCertificateLocation(componentName));
 
     if (certStatus && keyStatus) {
-      return VerificationStatus.SUCCESS;
+      LOG.info("CertificateServer validation is successful");
+      return true;
     }
 
     if (!certStatus && !keyStatus) {
-      return VerificationStatus.INITIALIZE;
+      initKeysAndRootCa();
+      return false;
     }
 
     if (certStatus) {
-      return VerificationStatus.MISSING_KEYS;
+      LOG.error("We have found the Certificate for this CertificateServer, " +
+          "but keys used by this CertificateServer is missing. This is a non-recoverable error. " +
+          "Please restart the system after locating the Keys used by the CertificateServer.");
+      LOG.error("Exiting due to unrecoverable CertificateServer error.");
+      throw new IllegalStateException("Missing Keys, cannot continue.");
     }
 
-    return VerificationStatus.MISSING_CERTIFICATE;
+    LOG.error("We found the keys, but the root certificate for this CertificateServer is missing. " +
+        "Please restart SCM after locating the Certificates.");
+    LOG.error("Exiting due to unrecoverable CertificateServer error.");
+    throw new IllegalStateException("Missing Root Certs, cannot continue.");
+  }
+
+  //This method will be overridden once the RootCAServer and SubCAServer is separated
+
+  void initKeysAndRootCa() {
+
   }
 
   /**
@@ -373,84 +366,8 @@ public class DefaultCAServer implements CertificateServer {
         this.config.getCertificateFileName()));
   }
 
-  /**
-   * Based on the Status of the verification, we return a lambda that gets
-   * executed by the init function of the CA.
-   *
-   * @param status - Verification Status.
-   */
-  @VisibleForTesting
-  Consumer<SecurityConfig> processVerificationStatus(
-      VerificationStatus status,  CAType type) {
-    Consumer<SecurityConfig> consumer = null;
-    switch (status) {
-    case SUCCESS:
-      consumer = (arg) -> LOG.info("CertificateServer validation is " +
-          "successful");
-      break;
-    case MISSING_KEYS:
-      consumer = (arg) -> {
-        LOG.error("We have found the Certificate for this CertificateServer, " +
-            "but keys used by this CertificateServer is missing. This is a " +
-            "non-recoverable error. Please restart the system after locating " +
-            "the Keys used by the CertificateServer.");
-        LOG.error("Exiting due to unrecoverable CertificateServer error.");
-        throw new IllegalStateException("Missing Keys, cannot continue.");
-      };
-      break;
-    case MISSING_CERTIFICATE:
-      consumer = (arg) -> {
-        LOG.error("We found the keys, but the root certificate for this " +
-            "CertificateServer is missing. Please restart SCM after locating " +
-            "the " +
-            "Certificates.");
-        LOG.error("Exiting due to unrecoverable CertificateServer error.");
-        throw new IllegalStateException("Missing Root Certs, cannot continue.");
-      };
-      break;
-    case INITIALIZE:
-      if (type == CAType.ROOT) {
-        consumer = this::initRootCa;
-      } else if (type == CAType.SUBORDINATE) {
-        // For sub CA certificates are generated during bootstrap/init. If
-        // both keys/certs are missing, init/bootstrap is missed to be
-        // performed.
-        consumer = (arg) -> {
-          LOG.error("Sub SCM CA Server is missing keys/certs. SCM is started " +
-              "with out init/bootstrap");
-          throw new IllegalStateException("INTERMEDIARY_CA Should not be" +
-              " in Initialize State during startup.");
-        };
-      }
-      break;
-    default:
-      /* Make CheckStyle happy */
-      break;
-    }
-    return consumer;
-  }
-
-  private void initRootCa(SecurityConfig securityConfig) {
-    if (isExternalCaSpecified(securityConfig)) {
-      initWithExternalRootCa(securityConfig);
-    } else {
-      try {
-        generateSelfSignedCA(securityConfig);
-      } catch (NoSuchProviderException | NoSuchAlgorithmException
-               | IOException e) {
-        LOG.error("Unable to initialize CertificateServer.", e);
-      }
-    }
-    VerificationStatus newStatus = verifySelfSignedCA(securityConfig);
-    if (newStatus != VerificationStatus.SUCCESS) {
-      LOG.error("Unable to initialize CertificateServer, failed in " +
-          "verification.");
-    }
-  }
-
-  private boolean isExternalCaSpecified(SecurityConfig conf) {
-    return !conf.getExternalRootCaCert().isEmpty() &&
-        !conf.getExternalRootCaPrivateKeyPath().isEmpty();
+  public SecurityConfig getSecurityConfig() {
+    return config;
   }
 
   /**
@@ -462,7 +379,7 @@ public class DefaultCAServer implements CertificateServer {
    * @throws NoSuchAlgorithmException - on Error.
    * @throws IOException              - on Error.
    */
-  private KeyPair generateKeys(SecurityConfig securityConfig)
+  KeyPair generateKeys(SecurityConfig securityConfig)
       throws NoSuchProviderException, NoSuchAlgorithmException, IOException {
     HDDSKeyGenerator keyGenerator = new HDDSKeyGenerator(securityConfig);
     KeyPair keys = keyGenerator.generateKey();
@@ -470,106 +387,6 @@ public class DefaultCAServer implements CertificateServer {
         componentName);
     keyPEMWriter.writeKey(keys);
     return keys;
-  }
-
-  /**
-   * Generates a self-signed Root Certificate for CA.
-   *
-   * @param securityConfig - SecurityConfig
-   * @param key            - KeyPair.
-   * @throws IOException          - on Error.
-   * @throws SCMSecurityException - on Error.
-   */
-  private void generateRootCertificate(
-      SecurityConfig securityConfig, KeyPair key)
-      throws IOException, SCMSecurityException {
-    Preconditions.checkNotNull(this.config);
-    LocalDateTime beginDate = LocalDateTime.now();
-    LocalDateTime endDate =
-        beginDate.plus(securityConfig.getMaxCertificateDuration());
-    SelfSignedCertificate.Builder builder = SelfSignedCertificate.newBuilder()
-        .setSubject(this.subject)
-        .setScmID(this.scmID)
-        .setClusterID(this.clusterID)
-        .setBeginDate(beginDate)
-        .setEndDate(endDate)
-        .makeCA(rootCertificateId)
-        .setConfiguration(securityConfig)
-        .setKey(key);
-
-    builder.addInetAddresses();
-    X509Certificate selfSignedCertificate = builder.build();
-
-    CertificateCodec certCodec =
-        new CertificateCodec(config, componentName);
-    certCodec.writeCertificate(selfSignedCertificate);
-  }
-
-  private void initWithExternalRootCa(SecurityConfig conf) {
-    String externalRootCaLocation = conf.getExternalRootCaCert();
-    Path extCertPath = Paths.get(externalRootCaLocation);
-    Path extPrivateKeyPath = Paths.get(conf.getExternalRootCaPrivateKeyPath());
-    String externalPublicKeyLocation = conf.getExternalRootCaPublicKeyPath();
-
-    KeyCodec keyCodec = new KeyCodec(config, componentName);
-    CertificateCodec certificateCodec =
-        new CertificateCodec(config, componentName);
-    try {
-      Path extCertParent = extCertPath.getParent();
-      Path extCertName = extCertPath.getFileName();
-      if (extCertParent == null || extCertName == null) {
-        throw new IOException("External cert path is not correct: " +
-            extCertPath);
-      }
-      X509Certificate certificate = certificateCodec.getTargetCert(extCertParent, extCertName.toString());
-      Path extPrivateKeyParent = extPrivateKeyPath.getParent();
-      Path extPrivateKeyFileName = extPrivateKeyPath.getFileName();
-      if (extPrivateKeyParent == null || extPrivateKeyFileName == null) {
-        throw new IOException("External private key path is not correct: " +
-            extPrivateKeyPath);
-      }
-      PrivateKey privateKey = keyCodec.readPrivateKey(extPrivateKeyParent,
-          extPrivateKeyFileName.toString());
-      PublicKey publicKey;
-      publicKey = readPublicKeyWithExternalData(
-          externalPublicKeyLocation, keyCodec, certificate);
-      keyCodec.writeKey(new KeyPair(publicKey, privateKey));
-      certificateCodec.writeCertificate(certificate);
-    } catch (IOException | CertificateException | NoSuchAlgorithmException |
-             InvalidKeySpecException e) {
-      LOG.error("External root CA certificate initialization failed", e);
-    }
-  }
-
-  private PublicKey readPublicKeyWithExternalData(
-      String externalPublicKeyLocation, KeyCodec keyCodec, X509Certificate certificate
-  ) throws CertificateException, NoSuchAlgorithmException, InvalidKeySpecException, IOException {
-    PublicKey publicKey;
-    if (externalPublicKeyLocation.isEmpty()) {
-      publicKey = certificate.getPublicKey();
-    } else {
-      Path publicKeyPath = Paths.get(externalPublicKeyLocation);
-      Path publicKeyPathFileName = publicKeyPath.getFileName();
-      Path publicKeyParent = publicKeyPath.getParent();
-      if (publicKeyPathFileName == null || publicKeyParent == null) {
-        throw new IOException("Public key path incorrect: " + publicKeyParent);
-      }
-      publicKey = keyCodec.readPublicKey(
-          publicKeyParent, publicKeyPathFileName.toString());
-    }
-    return publicKey;
-  }
-
-  /**
-   * This represents the verification status of the CA. Based on this enum
-   * appropriate action is taken in the Init.
-   */
-  @VisibleForTesting
-  enum VerificationStatus {
-    SUCCESS, /* All artifacts needed by CertificateServer is present */
-    MISSING_KEYS, /* Private key is missing, certificate Exists.*/
-    MISSING_CERTIFICATE, /* Keys exist, but root certificate missing.*/
-    INITIALIZE /* All artifacts are missing, we should init the system. */
   }
 
 }

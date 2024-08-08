@@ -392,7 +392,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
         InetAddress.getLocalHost().getHostName();
 
     DefaultCAServer rootCAServer = new DefaultCAServer(subject,
-        cId, scmId, scmCertStore, rootCertId, pkiProfile,
+        cId, scmId, scmCertStore, pkiProfile,
         component);
 
     rootCAServer.init(config, CAType.ROOT);
@@ -410,7 +410,6 @@ public class SCMCertificateClient extends DefaultCertificateClient {
       String certificateHolder) throws IOException {
     CertificateCodec certCodec =
         new CertificateCodec(getSecurityConfig(), getComponentName());
-
     certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
         getSecurityConfig().getCertificateFileName(), certificateHolder);
   }

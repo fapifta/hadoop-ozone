@@ -71,6 +71,8 @@ import org.apache.hadoop.hdds.scm.ha.SCMHAUtils;
 import org.apache.hadoop.hdds.scm.ha.SequenceIdGenerator;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.node.NodeAddressUpdateHandler;
+import org.apache.hadoop.hdds.scm.proxy.SCMClientConfig;
+import org.apache.hadoop.hdds.scm.proxy.SCMSecurityProtocolFailoverProxyProvider;
 import org.apache.hadoop.hdds.scm.security.SecretKeyManagerService;
 import org.apache.hadoop.hdds.scm.security.RootCARotationManager;
 import org.apache.hadoop.hdds.scm.server.upgrade.FinalizationManager;
@@ -202,6 +204,8 @@ import static org.apache.hadoop.hdds.HddsUtils.preserveThreadName;
 import static org.apache.hadoop.hdds.ratis.RatisHelper.newJvmPauseMonitor;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_EVENT_REPORT_EXEC_WAIT_THRESHOLD_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_EVENT_REPORT_QUEUE_WAIT_THRESHOLD_DEFAULT;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_INFO_WAIT_DURATION;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_INFO_WAIT_DURATION_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmUtils.checkIfCertSignRequestAllowed;
 import static org.apache.hadoop.hdds.scm.security.SecretKeyManagerService.isSecretKeyEnable;
 import static org.apache.hadoop.hdds.utils.HddsServerUtil.getRemoteUser;
@@ -894,10 +898,12 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       scmCertificateServer = new DefaultCAServer(subject,
           scmStorageConfig.getClusterID(), scmStorageConfig.getScmId(),
           certificateStore, new DefaultCAProfile(),
-          scmCertificateClient.getComponentName());
+          scmCertificateClient.getComponentName(), null, "");
+      SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
+          getScmSecurityClientWithFixedDuration(conf);
       // INTERMEDIARY_CA which issues certs to DN and OM.
       scmCertificateServer.init(new SecurityConfig(configuration),
-          CAType.SUBORDINATE);
+          CAType.SUBORDINATE, scmSecurityClient);
     }
 
     // If primary SCM node Id is set it means this is a cluster which has
@@ -943,6 +949,30 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     if (securityConfig.isAutoCARotationEnabled()) {
       rootCARotationManager = new RootCARotationManager(this);
     }
+  }
+
+  private static SCMSecurityProtocolClientSideTranslatorPB getScmSecurityClientWithFixedDuration(
+      OzoneConfiguration conf) throws IOException {
+    // As for OM during init, we need to wait for specific duration so that
+    // we can give response to user performed operation init in a definite
+    // period, instead of stuck for ever.
+    long duration = conf.getTimeDuration(OZONE_SCM_INFO_WAIT_DURATION,
+        OZONE_SCM_INFO_WAIT_DURATION_DEFAULT, TimeUnit.SECONDS);
+    SCMClientConfig scmClientConfig = conf.getObject(SCMClientConfig.class);
+    int retryCount =
+        (int) (duration / (scmClientConfig.getRetryInterval() / 1000));
+
+    // If duration is set to lesser value, fall back to actual default
+    // retry count.
+    if (retryCount > scmClientConfig.getRetryCount()) {
+      scmClientConfig.setRetryCount(retryCount);
+      conf.setFromObject(scmClientConfig);
+    }
+
+    return new SCMSecurityProtocolClientSideTranslatorPB(
+        new SCMSecurityProtocolFailoverProxyProvider(conf,
+            UserGroupInformation.getCurrentUser()));
+
   }
 
   /**

@@ -20,6 +20,7 @@
 package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
@@ -42,6 +43,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.time.LocalDateTime;
+import java.util.function.Consumer;
 
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_CA_CERT_STORAGE_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_CA_PATH;
@@ -57,13 +59,14 @@ public class RootCAServer extends DefaultCAServer {
   private String componentName;
   private BigInteger rootCertificateId;
 
+  @SuppressWarnings("parameternumber")
   public RootCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
-      PKIProfile pkiProfile) {
-    super(subject, clusterID, scmID, certificateStore, pkiProfile, SCM_ROOT_CA_COMPONENT_NAME);
+      PKIProfile pkiProfile, Consumer<String> saveCert, String hostName) {
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, SCM_ROOT_CA_COMPONENT_NAME, saveCert, hostName);
   }
 
   @Override
-  void initKeysAndRootCa() {
+  void initKeysAndCa(SCMSecurityProtocolClientSideTranslatorPB scmSecureClient) {
     if (isExternalCaSpecified(getSecurityConfig())) {
       initWithExternalRootCa(getSecurityConfig());
     } else {
@@ -74,15 +77,13 @@ public class RootCAServer extends DefaultCAServer {
         LOG.error("Unable to initialize CertificateServer.", e);
       }
     }
-    if (!verifySelfSignedCA()) {
-      LOG.error("Unable to initialize CertificateServer, failed in " +
-          "verification.");
+    if (!verifySelfSignedCA(null)) {
+      LOG.error("Unable to initialize CertificateServer, failed in verification.");
     }
   }
 
   private boolean isExternalCaSpecified(SecurityConfig conf) {
-    return !conf.getExternalRootCaCert().isEmpty() &&
-        !conf.getExternalRootCaPrivateKeyPath().isEmpty();
+    return !conf.getExternalRootCaCert().isEmpty() && !conf.getExternalRootCaPrivateKeyPath().isEmpty();
   }
 
   private void initWithExternalRootCa(SecurityConfig conf) {
@@ -115,6 +116,7 @@ public class RootCAServer extends DefaultCAServer {
           externalPublicKeyLocation, keyCodec, certificate);
       keyCodec.writeKey(new KeyPair(publicKey, privateKey));
       certificateCodec.writeCertificate(certificate);
+      getSaveCertId().accept(certificate.getSerialNumber().toString());
     } catch (IOException | CertificateException | NoSuchAlgorithmException |
              InvalidKeySpecException e) {
       LOG.error("External root CA certificate initialization failed", e);
@@ -186,5 +188,6 @@ public class RootCAServer extends DefaultCAServer {
     CertificateCodec certCodec =
         new CertificateCodec(getSecurityConfig(), componentName);
     certCodec.writeCertificate(selfSignedCertificate);
+    getSaveCertId().accept(selfSignedCertificate.getSerialNumber().toString());
   }
 }

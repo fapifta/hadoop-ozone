@@ -22,6 +22,7 @@ package org.apache.hadoop.hdds.security.x509.certificate.authority;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
+import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.metadata.SCMMetadataStore;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
@@ -54,8 +55,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 import static org.apache.hadoop.hdds.security.exception.SCMSecurityException.ErrorCode.UNABLE_TO_ISSUE_CERTIFICATE;
+import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CERTIFICATE_ERROR;
 
 /**
  * The default CertificateServer used by SCM. This has no dependencies on any
@@ -106,10 +109,15 @@ import static org.apache.hadoop.hdds.security.exception.SCMSecurityException.Err
 public class DefaultCAServer implements CertificateServer {
   private static final Logger LOG =
       LoggerFactory.getLogger(DefaultCAServer.class);
+  private static final String CERT_FILE_EXTENSION = ".crt";
+  private static final String CERT_FILE_NAME_FORMAT = "%s" + CERT_FILE_EXTENSION;
   private final String subject;
   private final String clusterID;
   private final String scmID;
-  private String componentName;
+
+  private Consumer<String> saveCertId;
+
+  private final String componentName;
 
   private SecurityConfig config;
 
@@ -121,17 +129,7 @@ public class DefaultCAServer implements CertificateServer {
   private CertificateStore store;
   private Lock lock;
 
-  public String getSubject() {
-    return subject;
-  }
-
-  public String getClusterID() {
-    return clusterID;
-  }
-
-  public String getScmID() {
-    return scmID;
-  }
+  private String hostName;
 
   /**
    * Create an Instance of DefaultCAServer.
@@ -141,24 +139,26 @@ public class DefaultCAServer implements CertificateServer {
    * @param scmID            - String SCMID.
    * @param certificateStore - A store used to persist Certificates.
    */
+  @SuppressWarnings("parameternumber")
   public DefaultCAServer(String subject, String clusterID, String scmID,
       CertificateStore certificateStore,
-      PKIProfile pkiProfile, String componentName) {
+      PKIProfile pkiProfile, String componentName, Consumer<String> saveCertId, String hostName) {
     this.subject = subject;
     this.clusterID = clusterID;
     this.scmID = scmID;
     this.store = certificateStore;
     this.profile = pkiProfile;
     this.componentName = componentName;
+    this.hostName = hostName;
     lock = new ReentrantLock();
   }
 
   @Override
-  public void init(SecurityConfig securityConfig, CAType type)
+  public void init(SecurityConfig securityConfig, CAType type, SCMSecurityProtocolClientSideTranslatorPB scmClient)
       throws IOException {
     this.config = securityConfig;
     this.approver = new DefaultApprover(profile, this.config);
-    verifySelfSignedCA();
+    verifySelfSignedCA(scmClient);
   }
 
   @Override
@@ -292,7 +292,7 @@ public class DefaultCAServer implements CertificateServer {
    * @return true if certificates and keys are present, false if all of them are missing
    * @throws IllegalStateException at least one key or certificate is present but not all of them
    */
-  boolean verifySelfSignedCA() {
+  boolean verifySelfSignedCA(SCMSecurityProtocolClientSideTranslatorPB scmClient) {
     /*
     The following is the truth table for the States.
     True means we have that file False means it is missing.
@@ -315,7 +315,7 @@ public class DefaultCAServer implements CertificateServer {
     }
 
     if (!certStatus && !keyStatus) {
-      initKeysAndRootCa();
+      initKeysAndCa(scmClient);
       return false;
     }
 
@@ -335,7 +335,7 @@ public class DefaultCAServer implements CertificateServer {
 
   //This method will be overridden once the RootCAServer and SubCAServer is separated
 
-  void initKeysAndRootCa() {
+  void initKeysAndCa(SCMSecurityProtocolClientSideTranslatorPB scmSecureClient) {
 
   }
 
@@ -383,10 +383,53 @@ public class DefaultCAServer implements CertificateServer {
       throws NoSuchProviderException, NoSuchAlgorithmException, IOException {
     HDDSKeyGenerator keyGenerator = new HDDSKeyGenerator(securityConfig);
     KeyPair keys = keyGenerator.generateKey();
-    KeyCodec keyPEMWriter = new KeyCodec(securityConfig,
+    KeyCodec keyCodec = new KeyCodec(securityConfig,
         componentName);
-    keyPEMWriter.writeKey(keys);
+    keyCodec.writeKey(keys);
     return keys;
   }
+
+  public String getComponentName() {
+    return componentName;
+  }
+
+  public Consumer<String> getSaveCertId() {
+    return saveCertId;
+  }
+
+  public String getHostName() {
+    return hostName;
+  }
+
+  public String getSubject() {
+    return subject;
+  }
+
+  public String getClusterID() {
+    return clusterID;
+  }
+
+  public String getScmID() {
+    return scmID;
+  }
+
+  public synchronized void storeCertificate(String pemEncodedCert,
+      CAType caType) throws org.apache.hadoop.hdds.security.x509.exception.CertificateException {
+    try {
+      CertificateCodec codec = new CertificateCodec(getSecurityConfig(), getComponentName());
+      CertPath certificatePath =
+          CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
+      X509Certificate cert = (X509Certificate) certificatePath.getCertificates().get(0);
+
+      String certName = String.format(CERT_FILE_NAME_FORMAT,
+          caType.getFileNamePrefix() + cert.getSerialNumber().toString());
+      codec.writeCertificate(certName, pemEncodedCert);
+    } catch (IOException | java.security.cert.CertificateException e) {
+      throw new org.apache.hadoop.hdds.security.x509.exception.CertificateException("Error while storing certificate.",
+          e,
+          CERTIFICATE_ERROR);
+    }
+  }
+
 
 }

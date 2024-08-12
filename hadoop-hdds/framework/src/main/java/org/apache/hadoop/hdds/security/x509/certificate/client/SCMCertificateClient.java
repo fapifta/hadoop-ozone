@@ -393,9 +393,9 @@ public class SCMCertificateClient extends DefaultCertificateClient {
 
     DefaultCAServer rootCAServer = new DefaultCAServer(subject,
         cId, scmId, scmCertStore, pkiProfile,
-        component);
+        component, saveCertIdCallback, scmHostname);
 
-    rootCAServer.init(config, CAType.ROOT);
+    rootCAServer.init(config, CAType.ROOT, null);
     return rootCAServer;
   }
 

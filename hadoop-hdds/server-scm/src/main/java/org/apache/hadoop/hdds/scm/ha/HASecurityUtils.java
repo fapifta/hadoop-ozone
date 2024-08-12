@@ -119,9 +119,9 @@ public final class  HASecurityUtils {
     DefaultCAServer rootCAServer = new DefaultCAServer(subject,
         scmStorageConfig.getClusterID(),
         scmStorageConfig.getScmId(), scmCertStore, pkiProfile,
-        component);
+        component, null, "");
 
-    rootCAServer.init(config, CAType.ROOT);
+    rootCAServer.init(config, CAType.ROOT, null);
 
     return rootCAServer;
   }

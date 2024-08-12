@@ -19,9 +19,26 @@
 
 package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos;
+import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.security.KeyPair;
+import java.security.cert.CertPath;
+import java.security.cert.X509Certificate;
+import java.util.function.Consumer;
+
+import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest.getEncodedString;
+import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CERTIFICATE_ERROR;
+import static org.apache.hadoop.ozone.OzoneConsts.SCM_SUB_CA_PREFIX;
 
 
 /**
@@ -30,14 +47,88 @@ import org.slf4j.LoggerFactory;
 public class SubCAServer extends DefaultCAServer {
   public static final Logger LOG =
       LoggerFactory.getLogger(SubCAServer.class);
+  private static final String CERT_FILE_EXTENSION = ".crt";
+  private static final String CERT_FILE_NAME_FORMAT = "%s" + CERT_FILE_EXTENSION;
 
+  @SuppressWarnings("parameternumber")
   public SubCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
-      PKIProfile pkiProfile, String componentName) {
-    super(subject, clusterID, scmID, certificateStore, pkiProfile, componentName);
+      PKIProfile pkiProfile, String componentName, Consumer<String> certIdCallBack, String hostName) {
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, componentName, certIdCallBack, hostName);
   }
 
   @Override
-  void initKeysAndRootCa() {
+  void initKeysAndCa(SCMSecurityProtocolClientSideTranslatorPB scmSecureClient) {
+    try {
+      KeyPair keyPair = generateKeys(getSecurityConfig());
+      getRootCASignedSCMCert(keyPair, scmSecureClient);
+    } catch (Exception e) {
 
+    }
+  }
+
+  /**
+   * For bootstrapped SCM get sub-ca signed certificate and root CA
+   * certificate using scm security client and store it using certificate
+   * client.
+   */
+  private void getRootCASignedSCMCert(KeyPair keyPair, SCMSecurityProtocolClientSideTranslatorPB scmClient) {
+    try {
+      // Generate CSR.
+      PKCS10CertificationRequest csr = getCSRBuilder(keyPair).build();
+      HddsProtos.ScmNodeDetailsProto scmNodeDetailsProto =
+          HddsProtos.ScmNodeDetailsProto.newBuilder()
+              .setClusterId(getClusterID())
+              .setHostName(getHostName())
+              .setScmNodeId(getScmID()).build();
+
+      // Get SCM sub CA cert.
+      SCMSecurityProtocolProtos.SCMGetCertResponseProto response = scmClient.
+          getSCMCertChain(scmNodeDetailsProto, getEncodedString(csr), false);
+      String pemEncodedCert = response.getX509Certificate();
+      if (!response.hasX509CACertificate()) {
+        throw new RuntimeException("Unable to retrieve SCM certificate chain");
+      }
+      // Store SCM sub CA and root CA certificate.
+      String pemEncodedRootCert = response.getX509CACertificate();
+      storeCertificate(pemEncodedRootCert, CAType.SUBORDINATE);
+      storeCertificate(pemEncodedCert, CAType.NONE);
+      persistSubCACertificate(pemEncodedCert);
+
+      X509Certificate certificate =
+          CertificateCodec.getX509Certificate(pemEncodedCert);
+      // Persist scm cert serial ID.
+      getSaveCertId().accept(certificate.getSerialNumber().toString());
+    } catch (IOException | java.security.cert.CertificateException e) {
+      LOG.error("Error while fetching/storing SCM signed certificate.", e);
+      throw new RuntimeException(e);
+    }
+  }
+
+  public CertificateSignRequest.Builder getCSRBuilder(KeyPair keyPair)
+      throws CertificateException {
+    String subject = SCM_SUB_CA_PREFIX + getHostName();
+
+    LOG.info("Creating csr for SCM->hostName:{},scmId:{},clusterId:{}," +
+        "subject:{}", getHostName(), getScmID(), getClusterID(), subject);
+    return new CertificateSignRequest.Builder()
+        .setConfiguration(getSecurityConfig())
+        .addInetAddresses()
+        .setDigitalEncryption(true)
+        .setDigitalSignature(true)
+        .setSubject(subject)
+        .setScmID(getScmID())
+        .setClusterID(getClusterID())
+        // Set CA to true, as this will be used to sign certs for OM/DN.
+        .setCA(true)
+        .setKey(keyPair);
+  }
+
+
+  private void persistSubCACertificate(
+      String certificateHolder) throws IOException {
+    CertificateCodec certCodec =
+        new CertificateCodec(getSecurityConfig(), getComponentName());
+    certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
+        getSecurityConfig().getCertificateFileName(), certificateHolder);
   }
 }

@@ -52,18 +52,17 @@ public class RootCAServer extends DefaultCAServer {
   public static final String SCM_ROOT_CA_COMPONENT_NAME = Paths.get(SCM_CA_CERT_STORAGE_DIR, SCM_CA_PATH).toString();
   public static final Logger LOG =
       LoggerFactory.getLogger(RootCAServer.class);
-  private String componentName;
   private BigInteger rootCertificateId;
 
   @SuppressWarnings("parameternumber")
   public RootCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
-      PKIProfile pkiProfile, Consumer<String> saveCert, String hostName) {
-    super(subject, clusterID, scmID, certificateStore, pkiProfile, SCM_ROOT_CA_COMPONENT_NAME, saveCert, hostName);
+      PKIProfile pkiProfile, String hostName, Consumer<String> saveCert) {
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, SCM_ROOT_CA_COMPONENT_NAME, hostName, saveCert);
   }
 
   @Override
   void initKeysAndCa(SCMSecurityProtocolClientSideTranslatorPB scmSecureClient) {
-    if (getSecurityConfig().useExternalCACertificate(componentName)) {
+    if (getSecurityConfig().useExternalCACertificate(getComponentName())) {
       initWithExternalRootCa(getSecurityConfig());
     } else {
       try {
@@ -82,7 +81,7 @@ public class RootCAServer extends DefaultCAServer {
     Path extCertPath = Paths.get(conf.getExternalRootCaCert());
 
     try {
-      CertificateCodec certificateCodec = new CertificateCodec(conf, componentName);
+      CertificateCodec certificateCodec = new CertificateCodec(conf, getComponentName());
       Path extCertParent = extCertPath.getParent();
       Path extCertName = extCertPath.getFileName();
       if (extCertParent == null || extCertName == null) {
@@ -142,8 +141,10 @@ public class RootCAServer extends DefaultCAServer {
     X509Certificate selfSignedCertificate = builder.build();
 
     CertificateCodec certCodec =
-        new CertificateCodec(getSecurityConfig(), componentName);
+        new CertificateCodec(getSecurityConfig(), getComponentName());
     certCodec.writeCertificate(selfSignedCertificate);
+    String encodedCert = CertificateCodec.getPEMEncodedString(selfSignedCertificate);
+    storeCertificate(encodedCert, CAType.NONE);
     getSaveCertId().accept(selfSignedCertificate.getSerialNumber().toString());
   }
 }

@@ -32,12 +32,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.KeyPair;
-import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
 import java.util.function.Consumer;
 
 import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest.getEncodedString;
-import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CERTIFICATE_ERROR;
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_SUB_CA_PREFIX;
 
 
@@ -53,7 +51,7 @@ public class SubCAServer extends DefaultCAServer {
   @SuppressWarnings("parameternumber")
   public SubCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
       PKIProfile pkiProfile, String componentName, Consumer<String> certIdCallBack, String hostName) {
-    super(subject, clusterID, scmID, certificateStore, pkiProfile, componentName, certIdCallBack, hostName);
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, componentName, hostName, certIdCallBack);
   }
 
   @Override

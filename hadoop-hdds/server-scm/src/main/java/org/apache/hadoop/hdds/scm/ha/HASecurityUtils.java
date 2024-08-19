@@ -80,21 +80,32 @@ public final class HASecurityUtils {
     LOG.info("Initializing secure StorageContainerManager.");
 
     SecurityConfig securityConfig = new SecurityConfig(conf);
+//    if (primaryscm) {
+//      String subject = SCM_ROOT_CA_PREFIX +
+//          InetAddress.getLocalHost().getHostName();
+//
+//      RootCAServer rootCAServer = new RootCAServer(subject,
+//          scmStorageConfig.getClusterID(),
+//          scmStorageConfig.getScmId(), null, new DefaultCAProfile(), null, scmHostname);
+//
+//      rootCAServer.init(securityConfig, CAType.ROOT, null);
+//    } else {
     SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
         getScmSecurityClientWithFixedDuration(conf);
     try (CertificateClient certClient =
-        new SCMCertificateClient(securityConfig, scmSecurityClient,
-            scmStorageConfig.getScmId(), scmStorageConfig.getClusterID(),
-            scmStorageConfig.getScmCertSerialId(), scmHostname, primaryscm,
-            certIDString -> {
-              try {
-                scmStorageConfig.setScmCertSerialId(certIDString);
-              } catch (IOException e) {
-                LOG.error("Failed to set new certificate ID", e);
-                throw new RuntimeException("Failed to set new certificate ID");
-              }
-            })) {
+             new SCMCertificateClient(securityConfig, scmSecurityClient,
+                 scmStorageConfig.getScmId(), scmStorageConfig.getClusterID(),
+                 scmStorageConfig.getScmCertSerialId(), scmHostname, primaryscm,
+                 certIDString -> {
+                   try {
+                     scmStorageConfig.setScmCertSerialId(certIDString);
+                   } catch (IOException e) {
+                     LOG.error("Failed to set new certificate ID", e);
+                     throw new RuntimeException("Failed to set new certificate ID");
+                   }
+                 })) {
       certClient.initWithRecovery();
+//      }
     }
   }
 
@@ -119,7 +130,7 @@ public final class HASecurityUtils {
     DefaultCAServer rootCAServer = new DefaultCAServer(subject,
         scmStorageConfig.getClusterID(),
         scmStorageConfig.getScmId(), scmCertStore, pkiProfile,
-        component, null, "");
+        component, "", null);
 
     rootCAServer.init(config, CAType.ROOT, null);
 

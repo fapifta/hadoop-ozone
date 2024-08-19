@@ -142,7 +142,7 @@ public class DefaultCAServer implements CertificateServer {
   @SuppressWarnings("parameternumber")
   public DefaultCAServer(String subject, String clusterID, String scmID,
       CertificateStore certificateStore,
-      PKIProfile pkiProfile, String componentName, Consumer<String> saveCertId, String hostName) {
+      PKIProfile pkiProfile, String componentName, String hostName, Consumer<String> saveCertId) {
     this.subject = subject;
     this.clusterID = clusterID;
     this.scmID = scmID;
@@ -150,6 +150,7 @@ public class DefaultCAServer implements CertificateServer {
     this.profile = pkiProfile;
     this.componentName = componentName;
     this.hostName = hostName;
+    this.saveCertId = saveCertId;
     lock = new ReentrantLock();
   }
 

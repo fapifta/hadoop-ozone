@@ -898,7 +898,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       scmCertificateServer = new DefaultCAServer(subject,
           scmStorageConfig.getClusterID(), scmStorageConfig.getScmId(),
           certificateStore, new DefaultCAProfile(),
-          scmCertificateClient.getComponentName(), "", null);
+          scmCertificateClient.getComponentName(), BigInteger.ONE, "", null);
       SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
           getScmSecurityClientWithFixedDuration(conf);
       // INTERMEDIARY_CA which issues certs to DN and OM.

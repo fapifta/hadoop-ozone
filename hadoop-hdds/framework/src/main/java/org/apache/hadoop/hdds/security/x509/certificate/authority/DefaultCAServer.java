@@ -21,13 +21,14 @@ package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
-import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.metadata.SCMMetadataStore;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyStorage;
 import org.bouncycastle.operator.OperatorCreationException;
@@ -43,6 +44,8 @@ import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -119,6 +122,7 @@ public class DefaultCAServer implements CertificateServer {
   private final String componentName;
 
   private SecurityConfig config;
+  private BigInteger rootCertId;
 
   /**
    * TODO: We will make these configurable in the future.
@@ -129,6 +133,10 @@ public class DefaultCAServer implements CertificateServer {
   private Lock lock;
 
   private String hostName;
+
+  public BigInteger getRootCertId() {
+    return rootCertId;
+  }
 
   /**
    * Create an Instance of DefaultCAServer.
@@ -141,7 +149,8 @@ public class DefaultCAServer implements CertificateServer {
   @SuppressWarnings("parameternumber")
   public DefaultCAServer(String subject, String clusterID, String scmID,
       CertificateStore certificateStore,
-      PKIProfile pkiProfile, String componentName, String hostName, Consumer<String> saveCertId) {
+      PKIProfile pkiProfile, String componentName, BigInteger rootCertId, String hostName,
+      Consumer<String> saveCertId) {
     this.subject = subject;
     this.clusterID = clusterID;
     this.scmID = scmID;
@@ -150,15 +159,16 @@ public class DefaultCAServer implements CertificateServer {
     this.componentName = componentName;
     this.hostName = hostName;
     this.saveCertId = saveCertId;
+    this.rootCertId = rootCertId;
     lock = new ReentrantLock();
   }
 
   @Override
-  public void init(SecurityConfig securityConfig, CAType type, SCMSecurityProtocolClientSideTranslatorPB scmClient)
+  public void init(SecurityConfig securityConfig, CAType type, SCMSecurityProtocol rootCAServer)
       throws IOException {
     this.config = securityConfig;
     this.approver = new DefaultApprover(profile, this.config);
-    verifySelfSignedCA(scmClient);
+    verifySelfSignedCA(rootCAServer);
   }
 
   @Override
@@ -286,7 +296,7 @@ public class DefaultCAServer implements CertificateServer {
    * @return true if certificates and keys are present, false if all of them are missing
    * @throws IllegalStateException at least one key or certificate is present but not all of them
    */
-  boolean verifySelfSignedCA(SCMSecurityProtocolClientSideTranslatorPB scmClient) {
+  boolean verifySelfSignedCA(SCMSecurityProtocol rootCaServer) {
     /*
     The following is the truth table for the States.
     True means we have that file False means it is missing.
@@ -309,7 +319,7 @@ public class DefaultCAServer implements CertificateServer {
     }
 
     if (!certStatus && !keyStatus) {
-      initKeysAndCa(scmClient);
+      initKeysAndCa(rootCaServer);
       return false;
     }
 
@@ -329,7 +339,7 @@ public class DefaultCAServer implements CertificateServer {
 
   //This method will be overridden once the RootCAServer and SubCAServer is separated
 
-  void initKeysAndCa(SCMSecurityProtocolClientSideTranslatorPB scmSecureClient) {
+  void initKeysAndCa(SCMSecurityProtocol rootCAServer) {
 
   }
 
@@ -430,6 +440,132 @@ public class DefaultCAServer implements CertificateServer {
           e,
           CERTIFICATE_ERROR);
     }
+  }
+
+  /**
+   * Generates a Self Signed CertificateServer. These are the steps in
+   * generating a Self-Signed CertificateServer.
+   * <p>
+   * 1. Generate a Private/Public Key Pair. 2. Persist to a protected location.
+   * 3. Generate a SelfSigned Root CertificateServer certificate.
+   *
+   * @param securityConfig - Config.
+   */
+  private void generateSelfSignedCA(SecurityConfig securityConfig) throws
+      NoSuchAlgorithmException, NoSuchProviderException, IOException {
+    KeyPair keyPair = generateKeys(securityConfig);
+    generateRootCertificate(securityConfig, keyPair);
+  }
+
+  private void initRootCa(SecurityConfig securityConfig) {
+    if (isExternalCaSpecified(securityConfig)) {
+      initWithExternalRootCa(securityConfig);
+    } else {
+      try {
+        generateSelfSignedCA(securityConfig);
+      } catch (NoSuchProviderException | NoSuchAlgorithmException
+               | IOException e) {
+        LOG.error("Unable to initialize CertificateServer.", e);
+      }
+    }
+    boolean isVerificationSuccessful = verifySelfSignedCA(null);
+    if (!isVerificationSuccessful) {
+      LOG.error("Unable to initialize CertificateServer, failed in " +
+          "verification.");
+    }
+  }
+
+  private boolean isExternalCaSpecified(SecurityConfig conf) {
+    return !conf.getExternalRootCaCert().isEmpty() &&
+        !conf.getExternalRootCaPrivateKeyPath().isEmpty();
+  }
+
+  /**
+   * Generates a self-signed Root Certificate for CA.
+   *
+   * @param securityConfig - SecurityConfig
+   * @param key            - KeyPair.
+   * @throws IOException          - on Error.
+   * @throws SCMSecurityException - on Error.
+   */
+  private void generateRootCertificate(
+      SecurityConfig securityConfig, KeyPair key)
+      throws IOException, SCMSecurityException {
+    Preconditions.checkNotNull(this.config);
+    LocalDateTime beginDate = LocalDateTime.now();
+    LocalDateTime endDate =
+        beginDate.plus(securityConfig.getMaxCertificateDuration());
+    SelfSignedCertificate.Builder builder = SelfSignedCertificate.newBuilder()
+        .setSubject(this.subject)
+        .setScmID(this.scmID)
+        .setClusterID(this.clusterID)
+        .setBeginDate(beginDate)
+        .setEndDate(endDate)
+        .makeCA(rootCertId)
+        .setConfiguration(securityConfig)
+        .setKey(key);
+
+    builder.addInetAddresses();
+    X509Certificate selfSignedCertificate = builder.build();
+
+    CertificateCodec certCodec =
+        new CertificateCodec(config, componentName);
+    certCodec.writeCertificate(selfSignedCertificate);
+  }
+
+  private void initWithExternalRootCa(SecurityConfig conf) {
+    String externalRootCaLocation = conf.getExternalRootCaCert();
+    Path extCertPath = Paths.get(externalRootCaLocation);
+    Path extPrivateKeyPath = Paths.get(conf.getExternalRootCaPrivateKeyPath());
+    String externalPublicKeyLocation = conf.getExternalRootCaPublicKeyPath();
+
+    KeyCodec keyCodec = new KeyCodec(config, componentName);
+    CertificateCodec certificateCodec =
+        new CertificateCodec(config, componentName);
+    try {
+      Path extCertParent = extCertPath.getParent();
+      Path extCertName = extCertPath.getFileName();
+      if (extCertParent == null || extCertName == null) {
+        throw new IOException("External cert path is not correct: " +
+            extCertPath);
+      }
+      X509Certificate certificate = certificateCodec.getTargetCert(extCertParent, extCertName.toString());
+      Path extPrivateKeyParent = extPrivateKeyPath.getParent();
+      Path extPrivateKeyFileName = extPrivateKeyPath.getFileName();
+      if (extPrivateKeyParent == null || extPrivateKeyFileName == null) {
+        throw new IOException("External private key path is not correct: " +
+            extPrivateKeyPath);
+      }
+      PrivateKey privateKey = keyCodec.readPrivateKey(extPrivateKeyParent,
+          extPrivateKeyFileName.toString());
+      PublicKey publicKey;
+      publicKey = readPublicKeyWithExternalData(
+          externalPublicKeyLocation, keyCodec, certificate);
+      keyCodec.writeKey(new KeyPair(publicKey, privateKey));
+      certificateCodec.writeCertificate(certificate);
+    } catch (IOException | CertificateException | NoSuchAlgorithmException |
+             InvalidKeySpecException e) {
+      LOG.error("External root CA certificate initialization failed", e);
+    }
+  }
+
+  private PublicKey readPublicKeyWithExternalData(
+      String externalPublicKeyLocation, KeyCodec keyCodec, X509Certificate certificate
+  ) throws CertificateException, NoSuchAlgorithmException, InvalidKeySpecException, IOException {
+    PublicKey publicKey;
+    if (externalPublicKeyLocation.isEmpty()) {
+      publicKey = certificate.getPublicKey();
+    } else {
+      Path publicKeyPath = Paths.get(externalPublicKeyLocation);
+      Path publicKeyPathFileName = publicKeyPath.getFileName();
+      Path publicKeyParent = publicKeyPath.getParent();
+      if (publicKeyPathFileName == null || publicKeyParent == null) {
+        throw new IOException("Public key path incorrect: " + publicKeyParent);
+      }
+      publicKey = keyCodec.readPublicKey(
+          publicKeyParent, publicKeyPathFileName.toString());
+    }
+    return publicKey;
   }
 
 

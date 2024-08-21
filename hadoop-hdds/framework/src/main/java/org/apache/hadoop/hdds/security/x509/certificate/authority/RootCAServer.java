@@ -20,7 +20,7 @@
 package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
@@ -52,16 +52,16 @@ public class RootCAServer extends DefaultCAServer {
   public static final String SCM_ROOT_CA_COMPONENT_NAME = Paths.get(SCM_CA_CERT_STORAGE_DIR, SCM_CA_PATH).toString();
   public static final Logger LOG =
       LoggerFactory.getLogger(RootCAServer.class);
-  private BigInteger rootCertificateId;
 
   @SuppressWarnings("parameternumber")
   public RootCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
-      PKIProfile pkiProfile, String hostName, Consumer<String> saveCert) {
-    super(subject, clusterID, scmID, certificateStore, pkiProfile, SCM_ROOT_CA_COMPONENT_NAME, hostName, saveCert);
+      PKIProfile pkiProfile, String hostName, BigInteger rootCertId, Consumer<String> saveCert) {
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, SCM_ROOT_CA_COMPONENT_NAME, rootCertId, hostName,
+        saveCert);
   }
 
   @Override
-  void initKeysAndCa(SCMSecurityProtocolClientSideTranslatorPB scmSecureClient) {
+  void initKeysAndCa(SCMSecurityProtocol rootCAServer) {
     if (getSecurityConfig().useExternalCACertificate(getComponentName())) {
       initWithExternalRootCa(getSecurityConfig());
     } else {
@@ -133,7 +133,7 @@ public class RootCAServer extends DefaultCAServer {
         .setClusterID(getClusterID())
         .setBeginDate(beginDate)
         .setEndDate(endDate)
-        .makeCA(rootCertificateId)
+        .makeCA(getRootCertId())
         .setConfiguration(securityConfig)
         .setKey(key);
 
@@ -143,8 +143,5 @@ public class RootCAServer extends DefaultCAServer {
     CertificateCodec certCodec =
         new CertificateCodec(getSecurityConfig(), getComponentName());
     certCodec.writeCertificate(selfSignedCertificate);
-    String encodedCert = CertificateCodec.getPEMEncodedString(selfSignedCertificate);
-    storeCertificate(encodedCert, CAType.NONE);
-    getSaveCertId().accept(selfSignedCertificate.getSerialNumber().toString());
   }
 }

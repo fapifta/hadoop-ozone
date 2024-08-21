@@ -28,7 +28,6 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateServer;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateStore;
-import org.apache.hadoop.hdds.security.x509.certificate.authority.DefaultCAServer;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.RootCAServer;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultCAProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
@@ -384,9 +383,8 @@ public class SCMCertificateClient extends DefaultCertificateClient {
     String subject = String.format(SCM_ROOT_CA_PREFIX, rootCertId) +
         InetAddress.getLocalHost().getHostName();
 
-    DefaultCAServer rootCAServer = new RootCAServer(subject,
-        cId, scmId, scmCertStore, pkiProfile,
-        scmHostname, saveCertIdCallback);
+    RootCAServer rootCAServer = new RootCAServer(subject,
+        cId, scmId, scmCertStore, pkiProfile, component, rootCertId, saveCertIdCallback);
 
     rootCAServer.init(config, CAType.ROOT, null);
     return rootCAServer;

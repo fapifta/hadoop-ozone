@@ -85,7 +85,6 @@ import org.apache.hadoop.hdds.scm.pipeline.WritableContainerFactory;
 import org.apache.hadoop.hdds.security.symmetric.SecretKeyManager;
 import org.apache.hadoop.hdds.security.token.ContainerTokenGenerator;
 import org.apache.hadoop.hdds.security.token.ContainerTokenSecretManager;
-import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateStore;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultCAProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultProfile;
@@ -908,8 +907,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
           getScmSecurityClientWithFixedDuration(conf);
       // INTERMEDIARY_CA which issues certs to DN and OM.
-      scmCertificateServer.init(new SecurityConfig(configuration),
-          CAType.SUBORDINATE, scmSecurityClient);
+      scmCertificateServer.init(new SecurityConfig(configuration));
     }
 
     // If primary SCM node Id is set it means this is a cluster which has

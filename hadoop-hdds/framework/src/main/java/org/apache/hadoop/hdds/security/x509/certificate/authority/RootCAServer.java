@@ -20,7 +20,6 @@
 package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
@@ -61,7 +60,7 @@ public class RootCAServer extends DefaultCAServer {
   }
 
   @Override
-  void initKeysAndCa(SCMSecurityProtocol rootCAServer) {
+  void initKeysAndCa() {
     if (getSecurityConfig().useExternalCACertificate(getComponentName())) {
       initWithExternalRootCa(getSecurityConfig());
     } else {
@@ -72,7 +71,7 @@ public class RootCAServer extends DefaultCAServer {
         LOG.error("Unable to initialize CertificateServer.", e);
       }
     }
-    if (!verifySelfSignedCA(null)) {
+    if (!verifySelfSignedCA()) {
       LOG.error("Unable to initialize CertificateServer, failed in verification.");
     }
   }

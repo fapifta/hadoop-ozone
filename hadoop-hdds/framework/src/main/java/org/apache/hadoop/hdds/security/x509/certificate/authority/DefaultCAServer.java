@@ -21,7 +21,6 @@ package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 import org.apache.hadoop.hdds.scm.metadata.SCMMetadataStore;
 import org.apache.hadoop.hdds.security.SecurityConfig;
@@ -165,11 +164,11 @@ public class DefaultCAServer implements CertificateServer {
   }
 
   @Override
-  public void init(SecurityConfig securityConfig, CAType type, SCMSecurityProtocol rootCAServer)
+  public void init(SecurityConfig securityConfig)
       throws IOException {
     this.config = securityConfig;
     this.approver = new DefaultApprover(profile, this.config);
-    verifySelfSignedCA(rootCAServer);
+    verifySelfSignedCA();
   }
 
   @Override
@@ -303,7 +302,7 @@ public class DefaultCAServer implements CertificateServer {
    * @return true if certificates and keys are present, false if all of them are missing
    * @throws IllegalStateException at least one key or certificate is present but not all of them
    */
-  boolean verifySelfSignedCA(SCMSecurityProtocol rootCaServer) {
+  boolean verifySelfSignedCA() {
     /*
     The following is the truth table for the States.
     True means we have that file False means it is missing.
@@ -326,7 +325,7 @@ public class DefaultCAServer implements CertificateServer {
     }
 
     if (!certStatus && !keyStatus) {
-      initKeysAndCa(rootCaServer);
+      initKeysAndCa();
       return false;
     }
 
@@ -346,7 +345,7 @@ public class DefaultCAServer implements CertificateServer {
 
   //This method will be overridden once the RootCAServer and SubCAServer is separated
 
-  void initKeysAndCa(SCMSecurityProtocol rootCAServer) {
+  void initKeysAndCa() {
 
   }
 
@@ -468,7 +467,7 @@ public class DefaultCAServer implements CertificateServer {
         LOG.error("Unable to initialize CertificateServer.", e);
       }
     }
-    boolean isVerificationSuccessful = verifySelfSignedCA(null);
+    boolean isVerificationSuccessful = verifySelfSignedCA();
     if (!isVerificationSuccessful) {
       LOG.error("Unable to initialize CertificateServer, failed in " +
           "verification.");

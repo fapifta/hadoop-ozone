@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
-import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 import org.apache.hadoop.hdds.scm.metadata.SCMMetadataStore;
 import org.apache.hadoop.hdds.security.SecurityConfig;
@@ -42,11 +41,9 @@ public interface CertificateServer {
    * Initialize the Certificate Authority.
    *
    * @param securityConfig - Security Configuration.
-   * @param type           - The Type of CertificateServer we are creating, we make this
-   *                       explicit so that when we read code it is visible to the users.
    * @throws SCMSecurityException - Throws if the init fails.
    */
-  void init(SecurityConfig securityConfig, CAType type, SCMSecurityProtocol rootCAServer)
+  void init(SecurityConfig securityConfig)
       throws IOException;
 
   /**

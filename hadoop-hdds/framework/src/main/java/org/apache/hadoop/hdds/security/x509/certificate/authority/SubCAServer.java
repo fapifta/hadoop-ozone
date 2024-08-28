@@ -19,32 +19,30 @@
 
 package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
-import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
-//import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultCAProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-//import java.math.BigInteger;
+import java.math.BigInteger;
+import java.nio.file.Paths;
 import java.security.KeyPair;
-//import java.security.cert.CertPath;
+import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
-//import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
-//import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType.SCM;
-//import static org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateApprover.ApprovalType
-// .KERBEROS_TRUSTED;
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType.SCM;
+import static org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateApprover.ApprovalType.KERBEROS_TRUSTED;
 import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest.getEncodedString;
-//import static org.apache.hadoop.ozone.OzoneConsts.SCM_ROOT_CA_COMPONENT_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_SUB_CA_PREFIX;
 
 
@@ -54,20 +52,24 @@ import static org.apache.hadoop.ozone.OzoneConsts.SCM_SUB_CA_PREFIX;
 public class SubCAServer extends DefaultCAServer {
   public static final Logger LOG =
       LoggerFactory.getLogger(SubCAServer.class);
-  private static final String CERT_FILE_EXTENSION = ".crt";
-  private static final String CERT_FILE_NAME_FORMAT = "%s" + CERT_FILE_EXTENSION;
+  private RootCAServer rootCAServer;
+  public static final String COMPONENT_NAME =
+      Paths.get(OzoneConsts.SCM_CA_CERT_STORAGE_DIR,
+          OzoneConsts.SCM_SUB_CA_PATH).toString();
 
   @SuppressWarnings("parameternumber")
   public SubCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
-      PKIProfile pkiProfile, String componentName, Consumer<String> certIdCallBack, String hostName) {
-    super(subject, clusterID, scmID, certificateStore, pkiProfile, componentName, null, hostName, certIdCallBack);
+      PKIProfile pkiProfile, RootCAServer rootCAServer,
+      Consumer<String> certIdCallBack, String hostName) {
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, null, hostName, certIdCallBack);
+    this.rootCAServer = rootCAServer;
   }
 
   @Override
-  void initKeysAndCa(SCMSecurityProtocol rootCAServer) {
+  void initKeysAndCa() {
     try {
       KeyPair keyPair = generateKeys(getSecurityConfig());
-      getPrimarySCMSelfSignedCert(keyPair, rootCAServer);
+      getPrimarySCMSelfSignedCert(keyPair);
     } catch (Exception e) {
 
     }
@@ -139,30 +141,29 @@ public class SubCAServer extends DefaultCAServer {
         getSecurityConfig().getCertificateFileName(), certificateHolder);
   }
 
-  private void getPrimarySCMSelfSignedCert(KeyPair keyPair, SCMSecurityProtocol rootCAServer) {
-//    try {
-//      CertPath rootCACertificatePath = rootCAServer.getCaCertPath();
-//      String pemEncodedRootCert =
-//          CertificateCodec.getPEMEncodedString(rootCACertificatePath);
-//
-//      PKCS10CertificationRequest csr = getCSRBuilder(keyPair).build();
-//      String subCaSerialId = BigInteger.ONE.add(BigInteger.ONE).toString();
-//      CertPath scmSubCACertPath = rootCAServer.requestCertificate(csr, KERBEROS_TRUSTED, SCM, subCaSerialId).get();
-//      String pemEncodedCert = CertificateCodec.getPEMEncodedString(scmSubCACertPath);
-//
-//      storeCertificate(pemEncodedRootCert, CAType.SUBORDINATE);
-//      storeCertificate(pemEncodedCert, CAType.NONE);
-//      //note: this does exactly the same as store certificate
-//      persistSubCACertificate(pemEncodedCert);
-//      X509Certificate cert = (X509Certificate) scmSubCACertPath.getCertificates().get(0);
-//
-//      // Persist scm cert serial ID.
-//      getSaveCertId().accept(cert.getSerialNumber().toString());
-//    } catch (InterruptedException | ExecutionException | IOException | java.security.cert.CertificateException e) {
-//      LOG.error("Error while fetching/storing SCM signed certificate.", e);
-//      Thread.currentThread().interrupt();
-//      throw new RuntimeException(e);
-//    }
-  }
+  private void getPrimarySCMSelfSignedCert(KeyPair keyPair) {
+    try {
+      CertPath rootCACertificatePath = rootCAServer.getCaCertPath();
+      String pemEncodedRootCert =
+          CertificateCodec.getPEMEncodedString(rootCACertificatePath);
 
+      PKCS10CertificationRequest csr = getCSRBuilder(keyPair).build();
+      String subCaSerialId = BigInteger.ONE.add(BigInteger.ONE).toString();
+      CertPath scmSubCACertPath = rootCAServer.requestCertificate(csr, KERBEROS_TRUSTED, SCM, subCaSerialId).get();
+      String pemEncodedCert = CertificateCodec.getPEMEncodedString(scmSubCACertPath);
+
+      storeCertificate(pemEncodedRootCert, CAType.SUBORDINATE);
+      storeCertificate(pemEncodedCert, CAType.NONE);
+      //note: this does exactly the same as store certificate
+      persistSubCACertificate(pemEncodedCert);
+      X509Certificate cert = (X509Certificate) scmSubCACertPath.getCertificates().get(0);
+
+      // Persist scm cert serial ID.
+      getSaveCertId().accept(cert.getSerialNumber().toString());
+    } catch (InterruptedException | ExecutionException | IOException | java.security.cert.CertificateException e) {
+      LOG.error("Error while fetching/storing SCM signed certificate.", e);
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+  }
 }

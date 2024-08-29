@@ -339,7 +339,7 @@ public class DefaultCAServer implements CertificateServer {
   //This method will be overridden once the RootCAServer and SubCAServer is separated
 
   void initKeysAndCa() {
-
+    initRootCa(getSecurityConfig());
   }
 
   /**

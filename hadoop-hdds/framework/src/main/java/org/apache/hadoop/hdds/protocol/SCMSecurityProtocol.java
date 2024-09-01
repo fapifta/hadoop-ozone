@@ -104,17 +104,17 @@ public interface SCMSecurityProtocol {
    *
    * @return String         - pem encoded CA certificate.
    */
-  String getCACertificate() throws IOException;
+  String getCACertificateEncoded() throws IOException;
 
   /**
    * Get list of certificates meet the query criteria.
    *
-   * @param type            - node type: OM/SCM/DN.
-   * @param startSerialId   - start certificate serial id.
-   * @param count           - max number of certificates returned in a batch.
+   * @param type          - node type: OM/SCM/DN.
+   * @param startSerialId - start certificate serial id.
+   * @param count         - max number of certificates returned in a batch.
    * @return list of PEM encoded certificate strings.
    */
-  List<String> listCertificate(HddsProtos.NodeType type, long startSerialId, int count) throws IOException;
+  List<String> listCertificateEncoded(HddsProtos.NodeType type, long startSerialId, int count) throws IOException;
 
   /**
    * Get Root CA certificate.

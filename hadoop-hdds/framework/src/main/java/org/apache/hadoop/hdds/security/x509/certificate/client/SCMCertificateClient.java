@@ -307,23 +307,19 @@ public class SCMCertificateClient extends DefaultCertificateClient {
       // Get SCM sub CA cert.
       SCMGetCertResponseProto response = getScmSecureClient().
           getSCMCertChain(scmNodeDetailsProto, csr.toEncodedFormat(), false);
-      String pemEncodedCert = response.getX509Certificate();
+      String scmCertificate = response.getX509Certificate();
 
-      // Store SCM sub CA and root CA certificate.
-      if (response.hasX509CACertificate()) {
-        String pemEncodedRootCert = response.getX509CACertificate();
-        storeCertificate(pemEncodedRootCert, CAType.SUBORDINATE);
-        storeCertificate(pemEncodedCert, CAType.NONE);
-        //note: this does exactly the same as store certificate
-        persistSubCACertificate(pemEncodedCert);
+      storeCertificate(scmCertificate, CAType.NONE);
+      //note: this does exactly the same as store certificate
+      persistSubCACertificate(scmCertificate);
 
-        X509Certificate certificate =
-            CertificateCodec.getX509Certificate(pemEncodedCert);
-        // Persist scm cert serial ID.
-        saveCertIdCallback.accept(certificate.getSerialNumber().toString());
-      } else {
-        throw new RuntimeException("Unable to retrieve SCM certificate chain");
-      }
+      X509Certificate certificate =
+          CertificateCodec.getX509Certificate(scmCertificate);
+      // Persist scm cert serial ID.
+      saveCertIdCallback.accept(certificate.getSerialNumber().toString());
+
+      String rootCACertificate = getScmSecureClient().getCACertificate();
+      storeCertificate(rootCACertificate, CAType.SUBORDINATE);
     } catch (IOException | java.security.cert.CertificateException e) {
       LOG.error("Error while fetching/storing SCM signed certificate.", e);
       throw new RuntimeException(e);

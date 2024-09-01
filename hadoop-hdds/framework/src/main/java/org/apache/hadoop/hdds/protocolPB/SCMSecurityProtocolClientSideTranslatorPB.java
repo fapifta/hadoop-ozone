@@ -314,7 +314,7 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
    * @return serial   - Root certificate.
    */
   @Override
-  public String getCACertificate() throws IOException {
+  public String getCACertificateEncoded() throws IOException {
     return getCACert().getX509Certificate();
   }
 
@@ -334,7 +334,7 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
    * @throws IOException
    */
   @Override
-  public List<String> listCertificate(HddsProtos.NodeType role,
+  public List<String> listCertificateEncoded(HddsProtos.NodeType role,
       long startSerialId, int count) throws IOException {
     SCMListCertificateRequestProto protoIns = SCMListCertificateRequestProto
         .newBuilder()

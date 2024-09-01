@@ -91,7 +91,7 @@ public class ListSubcommand extends ScmCertSubcommand {
   @Override
   protected void execute(SCMSecurityProtocol client) throws IOException {
     HddsProtos.NodeType nodeType = parseCertRole(role);
-    List<String> certPemList = client.listCertificate(nodeType, startSerialId, count);
+    List<String> certPemList = client.listCertificateEncoded(nodeType, startSerialId, count);
     if (count == certPemList.size()) {
       err.println("The certificate list could be longer than the batch size: "
           + count + ". Please use the \"-c\" option to see more" +

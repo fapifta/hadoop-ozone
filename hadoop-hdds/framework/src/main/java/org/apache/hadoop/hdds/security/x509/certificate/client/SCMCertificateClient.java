@@ -320,7 +320,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
       // Persist scm cert serial ID.
       saveCertIdCallback.accept(certificate.getSerialNumber().toString());
 
-      String rootCACertificate = getScmSecureClient().getCACertificate();
+      String rootCACertificate = getScmSecureClient().getCACertificateEncoded();
       storeCertificate(rootCACertificate, CAType.SUBORDINATE);
     } catch (IOException | java.security.cert.CertificateException e) {
       LOG.error("Error while fetching/storing SCM signed certificate.", e);

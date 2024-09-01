@@ -20,6 +20,8 @@
 package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
@@ -42,6 +44,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.function.Consumer;
 
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_CA_CERT_STORAGE_DIR;
@@ -50,7 +53,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.SCM_CA_PATH;
 /**
  * CertificateServer for creating self-signed and thus the trust anchor for pki infrastructure.
  */
-public class RootCAServer extends DefaultCAServer {
+public class RootCAServer extends DefaultCAServer implements SCMSecurityProtocol {
 
   public static final String SCM_ROOT_CA_COMPONENT_NAME = Paths.get(SCM_CA_CERT_STORAGE_DIR, SCM_CA_PATH).toString();
   public static final Logger LOG =
@@ -186,5 +189,69 @@ public class RootCAServer extends DefaultCAServer {
     CertificateCodec certCodec =
         new CertificateCodec(getSecurityConfig(), getComponentName());
     certCodec.writeCertificate(selfSignedCertificate);
+  }
+
+  @Override
+  public String getDataNodeCertificate(HddsProtos.DatanodeDetailsProto dataNodeDetails, String certSignReq)
+      throws IOException {
+    throw new UnsupportedOperationException("RootCAServer doesn't support this operation");
+  }
+
+  @Override
+  public String getOMCertificate(HddsProtos.OzoneManagerDetailsProto omDetails, String certSignReq) throws IOException {
+    throw new UnsupportedOperationException("RootCAServer doesn't support this operation");
+  }
+
+  @Override
+  public String getSCMCertificate(HddsProtos.ScmNodeDetailsProto scmNodeDetails, String certSignReq)
+      throws IOException {
+    return null;
+  }
+
+  @Override
+  public String getSCMCertificate(HddsProtos.ScmNodeDetailsProto scmNodeDetails, String certSignReq, boolean isRenew)
+      throws IOException {
+    return null;
+  }
+
+  @Override
+  public String getCACertificateEncoded() throws IOException {
+    return null;
+  }
+
+  @Override
+  public List<String> listCertificateEncoded(HddsProtos.NodeType type, long startSerialId, int count)
+      throws IOException {
+    return null;
+  }
+
+  @Override
+  public String getRootCACertificate() throws IOException {
+    return CertificateCodec.getPEMEncodedString(getCACertificate());
+  }
+
+  @Override
+  public List<String> listCACertificate() throws IOException {
+    throw new UnsupportedOperationException("RootCAServer doesn't support this operation");
+  }
+
+  @Override
+  public String getCertificate(HddsProtos.NodeDetailsProto nodeDetails, String certSignReq) throws IOException {
+    throw new UnsupportedOperationException("RootCAServer doesn't support this operation");
+  }
+
+  @Override
+  public List<String> getAllRootCaCertificates() throws IOException {
+    throw new UnsupportedOperationException("RootCAServer doesn't support this operation");
+  }
+
+  @Override
+  public List<String> removeExpiredCertificates() throws IOException {
+    throw new UnsupportedOperationException("RootCAServer doesn't support this operation");
+  }
+
+  @Override
+  List<String> listCertificate(HddsProtos.NodeType type, long startSerialId, int count) throws IOException {
+    throw new UnsupportedOperationException("RootCAServer doesn't support this operation");
   }
 }

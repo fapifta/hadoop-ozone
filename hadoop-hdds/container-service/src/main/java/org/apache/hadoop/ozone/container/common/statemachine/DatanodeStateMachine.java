@@ -39,11 +39,13 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.scm.client.ClientTrustManager;
 import org.apache.hadoop.hdds.security.symmetric.SecretKeyClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.upgrade.HDDSLayoutVersionManager;
 import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.hdds.utils.NettyMetrics;
+import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.HddsDatanodeStopService;
 import org.apache.hadoop.ozone.container.common.DatanodeLayoutStorage;
 import org.apache.hadoop.ozone.container.common.report.ReportManager;
@@ -137,7 +139,9 @@ public class DatanodeStateMachine implements Closeable {
    * @param certClient - Datanode Certificate client, required if security is
    *                     enabled
    */
-  public DatanodeStateMachine(DatanodeDetails datanodeDetails,
+  @SuppressWarnings("checkstyle:ParameterNumber")
+  public DatanodeStateMachine(HddsDatanodeService hddsDatanodeService,
+                              DatanodeDetails datanodeDetails,
                               ConfigurationSource conf,
                               CertificateClient certClient,
                               SecretKeyClient secretKeyClient,
@@ -177,7 +181,7 @@ public class DatanodeStateMachine implements Closeable {
     // HDDS-3116 for more details.
     constructionLock.writeLock().lock();
     try {
-      container = new OzoneContainer(this.datanodeDetails,
+      container = new OzoneContainer(hddsDatanodeService, this.datanodeDetails,
           conf, context, certClient, secretKeyClient);
     } finally {
       constructionLock.writeLock().unlock();
@@ -213,7 +217,7 @@ public class DatanodeStateMachine implements Closeable {
         ReplicationSupervisorMetrics.create(supervisor);
 
     ecReconstructionMetrics = ECReconstructionMetrics.create();
-
+    ClientTrustManager clientTrustManager = null;
     ecReconstructionCoordinator = new ECReconstructionCoordinator(
         conf, certClient, secretKeyClient, context, ecReconstructionMetrics,
         threadNamePrefix);
@@ -273,7 +277,7 @@ public class DatanodeStateMachine implements Closeable {
   @VisibleForTesting
   public DatanodeStateMachine(DatanodeDetails datanodeDetails,
                               ConfigurationSource conf) throws IOException {
-    this(datanodeDetails, conf, null, null, null,
+    this(null, datanodeDetails, conf, null, null, null,
         new ReconfigurationHandler("DN", (OzoneConfiguration) conf, op -> { }));
   }
 

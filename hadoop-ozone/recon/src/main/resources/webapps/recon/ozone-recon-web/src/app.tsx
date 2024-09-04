@@ -16,15 +16,19 @@
  * limitations under the License.
  */
 
-import React from 'react';
+import React, { Suspense } from 'react';
 
 import { Switch as AntDSwitch, Layout } from 'antd';
 import NavBar from './components/navBar/navBar';
+import NavBarV2 from '@/v2/components/navBar/navBar';
 import Breadcrumbs from './components/breadcrumbs/breadcrumbs';
 import { HashRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
 import { routes } from '@/routes';
+import { routesV2 } from '@/v2/routes-v2';
 import { MakeRouteWithSubRoutes } from '@/makeRouteWithSubRoutes';
 import classNames from 'classnames';
+
+import Loader from '@/v2/components/loader/loader';
 
 import './app.less';
 
@@ -51,14 +55,18 @@ class App extends React.Component<Record<string, object>, IAppState> {
   };
 
   render() {
-    const { collapsed } = this.state;
+    const { collapsed, enableNewUI } = this.state;
     const layoutClass = classNames('content-layout', { 'sidebar-collapsed': collapsed });
 
 
     return (
       <Router>
         <Layout style={{ minHeight: '100vh' }}>
-          <NavBar collapsed={collapsed} onCollapse={this.onCollapse} />
+          {
+            (enableNewUI)
+            ? <NavBarV2 collapsed={collapsed} onCollapse={this.onCollapse} />
+            : <NavBar collapsed={collapsed} onCollapse={this.onCollapse} />
+          }
           <Layout className={layoutClass}>
             <Header>
               <div style={{ margin: '16px 0', display: 'flex', justifyContent: 'space-between' }}>
@@ -73,13 +81,18 @@ class App extends React.Component<Record<string, object>, IAppState> {
                   }} />
               </div>
             </Header>
-            <Content style={{ margin: '0 16px 0', overflow: 'initial' }}>
+            <Content style={(enableNewUI) ? {} : { margin: '0 16px 0', overflow: 'initial' }}>
               <Switch>
                 <Route exact path='/'>
                   <Redirect to='/Overview' />
                 </Route>
-                {
-                  routes.map(
+                {(enableNewUI)
+                  ? <Suspense fallback={<Loader/>}>
+                    {routesV2.map(
+                      (route, index) => <MakeRouteWithSubRoutes key={index} {...route} />
+                    )}
+                  </Suspense>
+                  : routes.map(
                     (route, index) => <MakeRouteWithSubRoutes key={index} {...route} />
                   )
                 }

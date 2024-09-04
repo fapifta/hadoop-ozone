@@ -376,7 +376,7 @@ final class TestSecureOzoneCluster {
       try (SCMSecurityProtocolClientSideTranslatorPB securityClient =
           getScmSecurityClient(conf, ugi)) {
         assertNotNull(securityClient);
-        String caCert = securityClient.getCACertificateEncoded();
+        String caCert = securityClient.getCACertificate();
         assertNotNull(caCert);
         // Get some random certificate, used serial id 100 which will be
         // unavailable as our serial id is time stamp. Serial id 1 is root CA,
@@ -396,7 +396,7 @@ final class TestSecureOzoneCluster {
 
         String cannotAuthMessage = "Client cannot authenticate via:[KERBEROS]";
         IOException ioException = assertThrows(IOException.class,
-            securityClient::getCACertificateEncoded);
+            securityClient::getCACertificate);
         assertThat(ioException).hasMessageContaining(cannotAuthMessage);
         ioException = assertThrows(IOException.class,
             () -> securityClient.getCertificate("1"));
@@ -929,7 +929,7 @@ final class TestSecureOzoneCluster {
       X509Certificate certificate = om.getCertificateClient().getCertificate();
       validateCertificate(certificate);
       String pemEncodedCACert =
-          scm.getSecurityProtocolServer().getCACertificateEncoded();
+          scm.getSecurityProtocolServer().getCACertificate();
       X509Certificate caCert =
           CertificateCodec.getX509Certificate(pemEncodedCACert);
       X509Certificate caCertStored = om.getCertificateClient()

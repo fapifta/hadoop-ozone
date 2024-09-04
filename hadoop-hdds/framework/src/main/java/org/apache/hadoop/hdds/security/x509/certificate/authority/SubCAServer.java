@@ -22,6 +22,7 @@ package org.apache.hadoop.hdds.security.x509.certificate.authority;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
@@ -35,6 +36,8 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Paths;
 import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.ExecutionException;
@@ -70,8 +73,8 @@ public class SubCAServer extends DefaultCAServer {
     try {
       KeyPair keyPair = generateKeys(getSecurityConfig());
       getPrimarySCMSelfSignedCert(keyPair);
-    } catch (Exception e) {
-
+    } catch (NoSuchProviderException | NoSuchAlgorithmException | IOException e) {
+      LOG.error("Unable to initialize CertificateServer.", e);
     }
   }
 
@@ -83,7 +86,7 @@ public class SubCAServer extends DefaultCAServer {
   private void getRootCASignedSCMCert(KeyPair keyPair, SCMSecurityProtocolClientSideTranslatorPB scmClient) {
     try {
       // Generate CSR.
-      PKCS10CertificationRequest csr = getCSRBuilder(keyPair).build();
+      CertificateSignRequest csr = ().build();
       HddsProtos.ScmNodeDetailsProto scmNodeDetailsProto =
           HddsProtos.ScmNodeDetailsProto.newBuilder()
               .setClusterId(getClusterID())
@@ -92,7 +95,7 @@ public class SubCAServer extends DefaultCAServer {
 
       // Get SCM sub CA cert.
       SCMSecurityProtocolProtos.SCMGetCertResponseProto response = scmClient.
-          getSCMCertChain(scmNodeDetailsProto, getEncodedString(csr), false);
+          getSCMCertChain(scmNodeDetailsProto, csr.toEncodedFormat(), false);
       String pemEncodedCert = response.getX509Certificate();
       if (!response.hasX509CACertificate()) {
         throw new RuntimeException("Unable to retrieve SCM certificate chain");
@@ -165,5 +168,31 @@ public class SubCAServer extends DefaultCAServer {
       Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * Returns a CSR builder that can be used to creates a Certificate signing
+   * request.
+   *
+   * @return CertificateSignRequest.Builder
+   */
+  public CertificateSignRequest.Builder configureCSRBuilder()
+      throws SCMSecurityException {
+    String subject = SCM_SUB_CA_PREFIX + getHostName();
+
+    LOG.info("Creating csr for SCM->hostName:{},scmId:{},clusterId:{}," +
+        "subject:{}", getHostName(), getScmID(), getClusterID(), subject);
+
+    return CertificateSignRequest.Builder()
+        .setConfiguration(getSecurityConfig())
+        .addInetAddresses()
+        .setDigitalEncryption(true)
+        .setDigitalSignature(true)
+        .setSubject(subject)
+        .setScmID(getScmID())
+        .setClusterID(getClusterID())
+        // Set CA to true, as this will be used to sign certs for OM/DN.
+        .setCA(true)
+        .setKey(new KeyPair(getPublicKey(), getPrivateKey()));
   }
 }

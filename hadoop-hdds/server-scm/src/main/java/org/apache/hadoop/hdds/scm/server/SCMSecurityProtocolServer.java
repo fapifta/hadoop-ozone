@@ -415,7 +415,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
    * @return string         - Root certificate.
    */
   @Override
-  public String getCACertificateEncoded() throws IOException {
+  public String getCACertificate() throws IOException {
     LOGGER.debug("Getting CA certificate.");
     try {
       return getPEMEncodedString(
@@ -434,7 +434,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
    * @throws IOException
    */
   @Override
-  public List<String> listCertificateEncoded(NodeType role,
+  public List<String> listCertificate(NodeType role,
       long startSerialId, int count) throws IOException {
     List<X509Certificate> certificates = scmCertificateServer.listCertificate(role, startSerialId, count);
     List<String> results = new ArrayList<>(certificates.size());
@@ -452,7 +452,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
   @Override
   public List<String> listCACertificate() throws IOException {
     List<String> caCerts =
-        listCertificateEncoded(NodeType.SCM, 0, 10);
+        listCertificate(NodeType.SCM, 0, 10);
     return caCerts;
   }
 

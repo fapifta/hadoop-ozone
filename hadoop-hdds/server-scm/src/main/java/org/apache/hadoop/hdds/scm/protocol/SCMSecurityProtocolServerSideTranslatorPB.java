@@ -199,7 +199,7 @@ public class SCMSecurityProtocolServerSideTranslatorPB
             .newBuilder()
             .setResponseCode(ResponseCode.success)
             .setX509Certificate(certificate)
-            .setX509CACertificate(impl.getCACertificateEncoded());
+            .setX509CACertificate(impl.getCACertificate());
     setRootCAIfNeeded(builder);
 
     return builder.build();
@@ -222,7 +222,7 @@ public class SCMSecurityProtocolServerSideTranslatorPB
             .newBuilder()
             .setResponseCode(ResponseCode.success)
             .setX509Certificate(certificate)
-            .setX509CACertificate(impl.getCACertificateEncoded());
+            .setX509CACertificate(impl.getCACertificate());
     setRootCAIfNeeded(builder);
 
     return builder.build();
@@ -272,7 +272,7 @@ public class SCMSecurityProtocolServerSideTranslatorPB
             .newBuilder()
             .setResponseCode(ResponseCode.success)
             .setX509Certificate(certificate)
-            .setX509CACertificate(impl.getCACertificateEncoded());
+            .setX509CACertificate(impl.getCACertificate());
     setRootCAIfNeeded(builder);
     return builder.build();
 
@@ -295,7 +295,7 @@ public class SCMSecurityProtocolServerSideTranslatorPB
       SCMSecurityProtocolProtos.SCMGetCACertificateRequestProto request)
       throws IOException {
 
-    String certificate = impl.getCACertificateEncoded();
+    String certificate = impl.getCACertificate();
     SCMGetCertResponseProto.Builder builder =
         SCMGetCertResponseProto
             .newBuilder()
@@ -309,7 +309,7 @@ public class SCMSecurityProtocolServerSideTranslatorPB
 
   public SCMListCertificateResponseProto listCertificate(
       SCMListCertificateRequestProto request) throws IOException {
-    List<String> certs = impl.listCertificateEncoded(request.getRole(),
+    List<String> certs = impl.listCertificate(request.getRole(),
         request.getStartCertId(), request.getCount());
 
     SCMListCertificateResponseProto.Builder builder =

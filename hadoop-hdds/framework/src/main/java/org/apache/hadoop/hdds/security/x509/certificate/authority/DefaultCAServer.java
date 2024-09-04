@@ -116,14 +116,8 @@ public class DefaultCAServer implements CertificateServer {
   private final String subject;
   private final String clusterID;
   private final String scmID;
-
-  private Consumer<String> saveCertId;
-
   private final String componentName;
-
   private SecurityConfig config;
-  private BigInteger rootCertId;
-
   /**
    * TODO: We will make these configurable in the future.
    */
@@ -131,12 +125,9 @@ public class DefaultCAServer implements CertificateServer {
   private CertificateApprover approver;
   private CertificateStore store;
   private Lock lock;
-
+  private BigInteger rootCertificateId;
+  private Consumer<String> saveCertId;
   private String hostName;
-
-  public BigInteger getRootCertId() {
-    return rootCertId;
-  }
 
   /**
    * Create an Instance of DefaultCAServer.
@@ -149,7 +140,7 @@ public class DefaultCAServer implements CertificateServer {
   @SuppressWarnings("parameternumber")
   public DefaultCAServer(String subject, String clusterID, String scmID,
       CertificateStore certificateStore,
-      PKIProfile pkiProfile, String componentName, BigInteger rootCertId, String hostName,
+      PKIProfile pkiProfile, String componentName, BigInteger rootCertificateId, String hostName,
       Consumer<String> saveCertId) {
     this.subject = subject;
     this.clusterID = clusterID;
@@ -159,7 +150,7 @@ public class DefaultCAServer implements CertificateServer {
     this.componentName = componentName;
     this.hostName = hostName;
     this.saveCertId = saveCertId;
-    this.rootCertId = rootCertId;
+    this.rootCertificateId = rootCertificateId;
     lock = new ReentrantLock();
   }
 
@@ -296,6 +287,21 @@ public class DefaultCAServer implements CertificateServer {
   }
 
   /**
+   * Generates a Self-Signed certificate. These are the steps in
+   * generating a Self-Signed CertificateServer:
+   * <p>
+   * 1. Generate a Private/Public Key Pair and store them to persisted and protected location.
+   * 3. Generate a Self-Signed (Root) certificate.
+   *
+   * @param securityConfig - Config.
+   */
+  private void generateSelfSignedCA(SecurityConfig securityConfig) throws
+      NoSuchAlgorithmException, NoSuchProviderException, IOException {
+    KeyPair keyPair = generateKeys(securityConfig);
+    generateRootCertificate(securityConfig, keyPair);
+  }
+
+  /**
    * Verify Self-Signed CertificateServer. 1. Check if the Certificate exist. 2.
    * Check if the key pair exists.
    *
@@ -376,86 +382,6 @@ public class DefaultCAServer implements CertificateServer {
         this.config.getCertificateFileName()));
   }
 
-  public SecurityConfig getSecurityConfig() {
-    return config;
-  }
-
-  /**
-   * Generates a KeyPair for the Certificate.
-   *
-   * @param securityConfig - SecurityConfig.
-   * @return Key Pair.
-   * @throws NoSuchProviderException  - on Error.
-   * @throws NoSuchAlgorithmException - on Error.
-   * @throws IOException              - on Error.
-   */
-  KeyPair generateKeys(SecurityConfig securityConfig)
-      throws NoSuchProviderException, NoSuchAlgorithmException, IOException {
-    HDDSKeyGenerator keyGenerator = new HDDSKeyGenerator(securityConfig);
-    KeyPair keys = keyGenerator.generateKey();
-    KeyCodec keyCodec = new KeyCodec(securityConfig,
-        componentName);
-    keyCodec.writeKey(keys);
-    return keys;
-  }
-
-  public String getComponentName() {
-    return componentName;
-  }
-
-  public Consumer<String> getSaveCertId() {
-    return saveCertId;
-  }
-
-  public String getHostName() {
-    return hostName;
-  }
-
-  public String getSubject() {
-    return subject;
-  }
-
-  public String getClusterID() {
-    return clusterID;
-  }
-
-  public String getScmID() {
-    return scmID;
-  }
-
-  public synchronized void storeCertificate(String pemEncodedCert,
-      CAType caType) throws org.apache.hadoop.hdds.security.x509.exception.CertificateException {
-    try {
-      CertificateCodec codec = new CertificateCodec(getSecurityConfig(), getComponentName());
-      CertPath certificatePath =
-          CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
-      X509Certificate cert = (X509Certificate) certificatePath.getCertificates().get(0);
-
-      String certName = String.format(CERT_FILE_NAME_FORMAT,
-          caType.getFileNamePrefix() + cert.getSerialNumber().toString());
-      codec.writeCertificate(certName, pemEncodedCert);
-    } catch (IOException | java.security.cert.CertificateException e) {
-      throw new org.apache.hadoop.hdds.security.x509.exception.CertificateException("Error while storing certificate.",
-          e,
-          CERTIFICATE_ERROR);
-    }
-  }
-
-  /**
-   * Generates a Self Signed CertificateServer. These are the steps in
-   * generating a Self-Signed CertificateServer.
-   * <p>
-   * 1. Generate a Private/Public Key Pair. 2. Persist to a protected location.
-   * 3. Generate a SelfSigned Root CertificateServer certificate.
-   *
-   * @param securityConfig - Config.
-   */
-  private void generateSelfSignedCA(SecurityConfig securityConfig) throws
-      NoSuchAlgorithmException, NoSuchProviderException, IOException {
-    KeyPair keyPair = generateKeys(securityConfig);
-    generateRootCertificate(securityConfig, keyPair);
-  }
-
   private void initRootCa(SecurityConfig securityConfig) {
     if (isExternalCaSpecified(securityConfig)) {
       initWithExternalRootCa(securityConfig);
@@ -480,6 +406,25 @@ public class DefaultCAServer implements CertificateServer {
   }
 
   /**
+   * Generates a KeyPair for the Certificate.
+   *
+   * @param securityConfig - SecurityConfig.
+   * @return Key Pair.
+   * @throws NoSuchProviderException  - on Error.
+   * @throws NoSuchAlgorithmException - on Error.
+   * @throws IOException              - on Error.
+   */
+  KeyPair generateKeys(SecurityConfig securityConfig)
+      throws NoSuchProviderException, NoSuchAlgorithmException, IOException {
+    HDDSKeyGenerator keyGenerator = new HDDSKeyGenerator(securityConfig);
+    KeyPair keys = keyGenerator.generateKey();
+    KeyCodec keyCodec = new KeyCodec(securityConfig,
+        componentName);
+    keyCodec.writeKey(keys);
+    return keys;
+  }
+
+  /**
    * Generates a self-signed Root Certificate for CA.
    *
    * @param securityConfig - SecurityConfig
@@ -500,7 +445,7 @@ public class DefaultCAServer implements CertificateServer {
         .setClusterID(this.clusterID)
         .setBeginDate(beginDate)
         .setEndDate(endDate)
-        .makeCA(rootCertId)
+        .makeCA(rootCertificateId)
         .setConfiguration(securityConfig)
         .setKey(key);
 
@@ -567,5 +512,53 @@ public class DefaultCAServer implements CertificateServer {
     return publicKey;
   }
 
+  public synchronized void storeCertificate(String pemEncodedCert,
+      CAType caType) throws org.apache.hadoop.hdds.security.x509.exception.CertificateException {
+    try {
+      CertificateCodec codec = new CertificateCodec(getSecurityConfig(), getComponentName());
+      CertPath certificatePath =
+          CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
+      X509Certificate cert = (X509Certificate) certificatePath.getCertificates().get(0);
+      String certName = String.format(CERT_FILE_NAME_FORMAT,
+          caType.getFileNamePrefix() + cert.getSerialNumber().toString());
+      codec.writeCertificate(certName, pemEncodedCert);
+    } catch (IOException | java.security.cert.CertificateException e) {
+      throw new org.apache.hadoop.hdds.security.x509.exception.CertificateException("Error while storing certificate.",
+          e,
+          CERTIFICATE_ERROR);
+    }
+  }
+
+  public SecurityConfig getSecurityConfig() {
+    return config;
+  }
+
+  public String getComponentName() {
+    return componentName;
+  }
+
+  public Consumer<String> getSaveCertId() {
+    return saveCertId;
+  }
+
+  public String getHostName() {
+    return hostName;
+  }
+
+  public String getSubject() {
+    return subject;
+  }
+
+  public String getClusterID() {
+    return clusterID;
+  }
+
+  public String getScmID() {
+    return scmID;
+  }
+
+  public BigInteger getRootCertificateId() {
+    return rootCertificateId;
+  }
 
 }

@@ -26,9 +26,7 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
-import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +43,6 @@ import java.util.function.Consumer;
 
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType.SCM;
 import static org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateApprover.ApprovalType.KERBEROS_TRUSTED;
-import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest.getEncodedString;
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_SUB_CA_PREFIX;
 
 
@@ -86,7 +83,7 @@ public class SubCAServer extends DefaultCAServer {
   private void getRootCASignedSCMCert(KeyPair keyPair, SCMSecurityProtocolClientSideTranslatorPB scmClient) {
     try {
       // Generate CSR.
-      CertificateSignRequest csr = ().build();
+      CertificateSignRequest csr = configureCSRBuilder(keyPair).build();
       HddsProtos.ScmNodeDetailsProto scmNodeDetailsProto =
           HddsProtos.ScmNodeDetailsProto.newBuilder()
               .setClusterId(getClusterID())
@@ -116,26 +113,6 @@ public class SubCAServer extends DefaultCAServer {
     }
   }
 
-  public CertificateSignRequest.Builder getCSRBuilder(KeyPair keyPair)
-      throws CertificateException {
-    String subject = SCM_SUB_CA_PREFIX + getHostName();
-
-    LOG.info("Creating csr for SCM->hostName:{},scmId:{},clusterId:{}," +
-        "subject:{}", getHostName(), getScmID(), getClusterID(), subject);
-    return new CertificateSignRequest.Builder()
-        .setConfiguration(getSecurityConfig())
-        .addInetAddresses()
-        .setDigitalEncryption(true)
-        .setDigitalSignature(true)
-        .setSubject(subject)
-        .setScmID(getScmID())
-        .setClusterID(getClusterID())
-        // Set CA to true, as this will be used to sign certs for OM/DN.
-        .setCA(true)
-        .setKey(keyPair);
-  }
-
-
   private void persistSubCACertificate(
       String certificateHolder) throws IOException {
     CertificateCodec certCodec =
@@ -150,9 +127,10 @@ public class SubCAServer extends DefaultCAServer {
       String pemEncodedRootCert =
           CertificateCodec.getPEMEncodedString(rootCACertificatePath);
 
-      PKCS10CertificationRequest csr = getCSRBuilder(keyPair).build();
+      CertificateSignRequest csr = configureCSRBuilder(keyPair).build();
       String subCaSerialId = BigInteger.ONE.add(BigInteger.ONE).toString();
-      CertPath scmSubCACertPath = rootCAServer.requestCertificate(csr, KERBEROS_TRUSTED, SCM, subCaSerialId).get();
+      CertPath scmSubCACertPath =
+          rootCAServer.requestCertificate(csr.generateCSR(), KERBEROS_TRUSTED, SCM, subCaSerialId).get();
       String pemEncodedCert = CertificateCodec.getPEMEncodedString(scmSubCACertPath);
 
       storeCertificate(pemEncodedRootCert, CAType.SUBORDINATE);
@@ -176,14 +154,14 @@ public class SubCAServer extends DefaultCAServer {
    *
    * @return CertificateSignRequest.Builder
    */
-  public CertificateSignRequest.Builder configureCSRBuilder()
+  public CertificateSignRequest.Builder configureCSRBuilder(KeyPair keyPair)
       throws SCMSecurityException {
     String subject = SCM_SUB_CA_PREFIX + getHostName();
 
     LOG.info("Creating csr for SCM->hostName:{},scmId:{},clusterId:{}," +
         "subject:{}", getHostName(), getScmID(), getClusterID(), subject);
 
-    return CertificateSignRequest.Builder()
+    return new CertificateSignRequest.Builder()
         .setConfiguration(getSecurityConfig())
         .addInetAddresses()
         .setDigitalEncryption(true)
@@ -193,6 +171,6 @@ public class SubCAServer extends DefaultCAServer {
         .setClusterID(getClusterID())
         // Set CA to true, as this will be used to sign certs for OM/DN.
         .setCA(true)
-        .setKey(new KeyPair(getPublicKey(), getPrivateKey()));
+        .setKey(new KeyPair(keyPair.getPublic(), keyPair.getPrivate()));
   }
 }

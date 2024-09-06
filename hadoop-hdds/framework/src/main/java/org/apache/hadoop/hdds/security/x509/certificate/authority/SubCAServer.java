@@ -56,20 +56,24 @@ public class SubCAServer extends DefaultCAServer {
   public static final String COMPONENT_NAME =
       Paths.get(OzoneConsts.SCM_CA_CERT_STORAGE_DIR,
           OzoneConsts.SCM_SUB_CA_PATH).toString();
+  private SCMSecurityProtocolClientSideTranslatorPB clientSideTranslatorPB;
 
   @SuppressWarnings("parameternumber")
   public SubCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
-      PKIProfile pkiProfile, RootCAServer rootCAServer,
-      Consumer<String> certIdCallBack, String hostName) {
+      PKIProfile pkiProfile, Consumer<String> certIdCallBack, String hostName) {
     super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, null, hostName, certIdCallBack);
-    this.rootCAServer = rootCAServer;
   }
 
   @Override
   void initKeysAndCa() {
     try {
       KeyPair keyPair = generateKeys(getSecurityConfig());
-      getPrimarySCMSelfSignedCert(keyPair);
+      if (clientSideTranslatorPB != null) {
+        getRootCASignedSCMCert(keyPair, clientSideTranslatorPB);
+      }
+      if (rootCAServer != null) {
+        getPrimarySCMSelfSignedCert(keyPair);
+      }
     } catch (NoSuchProviderException | NoSuchAlgorithmException | IOException e) {
       LOG.error("Unable to initialize CertificateServer.", e);
     }
@@ -173,4 +177,14 @@ public class SubCAServer extends DefaultCAServer {
         .setCA(true)
         .setKey(new KeyPair(keyPair.getPublic(), keyPair.getPrivate()));
   }
+
+  public void setRootCAServer(RootCAServer rootCAServer) {
+    this.rootCAServer = rootCAServer;
+  }
+
+  public void setClientSideTranslatorPB(
+      SCMSecurityProtocolClientSideTranslatorPB clientSideTranslatorPB) {
+    this.clientSideTranslatorPB = clientSideTranslatorPB;
+  }
+
 }

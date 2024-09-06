@@ -32,7 +32,6 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.Defaul
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
-import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.conf.RaftProperties;
@@ -84,44 +83,39 @@ public final class  HASecurityUtils {
     LOG.info("Initializing secure StorageContainerManager.");
 
     SecurityConfig securityConfig = new SecurityConfig(conf);
+    String subject = SCM_ROOT_CA_PREFIX +
+        InetAddress.getLocalHost().getHostName();
+    Consumer<String> saveCertIdCallBack = getStorageConfigCallback(scmStorageConfig);
     if (primaryscm) {
-      String subject = SCM_ROOT_CA_PREFIX +
-          InetAddress.getLocalHost().getHostName();
-
-      Consumer<String> saveCertIdCallBack = certIDString -> {
-        try {
-          scmStorageConfig.setScmCertSerialId(certIDString);
-        } catch (IOException e) {
-          LOG.error("Failed to set new certificate ID", e);
-          throw new RuntimeException("Failed to set new certificate ID");
-        }
-      };
       RootCAServer rootCAServer = new RootCAServer(subject,
           scmStorageConfig.getClusterID(),
           scmStorageConfig.getScmId(), null, new DefaultCAProfile(), scmHostname, BigInteger.ONE, saveCertIdCallBack);
 
       rootCAServer.init(securityConfig);
       SubCAServer subCAServer = new SubCAServer(subject, scmStorageConfig.getClusterID(), scmStorageConfig.getScmId(),
-          null, new DefaultProfile(), rootCAServer, saveCertIdCallBack, scmHostname);
+          null, new DefaultProfile(), saveCertIdCallBack, scmHostname);
+      subCAServer.setRootCAServer(rootCAServer);
       subCAServer.init(securityConfig);
     } else {
       SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
           getScmSecurityClientWithFixedDuration(conf);
-      try (CertificateClient certClient =
-               new SCMCertificateClient(securityConfig, scmSecurityClient,
-                   scmStorageConfig.getScmId(), scmStorageConfig.getClusterID(),
-                   scmStorageConfig.getScmCertSerialId(), scmHostname, primaryscm,
-                   certIDString -> {
-                     try {
-                       scmStorageConfig.setScmCertSerialId(certIDString);
-                     } catch (IOException e) {
-                       LOG.error("Failed to set new certificate ID", e);
-                       throw new RuntimeException("Failed to set new certificate ID");
-                     }
-                   })) {
-        certClient.initWithRecovery();
-      }
+      SubCAServer subCAServer = new SubCAServer(subject, scmStorageConfig.getClusterID(), scmStorageConfig.getScmId(),
+          null, new DefaultProfile(), saveCertIdCallBack, scmHostname);
+      subCAServer.setClientSideTranslatorPB(scmSecurityClient);
+      subCAServer.init(securityConfig);
     }
+  }
+
+  private static Consumer<String> getStorageConfigCallback(SCMStorageConfig scmStorageConfig) {
+    Consumer<String> saveCertIdCallBack = certIDString -> {
+      try {
+        scmStorageConfig.setScmCertSerialId(certIDString);
+      } catch (IOException e) {
+        LOG.error("Failed to set new certificate ID", e);
+        throw new RuntimeException("Failed to set new certificate ID");
+      }
+    };
+    return saveCertIdCallBack;
   }
 
   /**

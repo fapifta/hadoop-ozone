@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateServer;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateStore;
+import org.apache.hadoop.hdds.security.x509.certificate.authority.DefaultCAServer;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.RootCAServer;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.SubCAServer;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultCAProfile;
@@ -135,10 +136,10 @@ public final class  HASecurityUtils {
     String subject = SCM_ROOT_CA_PREFIX +
         InetAddress.getLocalHost().getHostName();
 
-    RootCAServer rootCAServer = new RootCAServer(subject,
+    DefaultCAServer rootCAServer = new DefaultCAServer(subject,
         scmStorageConfig.getClusterID(),
         scmStorageConfig.getScmId(), scmCertStore, pkiProfile, component,
-        rootCertId, null);
+        rootCertId, "", null);
 
     rootCAServer.init(config);
 

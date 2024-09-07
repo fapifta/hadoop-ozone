@@ -70,14 +70,16 @@ public class SubCAServer extends DefaultCAServer {
   public SubCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
       PKIProfile pkiProfile, Consumer<String> certIdCallBack, String hostName,
       SCMSecurityProtocolClientSideTranslatorPB translatorPB) {
-    super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, null, hostName, certIdCallBack);
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, null, certIdCallBack);
+    this.hostName = hostName;
     this.clientSideTranslatorPB = translatorPB;
   }
 
   @SuppressWarnings("parameternumber")
   public SubCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
       PKIProfile pkiProfile, Consumer<String> certIdCallBack, String hostName, RootCAServer rootCAServer) {
-    super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, null, hostName, certIdCallBack);
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, null, certIdCallBack);
+    this.hostName = hostName;
     this.rootCAServer = rootCAServer;
   }
 

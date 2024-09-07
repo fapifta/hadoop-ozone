@@ -124,7 +124,6 @@ public class DefaultCAServer implements CertificateServer {
   private Lock lock;
   private BigInteger rootCertificateId;
   private Consumer<String> saveCertId;
-  private String hostName;
 
   /**
    * Create an Instance of DefaultCAServer.
@@ -137,7 +136,7 @@ public class DefaultCAServer implements CertificateServer {
   @SuppressWarnings("parameternumber")
   public DefaultCAServer(String subject, String clusterID, String scmID,
       CertificateStore certificateStore,
-      PKIProfile pkiProfile, String componentName, BigInteger rootCertificateId, String hostName,
+      PKIProfile pkiProfile, String componentName, BigInteger rootCertificateId,
       Consumer<String> saveCertId) {
     this.subject = subject;
     this.clusterID = clusterID;
@@ -145,7 +144,6 @@ public class DefaultCAServer implements CertificateServer {
     this.store = certificateStore;
     this.profile = pkiProfile;
     this.componentName = componentName;
-    this.hostName = hostName;
     this.saveCertId = saveCertId;
     this.rootCertificateId = rootCertificateId;
     lock = new ReentrantLock();
@@ -496,10 +494,6 @@ public class DefaultCAServer implements CertificateServer {
 
   public Consumer<String> getSaveCertId() {
     return saveCertId;
-  }
-
-  public String getHostName() {
-    return hostName;
   }
 
   public String getSubject() {

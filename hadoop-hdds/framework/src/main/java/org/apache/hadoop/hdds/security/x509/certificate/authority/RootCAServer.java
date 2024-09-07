@@ -58,8 +58,15 @@ public class RootCAServer extends DefaultCAServer {
 
   @SuppressWarnings("parameternumber")
   public RootCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
-      PKIProfile pkiProfile, String hostName, BigInteger rootCertId, Consumer<String> saveCert) {
-    super(subject, clusterID, scmID, certificateStore, pkiProfile, SCM_ROOT_CA_COMPONENT_NAME, rootCertId, hostName,
+      PKIProfile pkiProfile, BigInteger rootCertId, Consumer<String> saveCert) {
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, SCM_ROOT_CA_COMPONENT_NAME, rootCertId,
+        saveCert);
+  }
+  
+  @SuppressWarnings("parameternumber")
+  public RootCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
+      PKIProfile pkiProfile, String componentName, BigInteger rootCertId, Consumer<String> saveCert) {
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, componentName, rootCertId,
         saveCert);
   }
 

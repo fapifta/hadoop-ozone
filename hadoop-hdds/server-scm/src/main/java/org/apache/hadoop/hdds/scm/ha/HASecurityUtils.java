@@ -93,15 +93,13 @@ public final class  HASecurityUtils {
 
       rootCAServer.init(securityConfig);
       SubCAServer subCAServer = new SubCAServer(subject, scmStorageConfig.getClusterID(), scmStorageConfig.getScmId(),
-          null, new DefaultProfile(), saveCertIdCallBack, scmHostname);
-      subCAServer.setRootCAServer(rootCAServer);
+          null, new DefaultProfile(), saveCertIdCallBack, scmHostname, rootCAServer);
       subCAServer.init(securityConfig);
     } else {
       SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
           getScmSecurityClientWithFixedDuration(conf);
       SubCAServer subCAServer = new SubCAServer(subject, scmStorageConfig.getClusterID(), scmStorageConfig.getScmId(),
-          null, new DefaultProfile(), saveCertIdCallBack, scmHostname);
-      subCAServer.setClientSideTranslatorPB(scmSecurityClient);
+          null, new DefaultProfile(), saveCertIdCallBack, scmHostname, scmSecurityClient);
       subCAServer.init(securityConfig);
     }
   }

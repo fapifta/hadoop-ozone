@@ -62,7 +62,7 @@ public class SubCAServer extends DefaultCAServer {
   @SuppressWarnings("parameternumber")
   public SubCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
       PKIProfile pkiProfile, Consumer<String> certIdCallBack, String hostName) {
-    super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, null, certIdCallBack);
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, certIdCallBack);
     this.hostName = hostName;
   }
 
@@ -70,7 +70,7 @@ public class SubCAServer extends DefaultCAServer {
   public SubCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
       PKIProfile pkiProfile, Consumer<String> certIdCallBack, String hostName,
       SCMSecurityProtocolClientSideTranslatorPB translatorPB) {
-    super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, null, certIdCallBack);
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, certIdCallBack);
     this.hostName = hostName;
     this.clientSideTranslatorPB = translatorPB;
   }
@@ -78,7 +78,7 @@ public class SubCAServer extends DefaultCAServer {
   @SuppressWarnings("parameternumber")
   public SubCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
       PKIProfile pkiProfile, Consumer<String> certIdCallBack, String hostName, RootCAServer rootCAServer) {
-    super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, null, certIdCallBack);
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, certIdCallBack);
     this.hostName = hostName;
     this.rootCAServer = rootCAServer;
   }

@@ -51,19 +51,20 @@ public class RootCAServer extends DefaultCAServer {
   public static final String SCM_ROOT_CA_COMPONENT_NAME = Paths.get(SCM_CA_CERT_STORAGE_DIR, SCM_CA_PATH).toString();
   public static final Logger LOG =
       LoggerFactory.getLogger(RootCAServer.class);
+  private final BigInteger rootCertId;
 
   @SuppressWarnings("parameternumber")
   public RootCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
       PKIProfile pkiProfile, BigInteger rootCertId, Consumer<String> saveCert) {
-    super(subject, clusterID, scmID, certificateStore, pkiProfile, SCM_ROOT_CA_COMPONENT_NAME, rootCertId,
-        saveCert);
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, SCM_ROOT_CA_COMPONENT_NAME, saveCert);
+    this.rootCertId = rootCertId;
   }
   
   @SuppressWarnings("parameternumber")
   public RootCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
       PKIProfile pkiProfile, String componentName, BigInteger rootCertId, Consumer<String> saveCert) {
-    super(subject, clusterID, scmID, certificateStore, pkiProfile, componentName, rootCertId,
-        saveCert);
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, componentName, saveCert);
+    this.rootCertId = rootCertId;
   }
 
   @Override
@@ -139,7 +140,7 @@ public class RootCAServer extends DefaultCAServer {
         .setClusterID(getClusterID())
         .setBeginDate(beginDate)
         .setEndDate(endDate)
-        .makeCA(getRootCertificateId())
+        .makeCA(rootCertId)
         .setConfiguration(securityConfig)
         .setKey(key);
 

@@ -121,7 +121,6 @@ public abstract class DefaultCAServer implements CertificateServer {
   private CertificateApprover approver;
   private CertificateStore store;
   private Lock lock;
-  private BigInteger rootCertificateId;
   private Consumer<String> saveCertId;
 
   /**
@@ -134,9 +133,7 @@ public abstract class DefaultCAServer implements CertificateServer {
    */
   @SuppressWarnings("parameternumber")
   public DefaultCAServer(String subject, String clusterID, String scmID,
-      CertificateStore certificateStore,
-      PKIProfile pkiProfile, String componentName, BigInteger rootCertificateId,
-      Consumer<String> saveCertId) {
+      CertificateStore certificateStore, PKIProfile pkiProfile, String componentName, Consumer<String> saveCertId) {
     this.subject = subject;
     this.clusterID = clusterID;
     this.scmID = scmID;
@@ -144,7 +141,6 @@ public abstract class DefaultCAServer implements CertificateServer {
     this.profile = pkiProfile;
     this.componentName = componentName;
     this.saveCertId = saveCertId;
-    this.rootCertificateId = rootCertificateId;
     lock = new ReentrantLock();
   }
 
@@ -417,9 +413,4 @@ public abstract class DefaultCAServer implements CertificateServer {
   public String getScmID() {
     return scmID;
   }
-
-  public BigInteger getRootCertificateId() {
-    return rootCertificateId;
-  }
-
 }

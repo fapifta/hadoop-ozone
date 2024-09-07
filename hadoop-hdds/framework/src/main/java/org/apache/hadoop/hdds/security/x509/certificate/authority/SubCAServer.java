@@ -64,6 +64,21 @@ public class SubCAServer extends DefaultCAServer {
     super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, null, hostName, certIdCallBack);
   }
 
+  @SuppressWarnings("parameternumber")
+  public SubCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
+      PKIProfile pkiProfile, Consumer<String> certIdCallBack, String hostName,
+      SCMSecurityProtocolClientSideTranslatorPB translatorPB) {
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, null, hostName, certIdCallBack);
+    this.clientSideTranslatorPB = translatorPB;
+  }
+
+  @SuppressWarnings("parameternumber")
+  public SubCAServer(String subject, String clusterID, String scmID, CertificateStore certificateStore,
+      PKIProfile pkiProfile, Consumer<String> certIdCallBack, String hostName, RootCAServer rootCAServer) {
+    super(subject, clusterID, scmID, certificateStore, pkiProfile, COMPONENT_NAME, null, hostName, certIdCallBack);
+    this.rootCAServer = rootCAServer;
+  }
+
   @Override
   void initKeysAndCa() {
     try {
@@ -177,14 +192,4 @@ public class SubCAServer extends DefaultCAServer {
         .setCA(true)
         .setKey(new KeyPair(keyPair.getPublic(), keyPair.getPrivate()));
   }
-
-  public void setRootCAServer(RootCAServer rootCAServer) {
-    this.rootCAServer = rootCAServer;
-  }
-
-  public void setClientSideTranslatorPB(
-      SCMSecurityProtocolClientSideTranslatorPB clientSideTranslatorPB) {
-    this.clientSideTranslatorPB = clientSideTranslatorPB;
-  }
-
 }

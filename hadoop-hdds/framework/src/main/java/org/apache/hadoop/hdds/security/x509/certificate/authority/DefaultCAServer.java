@@ -30,7 +30,6 @@ import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyStorage;
 import org.bouncycastle.operator.OperatorCreationException;
-import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -189,7 +188,7 @@ public abstract class DefaultCAServer implements CertificateServer {
 
   @Override
   public Future<CertPath> requestCertificate(
-      PKCS10CertificationRequest csr,
+      String csr,
       CertificateApprover.ApprovalType approverType, NodeType role,
       String certSerialId) {
     LocalDateTime beginDate = LocalDateTime.now();
@@ -236,7 +235,7 @@ public abstract class DefaultCAServer implements CertificateServer {
   }
 
   private X509Certificate signAndStoreCertificate(
-      LocalDateTime beginDate, LocalDateTime endDate, PKCS10CertificationRequest csr, NodeType role, String certSerialId
+      LocalDateTime beginDate, LocalDateTime endDate, String csr, NodeType role, String certSerialId
   ) throws IOException, OperatorCreationException, CertificateException {
 
     lock.lock();

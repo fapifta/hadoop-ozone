@@ -29,7 +29,6 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIPro
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyStorage;
-import org.bouncycastle.operator.OperatorCreationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -219,7 +218,7 @@ public abstract class DefaultCAServer implements CertificateServer {
       default:
         return null; // cannot happen, keeping checkstyle happy.
       }
-    } catch (CertificateException | IOException | OperatorCreationException e) {
+    } catch (CertificateException | IOException e) {
       LOG.error("Unable to issue a certificate.", e);
       certPathPromise.completeExceptionally(new SCMSecurityException(e, UNABLE_TO_ISSUE_CERTIFICATE));
     }
@@ -236,7 +235,7 @@ public abstract class DefaultCAServer implements CertificateServer {
 
   private X509Certificate signAndStoreCertificate(
       LocalDateTime beginDate, LocalDateTime endDate, String csr, NodeType role, String certSerialId
-  ) throws IOException, OperatorCreationException, CertificateException {
+  ) throws IOException, CertificateException {
 
     lock.lock();
     X509Certificate xcert;

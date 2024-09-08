@@ -23,7 +23,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 import org.apache.hadoop.hdds.scm.metadata.SCMMetadataStore;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
-import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 
 import java.io.IOException;
 import java.security.cert.CertPath;
@@ -93,7 +92,7 @@ public interface CertificateServer {
    * @throws SCMSecurityException - on Error.
    */
   Future<CertPath> requestCertificate(
-      PKCS10CertificationRequest csr,
+      String csr,
       CertificateApprover.ApprovalType type, NodeType role,
       String certSerialId) throws SCMSecurityException;
 

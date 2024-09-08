@@ -139,12 +139,12 @@ public class CertificateClientTestImpl implements CertificateClient {
         HDDS_X509_DEFAULT_DURATION_DEFAULT);
     //TODO: generateCSR should not be called...
     x509Certificate = approver.sign(securityConfig, rootKeyPair.getPrivate(),
-            rootCert,
-            Date.from(start.atZone(ZoneId.systemDefault()).toInstant()),
-            Date.from(start.plus(Duration.parse(certDuration))
-                .atZone(ZoneId.systemDefault()).toInstant()),
-            csrBuilder.build().generateCSR(), "scm1", "cluster1",
-            String.valueOf(System.nanoTime()));
+        rootCert,
+        Date.from(start.atZone(ZoneId.systemDefault()).toInstant()),
+        Date.from(start.plus(Duration.parse(certDuration))
+            .atZone(ZoneId.systemDefault()).toInstant()),
+        csrBuilder.build().toEncodedFormat(), "scm1", "cluster1",
+        String.valueOf(System.nanoTime()));
     certificateMap.put(x509Certificate.getSerialNumber().toString(),
         x509Certificate);
 
@@ -294,7 +294,8 @@ public class CertificateClientTestImpl implements CertificateClient {
     //TODO: get rid of generateCSR call here, once the server side changes happened.
     X509Certificate newX509Certificate =
         approver.sign(securityConfig, rootKeyPair.getPrivate(), rootCert, start,
-            new Date(start.getTime() + certDuration.toMillis()), csrBuilder.build().generateCSR(), "scm1", "cluster1",
+            new Date(start.getTime() + certDuration.toMillis()),
+            csrBuilder.build().toEncodedFormat(), "scm1", "cluster1",
             String.valueOf(System.nanoTime())
         );
 

@@ -153,7 +153,7 @@ public class SubCAServer extends DefaultCAServer {
       CertificateSignRequest csr = configureCSRBuilder(keyPair).build();
       String subCaSerialId = BigInteger.ONE.add(BigInteger.ONE).toString();
       CertPath scmSubCACertPath =
-          rootCAServer.requestCertificate(csr.generateCSR(), KERBEROS_TRUSTED, SCM, subCaSerialId).get();
+          rootCAServer.requestCertificate(csr.toEncodedFormat(), KERBEROS_TRUSTED, SCM, subCaSerialId).get();
       String pemEncodedCert = CertificateCodec.getPEMEncodedString(scmSubCACertPath);
 
       storeCertificate(pemEncodedRootCert, CAType.SUBORDINATE);

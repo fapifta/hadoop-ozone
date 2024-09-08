@@ -94,7 +94,6 @@ public class TestDefaultProfile {
    */
   @Test
   public void testVerifyCertificate() throws Exception {
-    //TODO: generateCSR!
     CertificateSignRequest csr = new CertificateSignRequest.Builder()
         .addDnsName("hadoop.apache.org")
         .addIpAddress("8.8.8.8")
@@ -120,7 +119,6 @@ public class TestDefaultProfile {
     KeyPair newKeyPair = new HDDSKeyGenerator(securityConfig).generateKey();
     KeyPair wrongKey = new KeyPair(keyPair.getPublic(),
         newKeyPair.getPrivate());
-    //TODO: generateCSR!
     CertificateSignRequest csr = new CertificateSignRequest.Builder()
         .addDnsName("hadoop.apache.org")
         .addIpAddress("8.8.8.8")
@@ -141,7 +139,6 @@ public class TestDefaultProfile {
    */
   @Test
   public void testExtensions() throws Exception {
-    //TODO: generateCSR!
     CertificateSignRequest csr = new CertificateSignRequest.Builder()
         .addDnsName("hadoop.apache.org")
         .addIpAddress("192.10.234.6")
@@ -164,7 +161,6 @@ public class TestDefaultProfile {
 
   @Test
   public void testInvalidExtensionsWithCA() throws Exception {
-    //TODO: generateCSR!
     CertificateSignRequest csr = new CertificateSignRequest.Builder()
         .addDnsName("hadoop.apache.org")
         .addIpAddress("192.10.234.6")

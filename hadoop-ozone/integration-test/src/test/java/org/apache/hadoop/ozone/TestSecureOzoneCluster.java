@@ -1449,7 +1449,6 @@ final class TestSecureOzoneCluster {
     addIpAndDnsDataToBuilder(csrBuilder);
     LocalDateTime start = LocalDateTime.now();
     Duration certDuration = conf.getDefaultCertDuration();
-    //TODO: generateCSR!
     return approver.sign(conf, rootKeyPair.getPrivate(), rootCert,
         Date.from(start.atZone(ZoneId.systemDefault()).toInstant()),
         Date.from(start.plus(certDuration)

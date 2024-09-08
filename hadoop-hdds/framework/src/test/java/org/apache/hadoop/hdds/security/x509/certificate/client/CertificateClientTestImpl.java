@@ -137,7 +137,6 @@ public class CertificateClientTestImpl implements CertificateClient {
     start = LocalDateTime.now();
     String certDuration = conf.get(HDDS_X509_DEFAULT_DURATION,
         HDDS_X509_DEFAULT_DURATION_DEFAULT);
-    //TODO: generateCSR should not be called...
     x509Certificate = approver.sign(securityConfig, rootKeyPair.getPrivate(),
         rootCert,
         Date.from(start.atZone(ZoneId.systemDefault()).toInstant()),
@@ -291,7 +290,6 @@ public class CertificateClientTestImpl implements CertificateClient {
 
     Duration certDuration = securityConfig.getDefaultCertDuration();
     Date start = new Date();
-    //TODO: get rid of generateCSR call here, once the server side changes happened.
     X509Certificate newX509Certificate =
         approver.sign(securityConfig, rootKeyPair.getPrivate(), rootCert, start,
             new Date(start.getTime() + certDuration.toMillis()),

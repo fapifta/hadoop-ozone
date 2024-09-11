@@ -41,9 +41,11 @@ import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
@@ -165,7 +167,7 @@ public class TestDefaultCAServer {
   }
 
 
-  private static Stream<CertificateServer> createCertServer() throws IOException {
+  private static Stream<Arguments> createCertServer() throws IOException {
     OzoneConfiguration configuration = new OzoneConfiguration();
     configuration.set(OZONE_METADATA_DIRS, testDir.toString());
     SecurityConfig secConf = new SecurityConfig(configuration);
@@ -181,7 +183,10 @@ public class TestDefaultCAServer {
         new SubCAServer("testCA", clusterId, scmId, caStore, new DefaultProfile(), t -> {
         }, "testhost", rootCAServer);
     subCAServer.init(secConf);
-    return Stream.of(rootCAServer, subCAServer);
+    return Stream.of(
+        Arguments.of(Named.of("RootCAServer as cert server", rootCAServer)),
+        Arguments.of(Named.of("SubCAServer as cert server", subCAServer))
+    );
   }
 
   /**
@@ -195,38 +200,33 @@ public class TestDefaultCAServer {
    * @throws NoSuchProviderException  - on ERROR.
    * @throws NoSuchAlgorithmException - on ERROR.
    */
-  @Test
-  public void testRequestCertificate() throws Exception {
-    String scmId = RandomStringUtils.randomAlphabetic(4);
-    String clusterId = RandomStringUtils.randomAlphabetic(4);
+  @ParameterizedTest
+  @MethodSource("createCertServer")
+  public void testRequestCertificate(DefaultCAServer certificateServer) throws Exception {
     KeyPair keyPair =
         new HDDSKeyGenerator(securityConfig).generateKey();
+    certificateServer.init(securityConfig);
+
     CertificateSignRequest csr = new CertificateSignRequest.Builder()
         .addDnsName("hadoop.apache.org")
         .addIpAddress("8.8.8.8")
         .addServiceName("OzoneMarketingCluster002")
         .setCA(false)
-        .setClusterID(clusterId)
-        .setScmID(scmId)
+        .setClusterID(certificateServer.getClusterID())
+        .setScmID(certificateServer.getScmID())
         .setSubject("Ozone Cluster")
         .setConfiguration(securityConfig)
         .setKey(keyPair)
         .build();
 
-    CertificateServer testCA = new RootCAServer("testCA",
-        clusterId, scmId, caStore,
-        new DefaultProfile(),
-        Paths.get(SCM_CA_CERT_STORAGE_DIR, SCM_CA_PATH).toString(), BigInteger.ONE, null);
-    testCA.init(securityConfig);
-
-    Future<CertPath> holder = testCA.requestCertificate(
+    Future<CertPath> holder = certificateServer.requestCertificate(
         csr.toEncodedFormat(), CertificateApprover.ApprovalType.TESTING_AUTOMATIC, SCM,
         String.valueOf(System.nanoTime()));
     //Test that the cert path returned contains the CA certificate in proper
     // place
     List<? extends Certificate> certBundle = holder.get().getCertificates();
     X509Certificate caInReturnedBundle = (X509Certificate) certBundle.get(1);
-    assertEquals(caInReturnedBundle, testCA.getCACertificate());
+    assertEquals(caInReturnedBundle, certificateServer.getCACertificate());
     X509Certificate signedCert =
         CertificateCodec.firstCertificateFrom(holder.get());
     //Test that the ca has signed of the returned certificate
@@ -246,8 +246,9 @@ public class TestDefaultCAServer {
    * @throws NoSuchProviderException  - on ERROR.
    * @throws NoSuchAlgorithmException - on ERROR.
    */
-  @Test
-  public void testRequestCertificateWithInvalidSubject() throws Exception {
+  @ParameterizedTest
+  @MethodSource("createCertServer")
+  public void testRequestCertificateWithInvalidSubject(CertificateServer certificateServer) throws Exception {
     KeyPair keyPair =
         new HDDSKeyGenerator(securityConfig).generateKey();
     CertificateSignRequest csr = new CertificateSignRequest.Builder()
@@ -259,14 +260,9 @@ public class TestDefaultCAServer {
         .setKey(keyPair)
         .build();
 
-    CertificateServer testCA = new RootCAServer("testCA",
-        RandomStringUtils.randomAlphabetic(4),
-        RandomStringUtils.randomAlphabetic(4), caStore,
-        new DefaultProfile(),
-        Paths.get(SCM_CA_CERT_STORAGE_DIR, SCM_CA_PATH).toString(), BigInteger.ONE, null);
-    testCA.init(securityConfig);
+    certificateServer.init(securityConfig);
 
-    Future<CertPath> holder = testCA.requestCertificate(
+    Future<CertPath> holder = certificateServer.requestCertificate(
         csr.toEncodedFormat(), CertificateApprover.ApprovalType.TESTING_AUTOMATIC, OM,
         String.valueOf(System.nanoTime()));
     // Right now our calls are synchronous. Eventually this will have to wait.
@@ -274,8 +270,9 @@ public class TestDefaultCAServer {
     assertNotNull(CertificateCodec.firstCertificateFrom(holder.get()));
   }
 
-  @Test
-  public void testRequestCertificateWithInvalidSubjectFailure() throws Exception {
+  @ParameterizedTest
+  @MethodSource("createCertServer")
+  public void testRequestCertificateWithInvalidSubjectFailure(CertificateServer certificateServer) throws Exception {
     KeyPair keyPair =
         new HDDSKeyGenerator(securityConfig).generateKey();
     CertificateSignRequest csr = new CertificateSignRequest.Builder()
@@ -289,17 +286,12 @@ public class TestDefaultCAServer {
         .setKey(keyPair)
         .build();
 
-    CertificateServer testCA = new RootCAServer("testCA",
-        RandomStringUtils.randomAlphabetic(4),
-        RandomStringUtils.randomAlphabetic(4), caStore,
-        new DefaultProfile(),
-        Paths.get(SCM_CA_CERT_STORAGE_DIR, SCM_CA_PATH).toString(), BigInteger.ONE, null);
-    testCA.init(securityConfig);
+    certificateServer.init(securityConfig);
 
     ExecutionException execution = assertThrows(ExecutionException.class,
         () -> {
           Future<CertPath> holder =
-              testCA.requestCertificate(csr.toEncodedFormat(),
+              certificateServer.requestCertificate(csr.toEncodedFormat(),
                   CertificateApprover.ApprovalType.TESTING_AUTOMATIC, OM,
                   String.valueOf(System.nanoTime()));
           holder.get();
@@ -350,7 +342,6 @@ public class TestDefaultCAServer {
     testCA.init(securityConfig);
     //Then the external cert is set as CA cert for the server.
     assertEquals(externalCert, testCA.getCACertificate());
-
   }
 
   private void setExternalPathsInConfig(Path tempDir,

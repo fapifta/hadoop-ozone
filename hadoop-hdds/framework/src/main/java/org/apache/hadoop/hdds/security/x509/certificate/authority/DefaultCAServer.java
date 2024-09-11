@@ -313,7 +313,7 @@ public abstract class DefaultCAServer implements CertificateServer {
     LOG.error("We found the keys, but the root certificate for this CertificateServer is missing. " +
         "Please restart SCM after locating the Certificates.");
     LOG.error("Exiting due to unrecoverable CertificateServer error.");
-    throw new IllegalStateException("Missing Root Certs, cannot continue.");
+    throw new IllegalStateException("Missing CA Certs, cannot continue.");
   }
 
   abstract void initKeysAndCa();

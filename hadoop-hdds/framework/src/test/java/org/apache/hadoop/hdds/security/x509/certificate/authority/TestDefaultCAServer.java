@@ -20,6 +20,7 @@
 package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -37,12 +38,18 @@ import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyPair;
@@ -59,6 +66,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.stream.Stream;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType.OM;
@@ -78,65 +86,103 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestDefaultCAServer {
   private OzoneConfiguration conf;
   private SecurityConfig securityConfig;
-  private MockCAStore caStore;
+  private static MockCAStore caStore;
+  private CertificateServer certServer;
+  private static File testDir;
 
   @BeforeEach
-  public void init(@TempDir Path tempDir) throws IOException {
+  public void init() throws IOException {
     conf = new OzoneConfiguration();
-    conf.set(OZONE_METADATA_DIRS, tempDir.toString());
+    conf.set(OZONE_METADATA_DIRS, testDir.toString());
     securityConfig = new SecurityConfig(conf);
     caStore = new MockCAStore();
   }
 
-  @Test
-  public void testInit() throws Exception {
-    CertificateServer testCA = new RootCAServer("testCA",
-        RandomStringUtils.randomAlphabetic(4),
-        RandomStringUtils.randomAlphabetic(4), caStore,
-        new DefaultProfile(),
-        Paths.get(SCM_CA_CERT_STORAGE_DIR, SCM_CA_PATH).toString(), BigInteger.ONE, null);
-    testCA.init(securityConfig);
-    X509Certificate first = testCA.getCACertificate();
+  @BeforeAll
+  public static void initPath() throws IOException {
+    testDir = Files.createTempDirectory(Paths.get(""), "test_dir").toFile();
+    testDir.deleteOnExit();
+  }
+
+  @AfterAll
+  public static void clearPath() throws IOException {
+    FileUtils.deleteDirectory(testDir);
+    testDir.deleteOnExit();
+  }
+
+  @ParameterizedTest
+  @MethodSource("createCertServer")
+  public void testInitParameterized(CertificateServer certificateServer) throws Exception {
+    this.certServer = certificateServer;
+    certServer.init(securityConfig);
+    X509Certificate first = certServer.getCACertificate();
     assertNotNull(first);
     //Init is idempotent.
-    testCA.init(securityConfig);
-    X509Certificate second = testCA.getCACertificate();
+    certServer.init(securityConfig);
+    X509Certificate second = certServer.getCACertificate();
     assertEquals(first.getSerialNumber(), second.getSerialNumber());
   }
 
-  @Test
-  public void testMissingCertificate() throws NoSuchAlgorithmException, NoSuchProviderException, IOException {
-    CertificateServer testCA = new RootCAServer("testCA",
-        RandomStringUtils.randomAlphabetic(4),
-        RandomStringUtils.randomAlphabetic(4), caStore,
-        new DefaultProfile(),
-        "testComponent", BigInteger.ONE, null);
-    HDDSKeyGenerator keyGenerator = new HDDSKeyGenerator(securityConfig);
-    KeyPair keyPair = keyGenerator.generateKey();
-    KeyCodec keyCodec = new KeyCodec(securityConfig, "testComponent");
-    keyCodec.writeKey(keyPair);
-    IllegalStateException e =
-        assertThrows(IllegalStateException.class, () -> testCA.init(securityConfig));
-    // This also is a runtime exception. Hence not caught by junit expected
-    // exception.
-    assertThat(e.toString()).contains("Missing Root Certs");
+  @ParameterizedTest
+  @MethodSource("createCertServer")
+  public void testMissingCertificate(CertificateServer certificateServer) throws IOException {
+    this.certServer = certificateServer;
+    File rootCADir = Paths.get(testDir.toString(), "scm", "ca", "certs").toFile();
+    File subCADir = Paths.get(testDir.toString(), "scm", "sub-ca", "certs").toFile();
+    tempDeleteDirectory(rootCADir);
+    tempDeleteDirectory(subCADir);
+
+    RuntimeException e =
+        assertThrows(RuntimeException.class, () -> certServer.init(securityConfig));
+    assertThat(e.toString()).contains("Missing CA Certs");
+    restoreDirectory(rootCADir);
+    restoreDirectory(subCADir);
   }
-//
-//  @Test
-//  public void testMissingKey() {
-//    DefaultCAServer testCA = new RootCAServer("testCA",
-//        RandomStringUtils.randomAlphabetic(4),
-//        RandomStringUtils.randomAlphabetic(4), caStore,
-//        new DefaultProfile(),
-//        Paths.get(SCM_CA_CERT_STORAGE_DIR, SCM_CA_PATH).toString());
-//    Consumer<SecurityConfig> caInitializer =
-//        testCA.processVerificationStatus(VerificationStatus.MISSING_KEYS, CAType.ROOT);
-//    IllegalStateException e = assertThrows(IllegalStateException.class, () -> caInitializer.accept(securityConfig));
-//
-//    // This also is a runtime exception. Hence, not caught by junit expected exception.
-//    assertThat(e.toString()).contains("Missing Keys");
-//  }
-//
+
+  private static void tempDeleteDirectory(File directory) throws IOException {
+    if (directory.exists()) {
+      FileUtils.moveDirectory(directory, Paths.get(testDir.toString(), "tmp", directory.toString()).toFile());
+    }
+  }
+
+  private static void restoreDirectory(File directory) throws IOException {
+    FileUtils.moveDirectory(Paths.get(testDir.toString(), "tmp", directory.toString()).toFile(), directory);
+  }
+
+  @ParameterizedTest
+  @MethodSource("createCertServer")
+  public void testMissingKey(CertificateServer certificateServer) throws IOException {
+    this.certServer = certificateServer;
+    File rootCAServerKeysDir = Paths.get(testDir.toString(), "scm", "ca", "keys").toFile();
+    File subCAServerKeysDir = Paths.get(testDir.toString(), "scm", "sub-ca", "keys").toFile();
+    tempDeleteDirectory(rootCAServerKeysDir);
+    tempDeleteDirectory(subCAServerKeysDir);
+    IllegalStateException e = assertThrows(IllegalStateException.class, () -> certServer.init(securityConfig));
+    // This also is a runtime exception. Hence, not caught by junit expected exception.
+    assertThat(e.toString()).contains("Missing Keys");
+    restoreDirectory(rootCAServerKeysDir);
+    restoreDirectory(subCAServerKeysDir);
+  }
+
+
+  private static Stream<CertificateServer> createCertServer() throws IOException {
+    OzoneConfiguration configuration = new OzoneConfiguration();
+    configuration.set(OZONE_METADATA_DIRS, testDir.toString());
+    SecurityConfig secConf = new SecurityConfig(configuration);
+    String clusterId = RandomStringUtils.randomAlphabetic(4);
+    String scmId = RandomStringUtils.randomAlphabetic(4);
+    RootCAServer rootCAServer = new RootCAServer("testCA",
+        clusterId, scmId, caStore,
+        new DefaultCAProfile(),
+        BigInteger.ONE, t -> {
+    });
+    rootCAServer.init(secConf);
+    SubCAServer subCAServer =
+        new SubCAServer("testCA", clusterId, scmId, caStore, new DefaultProfile(), t -> {
+        }, "testhost", rootCAServer);
+    subCAServer.init(secConf);
+    return Stream.of(rootCAServer, subCAServer);
+  }
 
   /**
    * The most important test of this test suite. This tests that we are able
@@ -176,8 +222,6 @@ public class TestDefaultCAServer {
     Future<CertPath> holder = testCA.requestCertificate(
         csr.toEncodedFormat(), CertificateApprover.ApprovalType.TESTING_AUTOMATIC, SCM,
         String.valueOf(System.nanoTime()));
-    // Right now our calls are synchronous. Eventually this will have to wait.
-    assertTrue(holder.isDone());
     //Test that the cert path returned contains the CA certificate in proper
     // place
     List<? extends Certificate> certBundle = holder.get().getCertificates();
@@ -330,16 +374,16 @@ public class TestDefaultCAServer {
   @Test
   public void testInitWithCertChain(@TempDir Path tempDir) throws Exception {
     String externalCaCertFileName = "CaCert.pem";
-    setExternalPathsInConfig(tempDir, externalCaCertFileName);
+    setExternalPathsInConfig(testDir.toPath(), externalCaCertFileName);
     CertificateApprover approver = new DefaultApprover(new DefaultCAProfile(),
         securityConfig);
-    String componentName = Paths.get(SCM_CA_CERT_STORAGE_DIR, SCM_CA_PATH).toString();
+    String componentName = testDir.toString();
     String scmId = RandomStringUtils.randomAlphabetic(4);
     String clusterId = RandomStringUtils.randomAlphabetic(4);
     KeyPair keyPair = new HDDSKeyGenerator(securityConfig).generateKey();
     KeyCodec keyPEMWriter = new KeyCodec(securityConfig, componentName);
 
-    keyPEMWriter.writeKey(tempDir, keyPair, true);
+    keyPEMWriter.writeKey(testDir.toPath(), keyPair, true);
     LocalDate beginDate = LocalDate.now().atStartOfDay().toLocalDate();
     LocalDate endDate =
         LocalDate.from(LocalDate.now().atStartOfDay().plusDays(10));
@@ -363,7 +407,7 @@ public class TestDefaultCAServer {
     CertificateCodec certificateCodec = new CertificateCodec(securityConfig, componentName);
 
     CertPath certPath = certFactory.generateCertPath(ImmutableList.of(signedCert, externalCert));
-    certificateCodec.writeCertificate(tempDir, externalCaCertFileName,
+    certificateCodec.writeCertificate(testDir.toPath(), externalCaCertFileName,
         CertificateCodec.getPEMEncodedString(certPath));
 
     CertificateServer testCA = new RootCAServer("testCA",

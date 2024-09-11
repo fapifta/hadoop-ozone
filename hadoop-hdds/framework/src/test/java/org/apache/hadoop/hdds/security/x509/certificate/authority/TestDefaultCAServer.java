@@ -97,7 +97,6 @@ public class TestDefaultCAServer {
     conf = new OzoneConfiguration();
     conf.set(OZONE_METADATA_DIRS, testDir.toString());
     securityConfig = new SecurityConfig(conf);
-    caStore = new MockCAStore();
   }
 
   @BeforeAll
@@ -168,6 +167,7 @@ public class TestDefaultCAServer {
 
 
   private static Stream<Arguments> createCertServer() throws IOException {
+    caStore = new MockCAStore();
     OzoneConfiguration configuration = new OzoneConfiguration();
     configuration.set(OZONE_METADATA_DIRS, testDir.toString());
     SecurityConfig secConf = new SecurityConfig(configuration);

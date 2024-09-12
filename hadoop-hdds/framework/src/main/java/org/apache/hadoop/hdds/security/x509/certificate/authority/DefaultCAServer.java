@@ -310,6 +310,11 @@ public abstract class DefaultCAServer implements CertificateServer {
       throw new IllegalStateException("Missing Keys, cannot continue.");
     }
 
+    if (!certStatus && keyStatus && config.useExternalCACertificate(componentName)) {
+      initKeysAndCa();
+      return false;
+    }
+
     LOG.error("We found the keys, but the root certificate for this CertificateServer is missing. " +
         "Please restart SCM after locating the Certificates.");
     LOG.error("Exiting due to unrecoverable CertificateServer error.");

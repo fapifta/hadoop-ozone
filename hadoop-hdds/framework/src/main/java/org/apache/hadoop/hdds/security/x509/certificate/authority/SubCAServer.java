@@ -89,10 +89,13 @@ public class SubCAServer extends DefaultCAServer {
       KeyPair keyPair = generateKeys(getSecurityConfig());
       if (clientSideTranslatorPB != null) {
         getRootCASignedSCMCert(keyPair, clientSideTranslatorPB);
+        return;
       }
       if (rootCAServer != null) {
         getPrimarySCMSelfSignedCert(keyPair);
+        return;
       }
+      throw new IllegalStateException("Trying to initialize SubCAServer without creating a root CA first.");
     } catch (NoSuchProviderException | NoSuchAlgorithmException | IOException e) {
       LOG.error("Unable to initialize CertificateServer.", e);
     }

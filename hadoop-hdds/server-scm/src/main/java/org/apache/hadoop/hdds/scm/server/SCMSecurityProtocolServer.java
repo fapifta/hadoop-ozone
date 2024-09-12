@@ -333,9 +333,9 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
   /**
    * Request certificate for the specified role.
    *
-   * @param certSignReq - Certificate signing request.
-   * @param nodeType    - role OM/SCM/DATANODE
-   * @return String         - SCM signed pem encoded certificate.
+   * @param csr      - Certificate signing request.
+   * @param nodeType - role OM/SCM/DATANODE
+   * @return String  - SCM signed pem encoded certificate.
    * @throws IOException
    */
   private synchronized String getEncodedCertToString(String csr,

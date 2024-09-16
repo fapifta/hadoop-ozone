@@ -29,6 +29,7 @@ import org.apache.hadoop.hdds.scm.client.ClientTrustManager;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CACertificateProvider;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
@@ -41,6 +42,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -71,7 +74,7 @@ public class ECContainerOperationClient implements Closeable {
       throws IOException {
     ClientTrustManager trustManager = null;
     if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
-      trustManager = certificateClient.createClientTrustManager();
+      trustManager = createClientTrustManager(certificateClient);
     }
     XceiverClientManager.ScmClientConfig scmClientConfig = new XceiverClientManager.XceiverClientManagerConfigBuilder()
         .setMaxCacheSize(256)
@@ -104,6 +107,16 @@ public class ECContainerOperationClient implements Closeable {
     } finally {
       this.xceiverClientManager.releaseClient(xceiverClient, false);
     }
+  }
+
+  public static ClientTrustManager createClientTrustManager(final CertificateClient client) throws IOException {
+    CACertificateProvider caCertificateProvider = () -> {
+      List<X509Certificate> caCerts = new ArrayList<>();
+      caCerts.addAll(client.getAllCaCerts());
+      caCerts.addAll(client.getAllRootCaCerts());
+      return caCerts;
+    };
+    return new ClientTrustManager(caCertificateProvider, caCertificateProvider);
   }
 
   public void closeContainer(long containerID, DatanodeDetails dn,

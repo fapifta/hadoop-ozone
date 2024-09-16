@@ -179,14 +179,6 @@ public interface CertificateClient extends Closeable {
   ReloadingX509TrustManager getTrustManager() throws CertificateException;
 
   /**
-   * Creates a ClientTrustManager instance using the trusted certificates of this certificate client.
-   *
-   * @return The new ClientTrustManager instance.
-   * @throws IOException
-   */
-  ClientTrustManager createClientTrustManager() throws IOException;
-
-  /**
    * Register a receiver that will be called after the certificate renewed.
    *
    * @param receiver

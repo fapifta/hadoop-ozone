@@ -46,6 +46,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
@@ -54,10 +55,13 @@ import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
 import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.DefaultApprover;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultProfile;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
+import org.mockito.Mockito;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_DEFAULT_DURATION;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_DEFAULT_DURATION_DEFAULT;
@@ -344,13 +348,24 @@ public class CertificateClientTestImpl implements CertificateClient {
     try {
       if (trustManager == null) {
         Set<X509Certificate> newRootCaCerts = getAllRootCaCerts().isEmpty() ? getAllCaCerts() : getAllRootCaCerts();
-        trustManager = new ReloadingX509TrustManager(KeyStore.getDefaultType(), new ArrayList<>(newRootCaCerts));
+        TrustedCertStorage certStorage = Mockito.mock(TrustedCertStorage.class);
+        Mockito.when(certStorage.getCertificates()).thenReturn(convertToCertPaths(newRootCaCerts));
+        trustManager = new ReloadingX509TrustManager(KeyStore.getDefaultType(), certStorage);
         notificationReceivers.add(trustManager);
       }
       return trustManager;
     } catch (IOException | GeneralSecurityException e) {
       throw new CertificateException("Failed to init trustManager", e);
     }
+  }
+
+  private List<CertPath> convertToCertPaths(Set<X509Certificate> newRootCaCerts)
+      throws java.security.cert.CertificateException {
+    ArrayList<CertPath> convertedCerts = new ArrayList<>();
+    for (X509Certificate cert : newRootCaCerts) {
+      convertedCerts.add(CertificateCodec.getCertFactory().generateCertPath(ImmutableList.of(cert)));
+    }
+    return convertedCerts;
   }
 
   @Override

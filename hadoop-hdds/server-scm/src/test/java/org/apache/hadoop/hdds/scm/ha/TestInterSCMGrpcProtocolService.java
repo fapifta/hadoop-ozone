@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.scm.ha;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -28,6 +29,8 @@ import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
 import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
 import org.apache.hadoop.hdds.security.x509.CertificateTestUtils;
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.hdds.utils.db.DBStore;
@@ -37,6 +40,7 @@ import org.apache.ozone.test.GenericTestUtils.PortAllocator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -46,8 +50,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.security.KeyStore;
+import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -203,11 +211,16 @@ class TestInterSCMGrpcProtocolService {
     serviceCert = createSelfSignedCert(serviceKeys, "service");
     clientCert = createSelfSignedCert(clientKeys, "client");
 
-    ReloadingX509TrustManager toSpyServerTrustManager = new ReloadingX509TrustManager(KeyStore.getDefaultType(),
-        ImmutableList.of(clientCert));
+    TrustedCertStorage serviceCertStorage = mock(TrustedCertStorage.class);
+    TrustedCertStorage clientCertStorage = mock(TrustedCertStorage.class);
+    Mockito.when(serviceCertStorage.getCertificates()).thenReturn(convertToCertPaths(ImmutableSet.of(serviceCert)));
+    Mockito.when(clientCertStorage.getCertificates()).thenReturn(convertToCertPaths(ImmutableSet.of(clientCert)));
+
+    ReloadingX509TrustManager toSpyServerTrustManager =
+        new ReloadingX509TrustManager(KeyStore.getDefaultType(), clientCertStorage);
     serverTrustManager = spy(toSpyServerTrustManager);
-    ReloadingX509TrustManager toSpyClientTrustManager = new ReloadingX509TrustManager(KeyStore.getDefaultType(),
-        ImmutableList.of(serviceCert));
+    ReloadingX509TrustManager toSpyClientTrustManager =
+        new ReloadingX509TrustManager(KeyStore.getDefaultType(), serviceCertStorage);
     clientTrustManager = spy(toSpyClientTrustManager);
     ReloadingX509KeyManager toSpyServerKeyManager = new ReloadingX509KeyManager(KeyStore.getDefaultType(), "server",
         serviceKeys.getPrivate(), ImmutableList.of(serviceCert));
@@ -228,6 +241,15 @@ class TestInterSCMGrpcProtocolService {
     conf.setBoolean(OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY, true);
     conf.setBoolean(HddsConfigKeys.HDDS_GRPC_TLS_ENABLED, true);
     return conf;
+  }
+
+  private List<CertPath> convertToCertPaths(Set<X509Certificate> newRootCaCerts)
+      throws java.security.cert.CertificateException {
+    ArrayList<CertPath> convertedCerts = new ArrayList<>();
+    for (X509Certificate cert : newRootCaCerts) {
+      convertedCerts.add(CertificateCodec.getCertFactory().generateCertPath(ImmutableList.of(cert)));
+    }
+    return convertedCerts;
   }
 
 }

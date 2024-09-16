@@ -21,6 +21,7 @@ import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.annotation.InterfaceStability;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateNotification;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +59,7 @@ public final class ReloadingX509TrustManager implements X509TrustManager, Certif
 
   private final String type;
   private final AtomicReference<X509TrustManager> trustManagerRef;
+  private final TrustedCertStorage trustedCertStorage;
 
   /**
    * Current Root CA cert in trustManager, to detect if certificate is changed.
@@ -75,11 +77,15 @@ public final class ReloadingX509TrustManager implements X509TrustManager, Certif
    * @throws GeneralSecurityException thrown if the truststore could not be
    *                                  initialized due to a security error.
    */
-  public ReloadingX509TrustManager(String type, List<X509Certificate> newRootCaCerts)
+  public ReloadingX509TrustManager(String type, TrustedCertStorage certStorage)
       throws GeneralSecurityException, IOException {
     this.type = type;
     trustManagerRef = new AtomicReference<X509TrustManager>();
-    trustManagerRef.set(init(newRootCaCerts));
+    this.trustedCertStorage = certStorage;
+    List<X509Certificate> certPaths = trustedCertStorage.getCertificates().stream()
+        .map(certPath -> (X509Certificate) certPath.getCertificates().get(0))
+        .collect(Collectors.toList());
+    trustManagerRef.set(init(certPaths));
   }
 
   @Override

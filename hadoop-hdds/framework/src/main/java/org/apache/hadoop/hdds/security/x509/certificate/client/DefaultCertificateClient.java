@@ -80,6 +80,7 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
@@ -987,9 +988,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   public ReloadingX509TrustManager getTrustManager() throws CertificateException {
     try {
       if (trustManager == null) {
-        Set<X509Certificate> newRootCaCerts = rootCaCertificates.isEmpty() ?
-            caCertificates : rootCaCertificates;
-        trustManager = new ReloadingX509TrustManager(KeyStore.getDefaultType(), new ArrayList<>(newRootCaCerts));
+        TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, component);
+        trustManager = new ReloadingX509TrustManager(KeyStore.getDefaultType(), trustedCertStorage);
         notificationReceivers.add(trustManager);
       }
       return trustManager;

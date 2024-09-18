@@ -56,12 +56,22 @@ public abstract class CertificateStorage {
 
   public abstract Logger getLogger();
 
+
   CertPath readCertFile(Path filePath) {
     try {
-      return certificateCodec.getCertPath(filePath.getFileName().toString());
+      Path fileName;
+      if (filePath != null) {
+        fileName = filePath.getFileName();
+        if (fileName != null) {
+          return certificateCodec.getCertPath(fileName.toString());
+        } else {
+          throw new NullPointerException("CertificateFilename is null");
+        }
+      } else {
+        throw new NullPointerException("Certificate filename is null");
+      }
     } catch (IOException | CertificateException e) {
-      getLogger().error("Error reading certificate from file: {}.",
-          filePath.toAbsolutePath(), e);
+      getLogger().error("Error reading certificate from file: {}.", filePath, e);
     }
     throw new RuntimeException();
   }

@@ -49,6 +49,8 @@ public class TrustedCertStorage extends CertificateStorage {
     return LOG;
   }
 
+  //mi is adhatunk vissza keystore-t
+
   @Override
   public List<CertPath> getCertificates() throws IOException {
     Path certificateLocation = getSecurityConfig().getCertificateLocation(getComponentName());
@@ -65,7 +67,6 @@ public class TrustedCertStorage extends CertificateStorage {
   }
 
   private boolean isCaCertPath(Path path) {
-    return path.getFileName().toString().startsWith(CAType.ROOT.getFileNamePrefix()) ||
-        path.getFileName().toString().startsWith(CAType.SUBORDINATE.getFileNamePrefix());
+    return path.getFileName().toString().startsWith(CAType.ROOT.getFileNamePrefix());
   }
 }

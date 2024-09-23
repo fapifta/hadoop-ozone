@@ -77,7 +77,7 @@ public interface CertificateServer {
    *                              initialized.
    * @throws IOException          - on Error.
    */
-  X509Certificate getCertificate(String certSerialId)
+  X509Certificate getCertificateById(String certSerialId)
       throws CertificateException, IOException;
 
   /**

@@ -179,7 +179,7 @@ public abstract class DefaultCAServer implements CertificateServer {
    * @throws IOException - on Error.
    */
   @Override
-  public X509Certificate getCertificate(String certSerialId) throws IOException {
+  public X509Certificate getCertificateById(String certSerialId) throws IOException {
     return store.getCertificateByID(new BigInteger(certSerialId));
   }
 

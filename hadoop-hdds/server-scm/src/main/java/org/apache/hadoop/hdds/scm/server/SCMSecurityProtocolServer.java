@@ -394,7 +394,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
         certSerialId);
     try {
       X509Certificate certificate =
-          scmCertificateServer.getCertificate(certSerialId);
+          scmCertificateServer.getCertificateById(certSerialId);
       if (certificate != null) {
         return getPEMEncodedString(certificate);
       }

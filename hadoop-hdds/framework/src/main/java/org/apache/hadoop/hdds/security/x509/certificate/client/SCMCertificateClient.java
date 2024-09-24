@@ -149,7 +149,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
       if (response.hasX509CACertificate()) {
         String pemEncodedRootCert = response.getX509CACertificate();
         storeCertificate(pemEncodedRootCert,
-            CAType.SUBORDINATE, certCodec, false, !renew);
+            CAType.ROOT, certCodec, false, !renew);
         storeCertificate(pemEncodedCert, CAType.NONE, certCodec,
             false, !renew);
         //note: this does exactly the same as store certificate
@@ -201,7 +201,6 @@ public class SCMCertificateClient extends DefaultCertificateClient {
 
         // SCM certificate client currently sets root CA as CA cert
         Set<X509Certificate> certList = getAllRootCaCerts();
-        certList = certList.isEmpty() ? getAllCaCerts() : certList;
 
         List<X509Certificate> rootCAsFromLeaderSCM =
             OzoneSecurityUtil.convertToX509(rootCAPems);
@@ -216,7 +215,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
           LOG.info("Fetched new root CA certificate {} from leader SCM",
               cert.getSerialNumber().toString());
           storeCertificate(
-              CertificateCodec.getPEMEncodedString(cert), CAType.SUBORDINATE);
+              CertificateCodec.getPEMEncodedString(cert), CAType.ROOT);
         }
         String scmCertId = getCertificate().getSerialNumber().toString();
         notifyNotificationReceivers(scmCertId, scmCertId);

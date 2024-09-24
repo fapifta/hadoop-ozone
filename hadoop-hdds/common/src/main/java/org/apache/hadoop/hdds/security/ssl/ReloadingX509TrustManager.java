@@ -191,8 +191,7 @@ public final class ReloadingX509TrustManager implements X509TrustManager, Certif
   public synchronized void notifyCertificateRenewed(
       CertificateClient certClient, String oldCertId, String newCertId) {
     LOG.info("{} notify certificate renewed", certClient.getComponentName());
-    Set<X509Certificate> certList = certClient.getAllRootCaCerts();
-    Set<X509Certificate> rootCaCerts = certList.isEmpty() ? certClient.getAllCaCerts() : certList;
+    Set<X509Certificate> rootCaCerts = certClient.getAllRootCaCerts();
     try {
       X509TrustManager manager = init(new ArrayList<>(rootCaCerts));
       if (manager != null) {

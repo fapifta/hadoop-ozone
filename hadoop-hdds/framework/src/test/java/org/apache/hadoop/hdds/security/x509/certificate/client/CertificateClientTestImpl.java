@@ -255,11 +255,6 @@ public class CertificateClientTestImpl implements CertificateClient {
     return rootCerts;
   }
 
-  @Override
-  public Set<X509Certificate> getAllCaCerts() {
-    return rootCerts;
-  }
-
   public void renewRootCA() throws Exception {
     LocalDateTime start = LocalDateTime.now();
     Duration rootCACertDuration = securityConfig.getMaxCertificateDuration();
@@ -347,7 +342,7 @@ public class CertificateClientTestImpl implements CertificateClient {
   public ReloadingX509TrustManager getTrustManager() throws CertificateException {
     try {
       if (trustManager == null) {
-        Set<X509Certificate> newRootCaCerts = getAllRootCaCerts().isEmpty() ? getAllCaCerts() : getAllRootCaCerts();
+        Set<X509Certificate> newRootCaCerts = getAllRootCaCerts();
         TrustedCertStorage certStorage = Mockito.mock(TrustedCertStorage.class);
         Mockito.when(certStorage.getCertificates()).thenReturn(convertToCertPaths(newRootCaCerts));
         trustManager = new ReloadingX509TrustManager(KeyStore.getDefaultType(), certStorage);

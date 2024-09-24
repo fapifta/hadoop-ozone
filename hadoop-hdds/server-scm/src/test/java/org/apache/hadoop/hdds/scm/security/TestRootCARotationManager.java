@@ -109,6 +109,7 @@ public class TestRootCARotationManager {
     ozoneConfig.setBoolean(HDDS_X509_CA_ROTATION_ENABLED, true);
     scm = mock(StorageContainerManager.class);
     securityConfig = new SecurityConfig(ozoneConfig);
+
     scmCertClient = new SCMCertificateClient(securityConfig, null, scmID, cID,
         certID.toString(), "localhost");
     scmServiceManager = new SCMServiceManager();

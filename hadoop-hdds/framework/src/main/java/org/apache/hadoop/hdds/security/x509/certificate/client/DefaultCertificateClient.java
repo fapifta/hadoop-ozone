@@ -48,7 +48,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -61,12 +60,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -123,12 +119,9 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private Set<X509Certificate> rootCaCertificates;
   private Set<X509Certificate> caCertificates;
   private String certSerialId;
-  private String caCertId;
   private String rootCaCertId;
   private String component;
   private final String threadNamePrefix;
-  private List<String> pemEncodedCACerts = null;
-  private Lock pemEncodedCACertsLock = new ReentrantLock();
   private ReloadingX509KeyManager keyManager;
   private ReloadingX509TrustManager trustManager;
 
@@ -171,7 +164,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    * */
   private synchronized void loadAllCertificates() {
     Path path = securityConfig.getCertificateLocation(component);
-    if (!path.toFile().exists() && certSerialId == null) {
+    //should be || instead of &&
+    if (!path.toFile().exists() || certSerialId == null) {
       return;
     }
     try (Stream<Path> certFiles = Files.list(path)) {
@@ -242,10 +236,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         this.certPath = allCertificates;
       }
       certificateMap.put(readCertSerialId, allCertificates);
-      addCertsToSubCaMapIfNeeded(fileName, allCertificates);
       addCertToRootCaMapIfNeeded(fileName, allCertificates);
 
-      updateCachedData(fileName, CAType.SUBORDINATE, this::updateCachedSubCAId);
       updateCachedData(fileName, CAType.ROOT, this::updateCachedRootCAId);
 
       getLogger().info("Added certificate {} from file: {}.", readCertSerialId,
@@ -280,23 +272,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     if (rootCaCertId == null
         || new BigInteger(rootCaCertId).compareTo(candidateNewId) < 0) {
       rootCaCertId = s;
-    }
-  }
-
-  private synchronized void updateCachedSubCAId(String s) {
-    BigInteger candidateNewId = new BigInteger(s);
-    if (caCertId == null
-        || new BigInteger(caCertId).compareTo(candidateNewId) < 0) {
-      caCertId = s;
-    }
-  }
-
-  private void addCertsToSubCaMapIfNeeded(String fileName, CertPath certs) {
-    if (fileName.startsWith(CAType.SUBORDINATE.getFileNamePrefix())) {
-      caCertificates.addAll(
-          certs.getCertificates().stream()
-              .map(x -> (X509Certificate) x)
-              .collect(Collectors.toSet()));
     }
   }
 
@@ -440,8 +415,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   public synchronized CertPath getCACertPath() {
-    if (caCertId != null) {
-      return certificateMap.get(caCertId);
+    if (rootCaCertId != null) {
+      return certificateMap.get(rootCaCertId);
     }
     return null;
   }
@@ -604,9 +579,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
           caType.getFileNamePrefix() + cert.getSerialNumber().toString());
 
       if (updateCA) {
-        if (caType == CAType.SUBORDINATE) {
-          caCertId = cert.getSerialNumber().toString();
-        }
         if (caType == CAType.ROOT) {
           rootCaCertId = cert.getSerialNumber().toString();
         }
@@ -615,9 +587,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       codec.writeCertificate(certName, pemEncodedCert);
       if (addToCertMap) {
         certificateMap.put(cert.getSerialNumber().toString(), certificatePath);
-        if (caType == CAType.SUBORDINATE) {
-          caCertificates.add(cert);
-        }
         if (caType == CAType.ROOT) {
           rootCaCertificates.add(cert);
         }
@@ -977,14 +946,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   @Override
-  public Set<X509Certificate> getAllCaCerts() {
-    Set<X509Certificate> certs = Collections.unmodifiableSet(caCertificates);
-    getLogger().info("{} has {} CA certificates", this.component,
-        certs.size());
-    return certs;
-  }
-
-  @Override
   public ReloadingX509TrustManager getTrustManager() throws CertificateException {
     try {
       if (trustManager == null) {
@@ -1261,7 +1222,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     privateKey = null;
     publicKey = null;
     certPath = null;
-    caCertId = null;
     rootCaCertId = null;
 
     String oldCaCertId = updateCertSerialId(newCertId);
@@ -1297,8 +1257,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         // Certs will be added to cert map after reloadAllCertificate called
         storeCertificate(pemEncodedCert, CAType.NONE,
             certCodec, false, !renew);
-        storeCertificate(response.getX509CACertificate(),
-            CAType.SUBORDINATE, certCodec, false, !renew);
 
         getAndStoreAllRootCAs(certCodec, renew);
         // Return the default certificate ID
@@ -1447,10 +1405,9 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   @VisibleForTesting
   public synchronized void setCACertificate(X509Certificate cert)
       throws Exception {
-    caCertId = cert.getSerialNumber().toString();
+    rootCaCertId = cert.getSerialNumber().toString();
     String pemCert = CertificateCodec.getPEMEncodedString(cert);
-    certificateMap.put(caCertId,
+    certificateMap.put(rootCaCertId,
         CertificateCodec.getCertPathFromPemEncodedString(pemCert));
-    pemEncodedCACerts = Arrays.asList(pemCert);
   }
 }

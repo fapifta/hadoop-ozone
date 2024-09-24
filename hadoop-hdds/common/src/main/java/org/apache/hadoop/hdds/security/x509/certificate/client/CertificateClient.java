@@ -122,13 +122,6 @@ public interface CertificateClient extends Closeable {
   Set<X509Certificate> getAllRootCaCerts();
 
   /**
-   * Return the subordinate ca certs saved in this client's file system.
-   *
-   * @return all the subordinate CA certificates known to the client
-   */
-  Set<X509Certificate> getAllCaCerts();
-
-  /**
    * Verifies a digital Signature, given the signature and the certificate of
    * the signer.
    * @param data - Data in byte array.

@@ -175,7 +175,7 @@ public class TestDefaultCertificateClient {
     X509Certificate cert = dnCertClient.getCertificate();
     assertNull(cert);
     dnCertClient.storeCertificate(getPEMEncodedString(x509Certificate),
-        CAType.SUBORDINATE);
+        CAType.ROOT);
 
     cert = dnCertClient.getCertificate(
         x509Certificate.getSerialNumber().toString());
@@ -271,8 +271,6 @@ public class TestDefaultCertificateClient {
     X509Certificate cert3 = generateX509Cert(keyPair);
     X509Certificate rootCa1 = generateX509Cert(keyPair);
     X509Certificate rootCa2 = generateX509Cert(keyPair);
-    X509Certificate subCa1 = generateX509Cert(keyPair);
-    X509Certificate subCa2 = generateX509Cert(keyPair);
 
     Path certPath = dnSecurityConfig.getCertificateLocation(DN_COMPONENT);
     CertificateCodec codec = new CertificateCodec(dnSecurityConfig,
@@ -305,12 +303,6 @@ public class TestDefaultCertificateClient {
     codec.writeCertificate(certPath,
         CAType.ROOT.getFileNamePrefix() + "2.crt",
         getPEMEncodedString(rootCa2));
-    codec.writeCertificate(certPath,
-        CAType.SUBORDINATE.getFileNamePrefix() + "1.crt",
-        getPEMEncodedString(subCa1));
-    codec.writeCertificate(certPath,
-        CAType.SUBORDINATE.getFileNamePrefix() + "2.crt",
-        getPEMEncodedString(subCa2));
 
     // Re instantiate DN client which will load certificates from filesystem.
     if (dnCertClient != null) {
@@ -327,9 +319,6 @@ public class TestDefaultCertificateClient {
     assertNotNull(dnCertClient.getCertificate(cert3.getSerialNumber()
         .toString()));
 
-    assertEquals(2, dnCertClient.getAllCaCerts().size());
-    assertThat(dnCertClient.getAllCaCerts()).contains(subCa1);
-    assertThat(dnCertClient.getAllCaCerts()).contains(subCa2);
     assertEquals(2, dnCertClient.getAllRootCaCerts().size());
     assertThat(dnCertClient.getAllRootCaCerts()).contains(rootCa1);
     assertThat(dnCertClient.getAllRootCaCerts()).contains(rootCa2);
@@ -446,7 +435,7 @@ public class TestDefaultCertificateClient {
         keyPair, (int) (gracePeriod.toDays()),
         dnSecurityConfig.getSignatureAlgo());
     dnCertClient.storeCertificate(
-        getPEMEncodedString(cert), CAType.SUBORDINATE);
+        getPEMEncodedString(cert), CAType.ROOT);
     Duration duration = dnCertClient.timeBeforeExpiryGracePeriod(cert);
     assertTrue(duration.isZero());
 
@@ -454,7 +443,7 @@ public class TestDefaultCertificateClient {
         keyPair, (int) (gracePeriod.toDays() + 1),
         dnSecurityConfig.getSignatureAlgo());
     dnCertClient.storeCertificate(
-        getPEMEncodedString(cert), CAType.SUBORDINATE);
+        getPEMEncodedString(cert), CAType.ROOT);
     duration = dnCertClient.timeBeforeExpiryGracePeriod(cert);
     assertThat(duration.toMillis()).isLessThan(Duration.ofDays(1).toMillis())
         .isGreaterThan(Duration.ofHours(23).plusMinutes(59).toMillis());

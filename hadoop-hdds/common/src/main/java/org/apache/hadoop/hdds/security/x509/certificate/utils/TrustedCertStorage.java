@@ -27,7 +27,12 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertPath;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -49,7 +54,24 @@ public class TrustedCertStorage extends CertificateStorage {
     return LOG;
   }
 
-  //mi is adhatunk vissza keystore-t
+  public KeyStore getKeyStore() throws IOException {
+    try {
+      KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+      keyStore.load(null, null);
+      getCertificates().forEach(certPath -> insertCertsToKeystore(keyStore, certPath));
+      return keyStore;
+    } catch (KeyStoreException | IOException | CertificateException | NoSuchAlgorithmException e) {
+      throw new IOException("Error while creating keystore", e);
+    }
+  }
+
+  private void insertCertsToKeystore(KeyStore keyStore, CertPath certPath) {
+    X509Certificate cert = (X509Certificate) certPath.getCertificates().get(0);
+    try {
+      keyStore.setCertificateEntry(cert.getSerialNumber().toString(), cert);
+    } catch (KeyStoreException ignored) {
+    }
+  }
 
   @Override
   public List<CertPath> getCertificates() throws IOException {

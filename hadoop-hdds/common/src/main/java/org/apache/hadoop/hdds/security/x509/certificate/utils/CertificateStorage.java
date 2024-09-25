@@ -55,8 +55,7 @@ public abstract class CertificateStorage {
   }
 
   public abstract Logger getLogger();
-
-
+  
   CertPath readCertFile(Path filePath) {
     try {
       Path fileName;

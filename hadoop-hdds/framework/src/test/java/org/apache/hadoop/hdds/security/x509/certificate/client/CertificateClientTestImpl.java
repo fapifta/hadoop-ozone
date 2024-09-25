@@ -22,6 +22,7 @@ import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
@@ -46,7 +47,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
@@ -55,7 +55,6 @@ import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
 import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.DefaultApprover;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultProfile;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
@@ -90,6 +89,7 @@ public class CertificateClientTestImpl implements CertificateClient {
   private Map<String, X509Certificate> certificateMap;
   private ScheduledExecutorService executorService;
   private Set<CertificateNotification> notificationReceivers;
+  private TrustedCertStorage certificateStorage;
 
   public CertificateClientTestImpl(OzoneConfiguration conf)
       throws Exception {
@@ -122,6 +122,8 @@ public class CertificateClientTestImpl implements CertificateClient {
         .build();
     certificateMap.put(rootCert.getSerialNumber().toString(), rootCert);
     rootCerts.add(rootCert);
+    certificateStorage = Mockito.mock(TrustedCertStorage.class);
+    Mockito.when(certificateStorage.getKeyStore()).thenReturn(convertToKeyStore(getAllRootCaCerts()));
 
     // Generate normal certificate, signed by RootCA certificate
     approver = new DefaultApprover(new DefaultProfile(), securityConfig);
@@ -303,6 +305,7 @@ public class CertificateClientTestImpl implements CertificateClient {
     certificateMap.put(x509Certificate.getSerialNumber().toString(),
         x509Certificate);
 
+    Mockito.when(certificateStorage.getKeyStore()).thenReturn(convertToKeyStore(getAllRootCaCerts()));
     // notify notification receivers
     notificationReceivers.forEach(r -> r.notifyCertificateRenewed(this,
         oldCert.getSerialNumber().toString(),
@@ -342,10 +345,7 @@ public class CertificateClientTestImpl implements CertificateClient {
   public ReloadingX509TrustManager getTrustManager() throws CertificateException {
     try {
       if (trustManager == null) {
-        Set<X509Certificate> newRootCaCerts = getAllRootCaCerts();
-        TrustedCertStorage certStorage = Mockito.mock(TrustedCertStorage.class);
-        Mockito.when(certStorage.getCertificates()).thenReturn(convertToCertPaths(newRootCaCerts));
-        trustManager = new ReloadingX509TrustManager(KeyStore.getDefaultType(), certStorage);
+        trustManager = new ReloadingX509TrustManager(KeyStore.getDefaultType(), certificateStorage);
         notificationReceivers.add(trustManager);
       }
       return trustManager;
@@ -354,13 +354,19 @@ public class CertificateClientTestImpl implements CertificateClient {
     }
   }
 
-  private List<CertPath> convertToCertPaths(Set<X509Certificate> newRootCaCerts)
-      throws java.security.cert.CertificateException {
-    ArrayList<CertPath> convertedCerts = new ArrayList<>();
-    for (X509Certificate cert : newRootCaCerts) {
-      convertedCerts.add(CertificateCodec.getCertFactory().generateCertPath(ImmutableList.of(cert)));
-    }
-    return convertedCerts;
+  private KeyStore convertToKeyStore(Set<X509Certificate> newRootCaCerts)
+      throws java.security.cert.CertificateException, KeyStoreException, IOException, NoSuchAlgorithmException {
+    KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+    keyStore.load(null, null);
+    newRootCaCerts.forEach(certificate -> {
+      try {
+        keyStore.setCertificateEntry(
+            certificate.getSerialNumber().toString(), certificate);
+      } catch (KeyStoreException e) {
+        throw new RuntimeException(e);
+      }
+    });
+    return keyStore;
   }
 
   @Override

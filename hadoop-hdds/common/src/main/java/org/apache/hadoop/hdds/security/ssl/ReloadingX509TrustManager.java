@@ -37,14 +37,13 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
  * A {@link TrustManager} implementation that exposes a method,
- * {@link #init(List)} to reload its configuration for
+ * {@link #init(KeyStore)} to reload its configuration for
  * example when the truststore file on disk changes.
  */
 @InterfaceAudience.Private
@@ -64,14 +63,14 @@ public final class ReloadingX509TrustManager implements X509TrustManager, Certif
   /**
    * Current Root CA cert in trustManager, to detect if certificate is changed.
    */
-  private List<X509Certificate> currentRootCACerts = new ArrayList<>();
+  private KeyStore currentKeyStore;
 
   /**
    * Creates a reloadable trustmanager. The trustmanager reloads itself
    * if the underlying truststore materials have changed.
    *
-   * @param type           type of truststore file, typically 'jks'.
-   * @param newRootCaCerts the newest known trusted certificates.
+   * @param type        type of truststore file, typically 'jks'.
+   * @param certStorage the cert storage for reading root CA certificates
    * @throws IOException              thrown if the truststore could not be initialized due
    *                                  to an IO error.
    * @throws GeneralSecurityException thrown if the truststore could not be
@@ -82,10 +81,7 @@ public final class ReloadingX509TrustManager implements X509TrustManager, Certif
     this.type = type;
     trustManagerRef = new AtomicReference<X509TrustManager>();
     this.trustedCertStorage = certStorage;
-    List<X509Certificate> certPaths = trustedCertStorage.getCertificates().stream()
-        .map(certPath -> (X509Certificate) certPath.getCertificates().get(0))
-        .collect(Collectors.toList());
-    trustManagerRef.set(init(certPaths));
+    trustManagerRef.set(init(certStorage.getKeyStore()));
   }
 
   @Override
@@ -131,6 +127,7 @@ public final class ReloadingX509TrustManager implements X509TrustManager, Certif
   }
 
   private static final X509Certificate[] EMPTY = new X509Certificate[0];
+
   @Override
   public X509Certificate[] getAcceptedIssuers() {
     X509Certificate[] issuers = EMPTY;
@@ -141,21 +138,16 @@ public final class ReloadingX509TrustManager implements X509TrustManager, Certif
     return issuers;
   }
 
-  private X509TrustManager init(List<X509Certificate> newRootCaCerts)
-      throws GeneralSecurityException, IOException {
+  private X509TrustManager init(KeyStore keyStore)
+      throws GeneralSecurityException {
     // Certificate keeps the same.
-    if (isAlreadyUsing(newRootCaCerts)) {
+    if (isAlreadyUsing(keyStore)) {
       return null;
     }
-
     X509TrustManager trustManager = null;
-    KeyStore ks = KeyStore.getInstance(type);
-    ks.load(null, null);
-    insertCertsToKeystore(newRootCaCerts, ks);
-
     TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(
         TrustManagerFactory.getDefaultAlgorithm());
-    trustManagerFactory.init(ks);
+    trustManagerFactory.init(keyStore);
     TrustManager[] trustManagers = trustManagerFactory.getTrustManagers();
     for (TrustManager trustManager1 : trustManagers) {
       if (trustManager1 instanceof X509TrustManager) {
@@ -163,37 +155,28 @@ public final class ReloadingX509TrustManager implements X509TrustManager, Certif
         break;
       }
     }
-    currentRootCACerts = newRootCaCerts;
+    currentKeyStore = keyStore;
     return trustManager;
   }
 
-  private boolean isAlreadyUsing(List<X509Certificate> newRootCaCerts) {
-    return newRootCaCerts.size() > 0 &&
-        currentRootCACerts.size() == newRootCaCerts.size() &&
-        newRootCaCerts.stream()
-            .allMatch(
-                newCert -> currentRootCACerts.stream()
-                    .anyMatch(currentCert -> currentCert.getSerialNumber().equals(newCert.getSerialNumber()))
-            );
-  }
-
-  private void insertCertsToKeystore(Iterable<X509Certificate> certs,
-      KeyStore ks) throws KeyStoreException {
-    LOG.info("Trust manager is loaded with certificates");
-    for (X509Certificate certToInsert : certs) {
-      String certId = certToInsert.getSerialNumber().toString();
-      ks.setCertificateEntry(certId, certToInsert);
-      LOG.info(certToInsert.toString());
+  private boolean isAlreadyUsing(KeyStore newKeystore) throws KeyStoreException {
+    if (currentKeyStore == null) {
+      return false;
     }
+    ArrayList<String> newCaCertAliases = Collections.list(newKeystore.aliases());
+    ArrayList<String> currentCaCertAliases = Collections.list(currentKeyStore.aliases());
+    return newCaCertAliases.size() > 0 &&
+        currentCaCertAliases.size() == newCaCertAliases.size() &&
+        newCaCertAliases.stream()
+            .allMatch(newCert -> currentCaCertAliases.stream().anyMatch(alias -> alias.equals(newCert)));
   }
 
   @Override
   public synchronized void notifyCertificateRenewed(
       CertificateClient certClient, String oldCertId, String newCertId) {
     LOG.info("{} notify certificate renewed", certClient.getComponentName());
-    Set<X509Certificate> rootCaCerts = certClient.getAllRootCaCerts();
     try {
-      X509TrustManager manager = init(new ArrayList<>(rootCaCerts));
+      X509TrustManager manager = init(trustedCertStorage.getKeyStore());
       if (manager != null) {
         this.trustManagerRef.set(manager);
         LOG.info("ReloadingX509TrustManager is reloaded.");

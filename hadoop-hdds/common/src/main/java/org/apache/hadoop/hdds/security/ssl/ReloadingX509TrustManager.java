@@ -32,12 +32,9 @@ import javax.security.auth.x500.X500Principal;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -153,18 +150,6 @@ public final class ReloadingX509TrustManager implements X509TrustManager, Certif
     }
     currentKeyStore = keyStore;
     return trustManager;
-  }
-
-  private boolean isAlreadyUsing(KeyStore newKeystore) throws KeyStoreException {
-    if (currentKeyStore == null) {
-      return false;
-    }
-    ArrayList<String> newCaCertAliases = Collections.list(newKeystore.aliases());
-    ArrayList<String> currentCaCertAliases = Collections.list(currentKeyStore.aliases());
-    return newCaCertAliases.size() > 0 &&
-        currentCaCertAliases.size() == newCaCertAliases.size() &&
-        newCaCertAliases.stream()
-            .allMatch(newCert -> currentCaCertAliases.stream().anyMatch(alias -> alias.equals(newCert)));
   }
 
   @Override

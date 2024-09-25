@@ -29,6 +29,7 @@ import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
 import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
 import org.apache.hadoop.hdds.security.x509.CertificateTestUtils;
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
@@ -51,8 +52,10 @@ import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -211,8 +214,14 @@ class TestInterSCMGrpcProtocolService {
 
     TrustedCertStorage serviceCertStorage = mock(TrustedCertStorage.class);
     TrustedCertStorage clientCertStorage = mock(TrustedCertStorage.class);
-    Mockito.when(serviceCertStorage.getKeyStore()).thenReturn(convertToKeyStore(ImmutableSet.of(serviceCert)));
-    Mockito.when(clientCertStorage.getKeyStore()).thenReturn(convertToKeyStore(ImmutableSet.of(clientCert)));
+    Mockito.when(serviceCertStorage.getKeyStore()).thenReturn(convertToTrustedCertStore(ImmutableSet.of(serviceCert)));
+    Mockito.when(clientCertStorage.getKeyStore()).thenReturn(convertToTrustedCertStore(ImmutableSet.of(clientCert)));
+    SSLIdentityStorage serviceSSLStorage = mock(SSLIdentityStorage.class);
+    SSLIdentityStorage clientSSLStorage = mock(SSLIdentityStorage.class);
+    Mockito.when(serviceSSLStorage.getKeyStore())
+        .thenReturn(getKeyStoreForSSLIdentity(serviceKeys.getPrivate(), ImmutableList.of(serviceCert)));
+    Mockito.when(clientSSLStorage.getKeyStore())
+        .thenReturn(getKeyStoreForSSLIdentity(clientKeys.getPrivate(), ImmutableList.of(clientCert)));
 
     ReloadingX509TrustManager toSpyServerTrustManager =
         new ReloadingX509TrustManager(KeyStore.getDefaultType(), clientCertStorage);
@@ -220,10 +229,8 @@ class TestInterSCMGrpcProtocolService {
     ReloadingX509TrustManager toSpyClientTrustManager =
         new ReloadingX509TrustManager(KeyStore.getDefaultType(), serviceCertStorage);
     clientTrustManager = spy(toSpyClientTrustManager);
-    ReloadingX509KeyManager toSpyServerKeyManager = new ReloadingX509KeyManager(KeyStore.getDefaultType(), "server",
-        serviceKeys.getPrivate(), ImmutableList.of(serviceCert));
-    ReloadingX509KeyManager toSpyClientKeyManager = new ReloadingX509KeyManager(KeyStore.getDefaultType(), "server",
-        clientKeys.getPrivate(), ImmutableList.of(clientCert));
+    ReloadingX509KeyManager toSpyServerKeyManager = new ReloadingX509KeyManager(serviceSSLStorage);
+    ReloadingX509KeyManager toSpyClientKeyManager = new ReloadingX509KeyManager(clientSSLStorage);
     clientKeyManager = spy(toSpyClientKeyManager);
     serverKeyManager = spy(toSpyServerKeyManager);
 
@@ -241,7 +248,7 @@ class TestInterSCMGrpcProtocolService {
     return conf;
   }
 
-  private KeyStore convertToKeyStore(Set<X509Certificate> newRootCaCerts)
+  private KeyStore convertToTrustedCertStore(Set<X509Certificate> newRootCaCerts)
       throws java.security.cert.CertificateException, KeyStoreException, IOException, NoSuchAlgorithmException {
     KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     keyStore.load(null, null);
@@ -253,6 +260,15 @@ class TestInterSCMGrpcProtocolService {
         throw new RuntimeException(e);
       }
     });
+    return keyStore;
+  }
+
+  private KeyStore getKeyStoreForSSLIdentity(PrivateKey privateKey, List<X509Certificate> trustChain)
+      throws java.security.cert.CertificateException, KeyStoreException, IOException, NoSuchAlgorithmException {
+    KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+    keyStore.load(null, null);
+    keyStore.setKeyEntry(trustChain.get(0).getSerialNumber().toString(), privateKey, "".toCharArray(),
+        trustChain.toArray(new X509Certificate[0]));
     return keyStore;
   }
 }

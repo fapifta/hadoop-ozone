@@ -59,6 +59,7 @@ public abstract class CertificateStorage {
   CertPath readCertFile(Path filePath) {
     try {
       Path fileName;
+      //do this to avoid the findbugs error about possible nullpointer dereference
       if (filePath != null) {
         fileName = filePath.getFileName();
         if (fileName != null) {

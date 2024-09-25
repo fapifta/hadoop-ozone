@@ -76,6 +76,7 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
@@ -963,8 +964,9 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   public ReloadingX509KeyManager getKeyManager() throws CertificateException {
     try {
       if (keyManager == null) {
-        keyManager = new ReloadingX509KeyManager(
-            KeyStore.getDefaultType(), getComponentName(), getPrivateKey(), getTrustChain());
+        SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, component,
+            getCertificate().getSerialNumber().toString());
+        keyManager = new ReloadingX509KeyManager(sslIdentityStorage);
         notificationReceivers.add(keyManager);
       }
       return keyManager;

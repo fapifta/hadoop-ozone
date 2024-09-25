@@ -56,6 +56,7 @@ import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.DefaultApprover;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
@@ -90,6 +91,7 @@ public class CertificateClientTestImpl implements CertificateClient {
   private ScheduledExecutorService executorService;
   private Set<CertificateNotification> notificationReceivers;
   private TrustedCertStorage certificateStorage;
+  private SSLIdentityStorage sslIdentityStorage;
 
   public CertificateClientTestImpl(OzoneConfiguration conf)
       throws Exception {
@@ -122,8 +124,6 @@ public class CertificateClientTestImpl implements CertificateClient {
         .build();
     certificateMap.put(rootCert.getSerialNumber().toString(), rootCert);
     rootCerts.add(rootCert);
-    certificateStorage = Mockito.mock(TrustedCertStorage.class);
-    Mockito.when(certificateStorage.getKeyStore()).thenReturn(convertToKeyStore(getAllRootCaCerts()));
 
     // Generate normal certificate, signed by RootCA certificate
     approver = new DefaultApprover(new DefaultProfile(), securityConfig);
@@ -151,6 +151,14 @@ public class CertificateClientTestImpl implements CertificateClient {
         String.valueOf(System.nanoTime()));
     certificateMap.put(x509Certificate.getSerialNumber().toString(),
         x509Certificate);
+
+    certificateStorage = Mockito.mock(TrustedCertStorage.class);
+    Mockito.when(certificateStorage.getKeyStore()).thenReturn(getKeyStoreForTrustedCertificates(getAllRootCaCerts()));
+    sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
+    Mockito.when(sslIdentityStorage.getComponentName()).thenReturn(getComponentName());
+    Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
+        getKeyStoreForSSLIdentity(getPrivateKey(), getTrustChain()));
+
 
     notificationReceivers = new HashSet<>();
 
@@ -305,7 +313,9 @@ public class CertificateClientTestImpl implements CertificateClient {
     certificateMap.put(x509Certificate.getSerialNumber().toString(),
         x509Certificate);
 
-    Mockito.when(certificateStorage.getKeyStore()).thenReturn(convertToKeyStore(getAllRootCaCerts()));
+    Mockito.when(certificateStorage.getKeyStore()).thenReturn(getKeyStoreForTrustedCertificates(getAllRootCaCerts()));
+    Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
+        getKeyStoreForSSLIdentity(getPrivateKey(), getTrustChain()));
     // notify notification receivers
     notificationReceivers.forEach(r -> r.notifyCertificateRenewed(this,
         oldCert.getSerialNumber().toString(),
@@ -331,8 +341,7 @@ public class CertificateClientTestImpl implements CertificateClient {
   public ReloadingX509KeyManager getKeyManager() throws CertificateException {
     try {
       if (keyManager == null) {
-        keyManager = new ReloadingX509KeyManager(
-            KeyStore.getDefaultType(), getComponentName(), getPrivateKey(), getTrustChain());
+        keyManager = new ReloadingX509KeyManager(sslIdentityStorage);
         notificationReceivers.add(keyManager);
       }
       return keyManager;
@@ -354,7 +363,7 @@ public class CertificateClientTestImpl implements CertificateClient {
     }
   }
 
-  private KeyStore convertToKeyStore(Set<X509Certificate> newRootCaCerts)
+  private KeyStore getKeyStoreForTrustedCertificates(Set<X509Certificate> newRootCaCerts)
       throws java.security.cert.CertificateException, KeyStoreException, IOException, NoSuchAlgorithmException {
     KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     keyStore.load(null, null);
@@ -366,6 +375,15 @@ public class CertificateClientTestImpl implements CertificateClient {
         throw new RuntimeException(e);
       }
     });
+    return keyStore;
+  }
+
+  private KeyStore getKeyStoreForSSLIdentity(PrivateKey privateKey, List<X509Certificate> trustChain)
+      throws java.security.cert.CertificateException, KeyStoreException, IOException, NoSuchAlgorithmException {
+    KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+    keyStore.load(null, null);
+    keyStore.setKeyEntry(trustChain.get(0).getSerialNumber().toString(), privateKey, "".toCharArray(),
+        trustChain.toArray(new X509Certificate[0]));
     return keyStore;
   }
 

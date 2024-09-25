@@ -49,14 +49,14 @@ public class TestReloadingX509KeyManager {
   public void testReload() throws Exception {
     ReloadingX509KeyManager km = caClient.getKeyManager();
     PrivateKey privateKey1 = caClient.getPrivateKey();
-    assertEquals(privateKey1, km.getPrivateKey(caClient.getComponentName() + "_key"));
+    assertEquals(privateKey1, km.getPrivateKey(caClient.getCertificate().getSerialNumber().toString()));
 
     caClient.renewRootCA();
     caClient.renewKey();
     PrivateKey privateKey2 = caClient.getPrivateKey();
     assertNotEquals(privateKey1, privateKey2);
 
-    assertEquals(privateKey2, km.getPrivateKey(caClient.getComponentName() + "_key"));
+    assertEquals(privateKey2, km.getPrivateKey(caClient.getCertificate().getSerialNumber().toString()));
 
     assertThat(reloaderLog.getOutput()).contains("ReloadingX509KeyManager is reloaded");
 

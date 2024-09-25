@@ -21,6 +21,7 @@ import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.annotation.InterfaceStability;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateNotification;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +37,6 @@ import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -53,7 +53,6 @@ public class ReloadingX509KeyManager extends X509ExtendedKeyManager implements C
   public static final Logger LOG =
       LoggerFactory.getLogger(ReloadingX509KeyManager.class);
 
-  private final String type;
   /**
    * Default password. KeyStore and trustStore will not persist to disk, just in
    * memory.
@@ -62,30 +61,26 @@ public class ReloadingX509KeyManager extends X509ExtendedKeyManager implements C
   private final AtomicReference<X509ExtendedKeyManager> keyManagerRef;
 
   /**
-   * Current private key and cert used in keyManager. Used to detect if these
-   * materials are changed.
+   * Current keystore used to create the keymanager.
    */
-  private PrivateKey currentPrivateKey;
-  private List<X509Certificate> currentTrustChain;
+  private KeyStore currentKeyStore;
+  private final SSLIdentityStorage storage;
   private final String alias;
 
   /**
    * Construct a <code>Reloading509KeystoreManager</code>.
    *
-   * @param type          type of keystore file, typically 'jks'.
-   * @param componentName the name of the component for which the keys are created.
-   * @param privateKey    private key for this key manager.
-   * @param trustChain    list of the trusted certificates.
+   * @param storage SSLIdentityStorage for initializing the keystore used for establishing trust.
    * @throws IOException
    * @throws GeneralSecurityException
    */
-  public ReloadingX509KeyManager(String type, String componentName, PrivateKey privateKey,
-      List<X509Certificate> trustChain)
+  public ReloadingX509KeyManager(SSLIdentityStorage storage)
       throws GeneralSecurityException, IOException {
-    this.type = type;
-    alias = componentName + "_key";
+    this.storage = storage;
+    KeyStore keyStore = storage.getKeyStore();
+    alias = keyStore.aliases().nextElement();
     keyManagerRef = new AtomicReference<>();
-    keyManagerRef.set(init(privateKey, trustChain));
+    keyManagerRef.set(init(keyStore));
   }
 
   @Override
@@ -186,46 +181,21 @@ public class ReloadingX509KeyManager extends X509ExtendedKeyManager implements C
     return keyManagerRef.get().getPrivateKey(s.toLowerCase(Locale.ROOT));
   }
 
-  private X509ExtendedKeyManager init(PrivateKey newPrivateKey, List<X509Certificate> newTrustChain)
-      throws GeneralSecurityException, IOException {
+  private X509ExtendedKeyManager init(KeyStore newKeyStore)
+      throws GeneralSecurityException {
 
     X509ExtendedKeyManager keyManager = null;
-    KeyStore keystore = KeyStore.getInstance(type);
-    keystore.load(null, null);
-
-    keystore.setKeyEntry(alias, newPrivateKey, EMPTY_PASSWORD,
-        newTrustChain.toArray(new X509Certificate[0]));
-
-    LOG.info("Key manager is loaded with certificate chain");
-    for (X509Certificate x509Certificate : newTrustChain) {
-      LOG.info(x509Certificate.toString());
-    }
-
     KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance(
         KeyManagerFactory.getDefaultAlgorithm());
-    keyMgrFactory.init(keystore, EMPTY_PASSWORD);
+    keyMgrFactory.init(newKeyStore, EMPTY_PASSWORD);
     for (KeyManager candidate : keyMgrFactory.getKeyManagers()) {
       if (candidate instanceof X509ExtendedKeyManager) {
         keyManager = (X509ExtendedKeyManager) candidate;
         break;
       }
     }
-
-    currentPrivateKey = newPrivateKey;
-    currentTrustChain = newTrustChain;
+    currentKeyStore = newKeyStore;
     return keyManager;
-  }
-
-  private boolean isAlreadyUsing(PrivateKey privateKey, List<X509Certificate> newTrustChain) {
-    return currentPrivateKey != null && currentPrivateKey.equals(privateKey) &&
-        currentTrustChain.size() > 0 &&
-        newTrustChain.size() == currentTrustChain.size() &&
-        newTrustChain.stream()
-            .allMatch(
-                newCertificate -> (currentTrustChain.stream()
-                    .anyMatch(oldCert -> oldCert.getSerialNumber().equals(newCertificate.getSerialNumber()))
-                )
-            );
   }
 
   @Override
@@ -233,7 +203,7 @@ public class ReloadingX509KeyManager extends X509ExtendedKeyManager implements C
       CertificateClient certClient, String oldCertId, String newCertId) {
     LOG.info("{} notify certificate renewed", certClient.getComponentName());
     try {
-      X509ExtendedKeyManager manager = init(certClient.getPrivateKey(), certClient.getTrustChain());
+      X509ExtendedKeyManager manager = init(storage.getKeyStore());
       if (manager != null) {
         keyManagerRef.set(manager);
         LOG.info("ReloadingX509KeyManager is reloaded");

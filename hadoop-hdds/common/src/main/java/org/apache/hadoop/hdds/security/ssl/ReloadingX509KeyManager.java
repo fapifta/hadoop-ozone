@@ -188,10 +188,6 @@ public class ReloadingX509KeyManager extends X509ExtendedKeyManager implements C
 
   private X509ExtendedKeyManager init(PrivateKey newPrivateKey, List<X509Certificate> newTrustChain)
       throws GeneralSecurityException, IOException {
-    if (isAlreadyUsing(newPrivateKey, newTrustChain)) {
-      // Security materials(key and certificates) keep the same.
-      return null;
-    }
 
     X509ExtendedKeyManager keyManager = null;
     KeyStore keystore = KeyStore.getInstance(type);

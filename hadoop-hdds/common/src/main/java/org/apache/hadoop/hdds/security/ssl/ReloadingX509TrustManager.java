@@ -140,10 +140,6 @@ public final class ReloadingX509TrustManager implements X509TrustManager, Certif
 
   private X509TrustManager init(KeyStore keyStore)
       throws GeneralSecurityException {
-    // Certificate keeps the same.
-    if (isAlreadyUsing(keyStore)) {
-      return null;
-    }
     X509TrustManager trustManager = null;
     TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(
         TrustManagerFactory.getDefaultAlgorithm());

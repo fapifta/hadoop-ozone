@@ -29,7 +29,6 @@ import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
 import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
 import org.apache.hadoop.hdds.security.x509.CertificateTestUtils;
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
@@ -50,11 +49,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.security.KeyStore;
-import java.security.cert.CertPath;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -213,8 +211,8 @@ class TestInterSCMGrpcProtocolService {
 
     TrustedCertStorage serviceCertStorage = mock(TrustedCertStorage.class);
     TrustedCertStorage clientCertStorage = mock(TrustedCertStorage.class);
-    Mockito.when(serviceCertStorage.getCertificates()).thenReturn(convertToCertPaths(ImmutableSet.of(serviceCert)));
-    Mockito.when(clientCertStorage.getCertificates()).thenReturn(convertToCertPaths(ImmutableSet.of(clientCert)));
+    Mockito.when(serviceCertStorage.getKeyStore()).thenReturn(convertToKeyStore(ImmutableSet.of(serviceCert)));
+    Mockito.when(clientCertStorage.getKeyStore()).thenReturn(convertToKeyStore(ImmutableSet.of(clientCert)));
 
     ReloadingX509TrustManager toSpyServerTrustManager =
         new ReloadingX509TrustManager(KeyStore.getDefaultType(), clientCertStorage);
@@ -243,13 +241,18 @@ class TestInterSCMGrpcProtocolService {
     return conf;
   }
 
-  private List<CertPath> convertToCertPaths(Set<X509Certificate> newRootCaCerts)
-      throws java.security.cert.CertificateException {
-    ArrayList<CertPath> convertedCerts = new ArrayList<>();
-    for (X509Certificate cert : newRootCaCerts) {
-      convertedCerts.add(CertificateCodec.getCertFactory().generateCertPath(ImmutableList.of(cert)));
-    }
-    return convertedCerts;
+  private KeyStore convertToKeyStore(Set<X509Certificate> newRootCaCerts)
+      throws java.security.cert.CertificateException, KeyStoreException, IOException, NoSuchAlgorithmException {
+    KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+    keyStore.load(null, null);
+    newRootCaCerts.forEach(certificate -> {
+      try {
+        keyStore.setCertificateEntry(
+            certificate.getSerialNumber().toString(), certificate);
+      } catch (KeyStoreException e) {
+        throw new RuntimeException(e);
+      }
+    });
+    return keyStore;
   }
-
 }

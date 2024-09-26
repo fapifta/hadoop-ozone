@@ -44,7 +44,8 @@ import java.util.stream.Stream;
 public class SSLIdentityStorage extends CertificateStorage {
 
   private static final Logger LOG = LoggerFactory.getLogger(SSLIdentityStorage.class);
-  private final String certId;
+
+  private String certId;
   private final KeyCodec keyCodec;
 
   public SSLIdentityStorage(SecurityConfig config, String componentName, String certId) {
@@ -104,5 +105,9 @@ public class SSLIdentityStorage extends CertificateStorage {
   @Override
   public Logger getLogger() {
     return LOG;
+  }
+
+  public void setCertId(String certId) {
+    this.certId = certId;
   }
 }

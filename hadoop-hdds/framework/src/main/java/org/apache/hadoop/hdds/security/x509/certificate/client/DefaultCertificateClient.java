@@ -118,7 +118,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private CertPath certPath;
   private Map<String, CertPath> certificateMap;
   private Set<X509Certificate> rootCaCertificates;
-  private Set<X509Certificate> caCertificates;
   private String certSerialId;
   private String rootCaCertId;
   private String component;
@@ -155,7 +154,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     this.shutdownCallback = shutdown;
     this.notificationReceivers = new HashSet<>();
     this.rootCaCertificates = ConcurrentHashMap.newKeySet();
-    this.caCertificates = ConcurrentHashMap.newKeySet();
 
     updateCertSerialId(certSerialId);
   }
@@ -383,8 +381,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    * the last one is the root CA certificate.
    */
   @Override
-  public synchronized List<X509Certificate> getTrustChain()
-      throws IOException {
+  public synchronized List<X509Certificate> getTrustChain() {
     CertPath path = getCertPath();
     if (path == null || path.getCertificates() == null) {
       return null;

@@ -203,7 +203,6 @@ public class ReloadingX509KeyManager extends X509ExtendedKeyManager implements C
     LOG.info("{} notify certificate renewed", certClient.getComponentName());
     try {
       storage.setCertId(newCertId);
-      storage.setComponentName(certClient.getComponentName());
       X509ExtendedKeyManager manager = init(storage.getKeyStore());
       if (manager != null) {
         keyManagerRef.set(manager);

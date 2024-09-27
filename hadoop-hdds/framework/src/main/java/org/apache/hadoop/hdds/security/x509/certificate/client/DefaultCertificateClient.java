@@ -673,6 +673,14 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     int initCase = 0;
     PrivateKey pvtKey = getPrivateKey();
     PublicKey pubKey = getPublicKey();
+
+    //If we have a singular certificate in the file system that is not a root CA then this is before the
+    //certificate bundles were supported. In this case we can reinitialize all client side PKI.
+    CertPath seeIfCertPath = getCertPath();
+    if(seeIfCertPath.getCertificates().size() == 1 &&
+        !isSelfSignedCertificate((X509Certificate) seeIfCertPath.getCertificates().get(0))) {
+      return handleCase(InitCase.NONE);
+    }
     X509Certificate certificate = getCertificate();
     if (pvtKey != null) {
       initCase = initCase | 1 << 2;
@@ -689,6 +697,10 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         "valid case.");
     InitCase init = InitCase.values()[initCase];
     return handleCase(init);
+  }
+
+  public static boolean isSelfSignedCertificate(X509Certificate cert) {
+    return cert.getIssuerX500Principal().equals(cert.getSubjectX500Principal());
   }
 
   private X509Certificate firstCertificateFrom(CertPath certificatePath) {

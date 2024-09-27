@@ -63,9 +63,8 @@ public class ReloadingX509KeyManager extends X509ExtendedKeyManager implements C
   /**
    * Current keystore used to create the keymanager.
    */
-  private KeyStore currentKeyStore;
   private final SSLIdentityStorage storage;
-  private final String alias;
+  private String alias;
 
   /**
    * Construct a <code>Reloading509KeystoreManager</code>.
@@ -194,7 +193,7 @@ public class ReloadingX509KeyManager extends X509ExtendedKeyManager implements C
         break;
       }
     }
-    currentKeyStore = newKeyStore;
+    alias = newKeyStore.aliases().nextElement();
     return keyManager;
   }
 
@@ -204,6 +203,7 @@ public class ReloadingX509KeyManager extends X509ExtendedKeyManager implements C
     LOG.info("{} notify certificate renewed", certClient.getComponentName());
     try {
       storage.setCertId(newCertId);
+      storage.setComponentName(certClient.getComponentName());
       X509ExtendedKeyManager manager = init(storage.getKeyStore());
       if (manager != null) {
         keyManagerRef.set(manager);

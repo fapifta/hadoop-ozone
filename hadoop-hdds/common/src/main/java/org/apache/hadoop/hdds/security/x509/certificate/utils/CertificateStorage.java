@@ -35,7 +35,7 @@ import org.slf4j.Logger;
 public abstract class CertificateStorage {
 
   private final SecurityConfig securityConfig;
-  private final String componentName;
+  private String componentName;
   private final CertificateCodec certificateCodec;
 
   protected CertificateStorage(SecurityConfig securityConfig, String componentName) {
@@ -74,5 +74,9 @@ public abstract class CertificateStorage {
       getLogger().error("Error reading certificate from file: {}.", filePath, e);
     }
     throw new RuntimeException();
+  }
+
+  public void setComponentName(String componentName) {
+    this.componentName = componentName;
   }
 }

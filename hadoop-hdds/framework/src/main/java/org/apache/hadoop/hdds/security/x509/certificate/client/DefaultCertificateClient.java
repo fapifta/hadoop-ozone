@@ -363,20 +363,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   /**
-   * Return the latest CA certificate known to the client.
-   *
-   * @return latest ca certificate known to the client.
-   */
-  @Override
-  public synchronized X509Certificate getCACertificate() {
-    CertPath caCertPath = getCACertPath();
-    if (caCertPath == null || caCertPath.getCertificates() == null) {
-      return null;
-    }
-    return firstCertificateFrom(caCertPath);
-  }
-
-  /**
    * Return all certificates in this component's trust chain,
    * the last one is the root CA certificate.
    */
@@ -386,20 +372,12 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     if (path == null || path.getCertificates() == null) {
       return null;
     }
-
     List<X509Certificate> chain = new ArrayList<>();
     // certificate bundle case
     for (int i = 0; i < path.getCertificates().size(); i++) {
       chain.add((X509Certificate) path.getCertificates().get(i));
     }
     return chain;
-  }
-
-  public synchronized CertPath getCACertPath() {
-    if (rootCaCertId != null) {
-      return certificateMap.get(rootCaCertId);
-    }
-    return null;
   }
 
   /**
@@ -930,7 +908,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     if (rootCaCertId != null) {
       return firstCertificateFrom(certificateMap.get(rootCaCertId));
     }
-    return null;
+    loadAllCertificates();
+    return firstCertificateFrom(certificateMap.get(rootCaCertId));
   }
 
   @Override

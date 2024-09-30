@@ -238,7 +238,7 @@ public class RootCARotationManager extends StatefulService {
         new MonitorTask(scmCertClient, scm.getScmStorageConfig()),
         0, checkInterval.toMillis(), TimeUnit.MILLISECONDS);
     LOG.info("Monitor task for root certificate {} is started with " +
-        "interval {}.", scmCertClient.getCACertificate().getSerialNumber(),
+            "interval {}.", scmCertClient.getRootCACertificate().getSerialNumber(),
         checkInterval);
     executorService.scheduleAtFixedRate(this::removeExpiredCertTask, 0,
         secConf.getExpiredCertificateCheckInterval().toMillis(),
@@ -305,7 +305,7 @@ public class RootCARotationManager extends StatefulService {
           return;
         }
         try {
-          X509Certificate rootCACert = certClient.getCACertificate();
+          X509Certificate rootCACert = certClient.getRootCACertificate();
           Duration timeLeft = timeBefore2ExpiryGracePeriod(rootCACert);
           if (timeLeft.isZero()) {
             LOG.info("Root certificate {} has entered the 2 * expiry" +
@@ -377,7 +377,7 @@ public class RootCARotationManager extends StatefulService {
       //  5. send scm Sub-CA rotation commit request through RATIS
       //  6. send scm Sub-CA rotation finish request through RATIS
       synchronized (RootCARotationManager.class) {
-        X509Certificate rootCACert = certClient.getCACertificate();
+        X509Certificate rootCACert = certClient.getRootCACertificate();
         Duration timeLeft = timeBefore2ExpiryGracePeriod(rootCACert);
         if (timeLeft.isZero()) {
           LOG.info("Root certificate {} rotation is started.",
@@ -790,9 +790,7 @@ public class RootCARotationManager extends StatefulService {
     X509Certificate cert =
         CertificateCodec.getX509Certificate(proto.getX509Certificate());
 
-    List<X509Certificate> scmCertChain = scmCertClient.getTrustChain();
-    Preconditions.checkArgument(scmCertChain.size() > 1);
-    X509Certificate rootCert = scmCertChain.get(scmCertChain.size() - 1);
+    X509Certificate rootCert = scmCertClient.getRootCACertificate();
 
     int result = rootCert.getSerialNumber().compareTo(cert.getSerialNumber());
     if (result > 0) {

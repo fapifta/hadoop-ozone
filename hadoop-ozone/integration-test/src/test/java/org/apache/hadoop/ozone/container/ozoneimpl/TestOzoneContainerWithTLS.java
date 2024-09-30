@@ -384,14 +384,14 @@ public class TestOzoneContainerWithTLS {
   }
 
   private void letCACertExpire() throws Exception {
-    Date expiry = caClient.getCACertificate().getNotAfter();
+    Date expiry = caClient.getRootCACertificate().getNotAfter();
     waitFor(() -> expiry.before(new Date()), 100, ROOT_CERT_LIFE_TIME * 1000);
   }
 
   private ClientTrustManager aClientTrustManager() throws IOException {
-    X509Certificate firstCert = caClient.getCACertificate();
+    X509Certificate firstCert = caClient.getRootCACertificate();
     return new ClientTrustManager(
-        () -> singletonList(caClient.getCACertificate()),
+        () -> singletonList(caClient.getRootCACertificate()),
         () -> singletonList(firstCert));
   }
 

@@ -220,11 +220,6 @@ public class CertificateClientTestImpl implements CertificateClient {
   }
 
   @Override
-  public X509Certificate getCACertificate() {
-    return rootCert;
-  }
-
-  @Override
   public boolean verifySignature(byte[] data, byte[] signature,
       X509Certificate cert) throws CertificateException {
     try {

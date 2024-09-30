@@ -465,8 +465,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
       }
     }
 
-    return CertificateCodec.getPEMEncodedString(
-        scmCertificateClient.getCACertificate());
+    return CertificateCodec.getPEMEncodedString(scmCertificateClient.getRootCACertificate());
   }
 
   @Override

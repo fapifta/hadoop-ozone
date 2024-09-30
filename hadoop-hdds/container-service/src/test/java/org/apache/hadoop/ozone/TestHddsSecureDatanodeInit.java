@@ -350,7 +350,7 @@ public class TestHddsSecureDatanodeInit {
     }, 1000, CERT_LIFETIME * 1000);
     PrivateKey privateKey1 = client.getPrivateKey();
     PublicKey publicKey1 = client.getPublicKey();
-    String caCertId1 = client.getCACertificate().getSerialNumber().toString();
+    String caCertId1 = client.getRootCACertificate().getSerialNumber().toString();
     String rootCaCertId1 =
         client.getRootCACertificate().getSerialNumber().toString();
 
@@ -378,7 +378,7 @@ public class TestHddsSecureDatanodeInit {
     }, 1000, CERT_LIFETIME * 1000);
     assertNotEquals(privateKey1, client.getPrivateKey());
     assertNotEquals(publicKey1, client.getPublicKey());
-    assertNotEquals(caCertId1, client.getCACertificate().getSerialNumber().toString());
+    assertNotEquals(caCertId1, client.getRootCACertificate().getSerialNumber().toString());
     assertNotEquals(rootCaCertId1, client.getRootCACertificate().getSerialNumber().toString());
   }
 

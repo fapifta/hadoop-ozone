@@ -660,8 +660,13 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   private boolean isSingularLeafCert(CertPath seeIfCertPath) {
-    return seeIfCertPath != null && seeIfCertPath.getCertificates().size() == 1 &&
+    boolean isSingularLeafCert = seeIfCertPath != null && seeIfCertPath.getCertificates().size() == 1 &&
         !isSelfSignedCertificate((X509Certificate) seeIfCertPath.getCertificates().get(0));
+    if (isSingularLeafCert) {
+      getLogger().info("Found singular cert path with id: {}, proceeding to reinit certificates.",
+          ((X509Certificate) seeIfCertPath.getCertificates().get(0)).getSerialNumber());
+    }
+    return isSingularLeafCert;
   }
 
   public static boolean isSelfSignedCertificate(X509Certificate cert) {
@@ -748,7 +753,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       break;
     case GETCERT:
       Path certLocation = securityConfig.getCertificateLocation(getComponentName());
-      String certId = signAndStoreCertificate(configureCSRBuilder().build(), certLocation, false);
+      String certId = signAndStoreCertificate(configureCSRBuilder().build(), certLocation, true);
       if (certIdSaveCallback != null) {
         certIdSaveCallback.accept(certId);
       } else {

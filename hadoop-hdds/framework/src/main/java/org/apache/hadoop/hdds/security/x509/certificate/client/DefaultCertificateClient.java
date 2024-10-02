@@ -48,7 +48,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -62,6 +61,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -86,6 +86,7 @@ import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.RandomStringUtils;
 
+import static java.util.Comparator.comparing;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BACKUP_KEY_CERT_DIR_NAME_SUFFIX;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX;
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.FAILURE;
@@ -132,6 +133,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private final Set<CertificateNotification> notificationReceivers;
   private RootCaRotationPoller rootCaRotationPoller;
   private SSLIdentityStorage sslIdentityStorage;
+  private TrustedCertStorage trustedCertStorage;
 
   @SuppressWarnings("checkstyle:ParameterNumber")
   protected DefaultCertificateClient(
@@ -168,6 +170,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       return;
     }
     sslIdentityStorage = new SSLIdentityStorage(securityConfig, component, certSerialId);
+    trustedCertStorage = new TrustedCertStorage(securityConfig, component);
     try (Stream<Path> certFiles = Files.list(path)) {
       certFiles
           .filter(Files::isRegularFile)
@@ -904,27 +907,26 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   @Override
   public synchronized X509Certificate getRootCACertificate() {
-    if (rootCaCertId != null) {
-      return firstCertificateFrom(certificateMap.get(rootCaCertId));
+    return getAllRootCaCerts().stream()
+        .max(comparing(X509Certificate::getNotAfter))
+        .orElse(null);
+  }
+
+  @Override
+  public synchronized Set<X509Certificate> getAllRootCaCerts() {
+    if (trustedCertStorage == null) {
+      trustedCertStorage = new TrustedCertStorage(securityConfig, component);
     }
-    loadAllCertificates();
-    return firstCertificateFrom(certificateMap.get(rootCaCertId));
+    return trustedCertStorage.getCertificates().stream()
+        .flatMap(certPath1 -> certPath1.getCertificates().stream())
+        .map(certificate -> (X509Certificate) certificate)
+        .collect(Collectors.toSet());
   }
 
   @Override
-  public Set<X509Certificate> getAllRootCaCerts() {
-    Set<X509Certificate> certs =
-        Collections.unmodifiableSet(rootCaCertificates);
-    getLogger().info("{} has {} Root CA certificates", this.component,
-        certs.size());
-    return certs;
-  }
-
-  @Override
-  public ReloadingX509TrustManager getTrustManager() throws CertificateException {
+  public synchronized ReloadingX509TrustManager getTrustManager() throws CertificateException {
     try {
       if (trustManager == null) {
-        TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, component);
         trustManager = new ReloadingX509TrustManager(KeyStore.getDefaultType(), trustedCertStorage);
         notificationReceivers.add(trustManager);
       }
@@ -1371,17 +1373,5 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         cleanBackupDir();
       }
     }
-  }
-
-  /**
-   * Set the CA certificate. For TEST only.
-   */
-  @VisibleForTesting
-  public synchronized void setCACertificate(X509Certificate cert)
-      throws Exception {
-    rootCaCertId = cert.getSerialNumber().toString();
-    String pemCert = CertificateCodec.getPEMEncodedString(cert);
-    certificateMap.put(rootCaCertId,
-        CertificateCodec.getCertPathFromPemEncodedString(pemCert));
   }
 }

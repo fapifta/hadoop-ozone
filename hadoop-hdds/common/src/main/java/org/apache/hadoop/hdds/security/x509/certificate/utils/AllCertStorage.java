@@ -48,16 +48,18 @@ public class AllCertStorage extends CertificateStorage {
   }
 
   @Override
-  public List<CertPath> getCertificates() throws IOException {
+  public List<CertPath> getCertificates() {
     Path certificateLocation = getSecurityConfig().getCertificateLocation(getComponentName());
     if (!certificateLocation.toFile().exists()) {
-      throw new IOException("Certificate location doesn't exist: " + certificateLocation);
+      throw new RuntimeException("Certificate location doesn't exist: " + certificateLocation);
     }
     try (Stream<Path> certFiles = Files.list(certificateLocation)) {
       return certFiles
           .filter(Files::isRegularFile)
           .map(this::readCertFile)
           .collect(Collectors.toList());
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 }

@@ -44,7 +44,7 @@ public abstract class CertificateStorage {
     certificateCodec = new CertificateCodec(securityConfig, componentName);
   }
 
-  public abstract List<CertPath> getCertificates() throws IOException;
+  public abstract List<CertPath> getCertificates();
 
   public SecurityConfig getSecurityConfig() {
     return securityConfig;

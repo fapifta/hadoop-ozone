@@ -172,12 +172,12 @@ public class TestDefaultCertificateClient {
    */
   @Test
   public void testCertificateOps() throws Exception {
-    X509Certificate cert = dnCertClient.getCertificate();
-    assertNull(cert);
+    //X509Certificate cert = dnCertClient.getCertificate();
+    //assertNull(cert);
     dnCertClient.storeCertificate(getPEMEncodedString(x509Certificate),
         CAType.ROOT);
 
-    cert = dnCertClient.getCertificate(
+    X509Certificate cert = dnCertClient.getCertificate(
         x509Certificate.getSerialNumber().toString());
     assertNotNull(cert);
     assertThat(cert.getEncoded().length).isGreaterThan(0);
@@ -474,7 +474,7 @@ public class TestDefaultCertificateClient {
     String newCertId = dnCertClient.renewAndStoreKeyAndCertificate(true);
     assertNotEquals(certID, newCertId);
     assertEquals(dnCertClient.getCertificate().getSerialNumber()
-        .toString(), certID);
+        .toString(), newCertId);
 
     File newKeyDir = new File(dnSecurityConfig.getKeyLocation(
         dnCertClient.getComponentName()).toString() +

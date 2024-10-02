@@ -79,7 +79,7 @@ public class SSLIdentityStorage extends CertificateStorage {
   }
 
   @Override
-  public List<CertPath> getCertificates() throws IOException {
+  public List<CertPath> getCertificates() {
     Path certificateLocation = getSecurityConfig().getCertificateLocation(getComponentName());
     try (Stream<Path> certFiles = Files.list(certificateLocation)) {
       return certFiles
@@ -87,6 +87,9 @@ public class SSLIdentityStorage extends CertificateStorage {
           .map(this::readCertFile)
           .filter(certPath -> isLeafCertIdEqual(certPath, certId))
           .collect(Collectors.toList());
+    } catch (IOException e) {
+      getLogger().error("No certificates found at location: {}", certificateLocation);
+      return null;
     }
   }
 

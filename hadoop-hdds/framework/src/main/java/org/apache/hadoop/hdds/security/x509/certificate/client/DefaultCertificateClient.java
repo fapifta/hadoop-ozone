@@ -131,6 +131,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient;
   private final Set<CertificateNotification> notificationReceivers;
   private RootCaRotationPoller rootCaRotationPoller;
+  private SSLIdentityStorage sslIdentityStorage;
 
   @SuppressWarnings("checkstyle:ParameterNumber")
   protected DefaultCertificateClient(
@@ -163,10 +164,10 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    * */
   private synchronized void loadAllCertificates() {
     Path path = securityConfig.getCertificateLocation(component);
-    //should be || instead of &&
     if (!path.toFile().exists() || certSerialId == null) {
       return;
     }
+    sslIdentityStorage = new SSLIdentityStorage(securityConfig, component, certSerialId);
     try (Stream<Path> certFiles = Files.list(path)) {
       certFiles
           .filter(Files::isRegularFile)
@@ -345,21 +346,14 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    */
   @Override
   public synchronized CertPath getCertPath() {
-    if (certPath != null) {
-      return certPath;
+    if (sslIdentityStorage == null) {
+      sslIdentityStorage = new SSLIdentityStorage(securityConfig, component, certSerialId);
     }
-
-    if (certSerialId == null) {
-      getLogger().error("Default certificate serial id is not set. Can't " +
-          "locate the default certificate for this client.");
+    if (sslIdentityStorage.getCertificates() == null || sslIdentityStorage.getCertificates().isEmpty()) {
+      getLogger().info("No certificates found for certificate client.");
       return null;
     }
-    // Refresh the cache from file system.
-    loadAllCertificates();
-    if (certificateMap.containsKey(certSerialId)) {
-      certPath = certificateMap.get(certSerialId);
-    }
-    return certPath;
+    return sslIdentityStorage.getCertificates().get(0);
   }
 
   /**
@@ -944,8 +938,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   public ReloadingX509KeyManager getKeyManager() throws CertificateException {
     try {
       if (keyManager == null) {
-        SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, component,
-            getCertificate().getSerialNumber().toString());
         keyManager = new ReloadingX509KeyManager(sslIdentityStorage);
         notificationReceivers.add(keyManager);
       }
@@ -1022,7 +1014,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     if (!force) {
       synchronized (this) {
         Preconditions.checkArgument(
-            timeBeforeExpiryGracePeriod(firstCertificateFrom(certPath))
+            timeBeforeExpiryGracePeriod(firstCertificateFrom(getCertPath()))
                 .isZero());
       }
     }
@@ -1290,7 +1282,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     // Schedule task to refresh certificate before it expires
     Duration gracePeriod = securityConfig.getRenewalGracePeriod();
     long timeBeforeGracePeriod =
-        timeBeforeExpiryGracePeriod(firstCertificateFrom(certPath)).toMillis();
+        timeBeforeExpiryGracePeriod(firstCertificateFrom(getCertPath())).toMillis();
     // At least three chances to renew the certificate before it expires
     long interval =
         Math.min(gracePeriod.toMillis() / 3, TimeUnit.DAYS.toMillis(1));

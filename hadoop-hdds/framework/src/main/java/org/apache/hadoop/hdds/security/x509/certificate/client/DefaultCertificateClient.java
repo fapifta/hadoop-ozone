@@ -935,7 +935,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   @Override
-  public ReloadingX509KeyManager getKeyManager() throws CertificateException {
+  public synchronized ReloadingX509KeyManager getKeyManager() throws CertificateException {
     try {
       if (keyManager == null) {
         keyManager = new ReloadingX509KeyManager(sslIdentityStorage);

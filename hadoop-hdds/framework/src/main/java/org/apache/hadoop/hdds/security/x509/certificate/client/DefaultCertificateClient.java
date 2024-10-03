@@ -240,6 +240,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       }
       certificateMap.put(readCertSerialId, allCertificates);
       addCertToRootCaMapIfNeeded(fileName, allCertificates);
+      handleUpgradeCaseForSubCaType(fileName, allCertificates);
 
       updateCachedData(fileName, CAType.ROOT, this::updateCachedRootCAId);
 
@@ -252,6 +253,17 @@ public abstract class DefaultCertificateClient implements CertificateClient {
              | IOException | IndexOutOfBoundsException e) {
       getLogger().error("Error reading certificate from file: {}.",
           filePath.toAbsolutePath(), e);
+    }
+  }
+
+  private void handleUpgradeCaseForSubCaType(String fileName, CertPath allCerts) {
+    X509Certificate cert = firstCertificateFrom(allCerts);
+    if (!isSelfSignedCertificate(cert)) {
+      return;
+    }
+    if (fileName.startsWith(CAType.SUBORDINATE.getFileNamePrefix())) {
+      rootCaCertificates.add(cert);
+      updateCachedRootCAId(cert.getSerialNumber().toString());
     }
   }
 
@@ -350,10 +362,12 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   @Override
   public synchronized CertPath getCertPath() {
     if (sslIdentityStorage == null) {
+      getLogger().info("SSLIdentityStorage not yet initialized, reiniting with certId: {}", certSerialId);
       sslIdentityStorage = new SSLIdentityStorage(securityConfig, component, certSerialId);
+      loadAllCertificates();
     }
     if (sslIdentityStorage.getCertificates() == null || sslIdentityStorage.getCertificates().isEmpty()) {
-      getLogger().info("No certificates found for certificate client.");
+      getLogger().info("No certificates found for certificate client with certificate id: {}", certSerialId);
       return null;
     }
     return sslIdentityStorage.getCertificates().get(0);

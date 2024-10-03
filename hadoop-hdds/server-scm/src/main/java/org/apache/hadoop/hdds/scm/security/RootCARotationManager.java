@@ -59,7 +59,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -764,15 +763,13 @@ public class RootCARotationManager extends StatefulService {
   }
 
   public boolean shouldSkipRootCert(String newRootCertId) throws IOException {
-    List<X509Certificate> scmCertChain = scmCertClient.getTrustChain();
-    Preconditions.checkArgument(scmCertChain.size() > 1);
-    X509Certificate rootCert = scmCertChain.get(scmCertChain.size() - 1);
+    X509Certificate rootCert = scmCertClient.getRootCACertificate();
     if (rootCert.getSerialNumber().compareTo(new BigInteger(newRootCertId))
         >= 0) {
       // usually this will happen when reapply RAFT log during SCM start
-      LOG.info("Sub CA certificate {} is already signed by root " +
+      LOG.info("SCM certificate {} is already signed by root " +
               "certificate {} or a newer root certificate.",
-          scmCertChain.get(0).getSerialNumber().toString(), newRootCertId);
+          rootCert.getSerialNumber().toString(), newRootCertId);
       return true;
     }
     return false;

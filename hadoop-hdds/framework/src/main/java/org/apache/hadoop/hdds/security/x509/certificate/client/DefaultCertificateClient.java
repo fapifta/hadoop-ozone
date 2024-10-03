@@ -48,6 +48,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -61,7 +62,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -914,13 +914,11 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   @Override
   public synchronized Set<X509Certificate> getAllRootCaCerts() {
-    if (trustedCertStorage == null) {
-      trustedCertStorage = new TrustedCertStorage(securityConfig, component);
-    }
-    return trustedCertStorage.getCertificates().stream()
-        .flatMap(certPath1 -> certPath1.getCertificates().stream())
-        .map(certificate -> (X509Certificate) certificate)
-        .collect(Collectors.toSet());
+    Set<X509Certificate> certs =
+        Collections.unmodifiableSet(rootCaCertificates);
+    getLogger().info("{} has {} Root CA certificates", this.component,
+        certs.size());
+    return certs;
   }
 
   @Override

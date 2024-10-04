@@ -960,7 +960,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       certificateStore.storeValidScmCertificate(
           certSerial, scmCertificateClient.getCertificate());
     }
-    X509Certificate rootCACert = scmCertificateClient.getRootCACertificate();
+    X509Certificate rootCACert = scmCertificateClient.getCACertificate();
     if (certificateStore.getCertificateByID(rootCACert.getSerialNumber()) == null) {
       LOG.info("Storing root certificate serialId {}",
           rootCACert.getSerialNumber());

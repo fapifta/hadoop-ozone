@@ -95,6 +95,13 @@ public interface CertificateClient extends Closeable {
   CertPath getCertPath();
 
   /**
+   * Return the latest CA certificate known to the client.
+   *
+   * @return latest ca certificate known to the client.
+   */
+  X509Certificate getCACertificate();
+
+  /**
    * Return all certificates in this component's trust chain,
    * the last one is the root CA certificate.
    */
@@ -115,11 +122,19 @@ public interface CertificateClient extends Closeable {
   Set<X509Certificate> getAllRootCaCerts();
 
   /**
+   * Return the subordinate ca certs saved in this client's file system.
+   *
+   * @return all the subordinate CA certificates known to the client
+   */
+  Set<X509Certificate> getAllCaCerts();
+
+  /**
    * Verifies a digital Signature, given the signature and the certificate of
    * the signer.
-   * @param data - Data in byte array.
+   *
+   * @param data      - Data in byte array.
    * @param signature - Byte Array containing the signature.
-   * @param cert - Certificate of the Signer.
+   * @param cert      - Certificate of the Signer.
    * @return true if verified, false if not.
    */
   boolean verifySignature(byte[] data, byte[] signature,

@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -109,7 +110,12 @@ public class ECContainerOperationClient implements Closeable {
   }
 
   public static ClientTrustManager createClientTrustManager(final CertificateClient client) throws IOException {
-    CACertificateProvider caCertificateProvider = () -> new ArrayList<>(client.getAllRootCaCerts());
+    CACertificateProvider caCertificateProvider = () -> {
+      List<X509Certificate> caCerts = new ArrayList<>();
+      caCerts.addAll(client.getAllCaCerts());
+      caCerts.addAll(client.getAllRootCaCerts());
+      return caCerts;
+    };
     return new ClientTrustManager(caCertificateProvider, caCertificateProvider);
   }
 

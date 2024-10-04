@@ -59,6 +59,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -117,6 +118,8 @@ public class RootCARotationManager extends StatefulService {
    *
    * @param scm the storage container manager
    *
+   * <pre>
+   * {@code
    *                         (1)   (3)(4)
    *                   --------------------------->
    *                         (2)                        scm2(Follower)
@@ -129,8 +132,8 @@ public class RootCARotationManager extends StatefulService {
    *                   --------------------------->
    *                          (2)                       scm3(Follower)
    *                   <---------------------------
-   *
-   *
+   * }
+   * </pre>
    *   (1) Rotation Prepare
    *   (2) Rotation Prepare Ack
    *   (3) Rotation Commit
@@ -237,7 +240,7 @@ public class RootCARotationManager extends StatefulService {
         new MonitorTask(scmCertClient, scm.getScmStorageConfig()),
         0, checkInterval.toMillis(), TimeUnit.MILLISECONDS);
     LOG.info("Monitor task for root certificate {} is started with " +
-            "interval {}.", scmCertClient.getRootCACertificate().getSerialNumber(),
+            "interval {}.", scmCertClient.getCACertificate().getSerialNumber(),
         checkInterval);
     executorService.scheduleAtFixedRate(this::removeExpiredCertTask, 0,
         secConf.getExpiredCertificateCheckInterval().toMillis(),
@@ -304,7 +307,7 @@ public class RootCARotationManager extends StatefulService {
           return;
         }
         try {
-          X509Certificate rootCACert = certClient.getRootCACertificate();
+          X509Certificate rootCACert = certClient.getCACertificate();
           Duration timeLeft = timeBefore2ExpiryGracePeriod(rootCACert);
           if (timeLeft.isZero()) {
             LOG.info("Root certificate {} has entered the 2 * expiry" +
@@ -376,7 +379,7 @@ public class RootCARotationManager extends StatefulService {
       //  5. send scm Sub-CA rotation commit request through RATIS
       //  6. send scm Sub-CA rotation finish request through RATIS
       synchronized (RootCARotationManager.class) {
-        X509Certificate rootCACert = certClient.getRootCACertificate();
+        X509Certificate rootCACert = certClient.getCACertificate();
         Duration timeLeft = timeBefore2ExpiryGracePeriod(rootCACert);
         if (timeLeft.isZero()) {
           LOG.info("Root certificate {} rotation is started.",
@@ -763,13 +766,15 @@ public class RootCARotationManager extends StatefulService {
   }
 
   public boolean shouldSkipRootCert(String newRootCertId) throws IOException {
-    X509Certificate rootCert = scmCertClient.getRootCACertificate();
+    List<X509Certificate> scmCertChain = scmCertClient.getTrustChain();
+    Preconditions.checkArgument(scmCertChain.size() > 1);
+    X509Certificate rootCert = scmCertChain.get(scmCertChain.size() - 1);
     if (rootCert.getSerialNumber().compareTo(new BigInteger(newRootCertId))
         >= 0) {
       // usually this will happen when reapply RAFT log during SCM start
-      LOG.info("SCM certificate {} is already signed by root " +
+      LOG.info("Sub CA certificate {} is already signed by root " +
               "certificate {} or a newer root certificate.",
-          rootCert.getSerialNumber().toString(), newRootCertId);
+          scmCertChain.get(0).getSerialNumber().toString(), newRootCertId);
       return true;
     }
     return false;
@@ -787,7 +792,9 @@ public class RootCARotationManager extends StatefulService {
     X509Certificate cert =
         CertificateCodec.getX509Certificate(proto.getX509Certificate());
 
-    X509Certificate rootCert = scmCertClient.getRootCACertificate();
+    List<X509Certificate> scmCertChain = scmCertClient.getTrustChain();
+    Preconditions.checkArgument(scmCertChain.size() > 1);
+    X509Certificate rootCert = scmCertChain.get(scmCertChain.size() - 1);
 
     int result = rootCert.getSerialNumber().compareTo(cert.getSerialNumber());
     if (result > 0) {

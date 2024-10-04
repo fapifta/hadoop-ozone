@@ -125,7 +125,7 @@ public class SubCAServer extends DefaultCAServer {
       }
       // Store SCM sub CA and root CA certificate.
       String pemEncodedRootCert = response.getX509CACertificate();
-      storeCertificate(pemEncodedRootCert, CAType.ROOT);
+      storeCertificate(pemEncodedRootCert, CAType.SUBORDINATE);
       storeCertificate(pemEncodedCert, CAType.NONE);
       persistSubCACertificate(pemEncodedCert);
 
@@ -159,7 +159,7 @@ public class SubCAServer extends DefaultCAServer {
           rootCAServer.requestCertificate(csr.toEncodedFormat(), KERBEROS_TRUSTED, SCM, subCaSerialId).get();
       String pemEncodedCert = CertificateCodec.getPEMEncodedString(scmSubCACertPath);
 
-      storeCertificate(pemEncodedRootCert, CAType.ROOT);
+      storeCertificate(pemEncodedRootCert, CAType.SUBORDINATE);
       storeCertificate(pemEncodedCert, CAType.NONE);
       //note: this does exactly the same as store certificate
       persistSubCACertificate(pemEncodedCert);

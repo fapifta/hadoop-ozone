@@ -1291,14 +1291,14 @@ final class TestSecureOzoneCluster {
       CertificateClient scmCertClient = scm.getScmCertificateClient();
       CertificateCodec certCodec = new CertificateCodec(securityConfig, "om");
       X509Certificate scmCert = scmCertClient.getCertificate();
-      X509Certificate rootCert = scmCertClient.getRootCACertificate();
+      X509Certificate rootCert = scmCertClient.getCACertificate();
       X509Certificate cert = signX509Cert(securityConfig, keyPair, new KeyPair(scmCertClient.getPublicKey(),
           scmCertClient.getPrivateKey()), scmCert, "om_cert", clusterId);
       String certId = cert.getSerialNumber().toString();
       certCodec.writeCertificate(cert);
       certCodec.writeCertificate(scmCert, String.format(DefaultCertificateClient.CERT_FILE_NAME_FORMAT,
-          CAType.ROOT.getFileNamePrefix() + scmCert.getSerialNumber().toString()));
-      certCodec.writeCertificate(scmCertClient.getRootCACertificate(),
+          CAType.SUBORDINATE.getFileNamePrefix() + scmCert.getSerialNumber().toString()));
+      certCodec.writeCertificate(scmCertClient.getCACertificate(),
           String.format(DefaultCertificateClient.CERT_FILE_NAME_FORMAT,
               CAType.ROOT.getFileNamePrefix() + rootCert.getSerialNumber().toString()));
       omStore.setOmCertSerialId(certId);
@@ -1332,8 +1332,7 @@ final class TestSecureOzoneCluster {
 
         ServiceInfoEx serviceInfoEx = client.getObjectStore()
             .getClientProxy().getOzoneManagerClient().getServiceInfo();
-        assertEquals(caCert.getSerialNumber(),
-            CertificateCodec.getX509Certificate(serviceInfoEx.getCaCertificate()).getSerialNumber());
+        assertEquals(CertificateCodec.getPEMEncodedString(caCert), serviceInfoEx.getCaCertificate());
 
         // Wait for OM certificate to renewed
         GenericTestUtils.waitFor(() ->

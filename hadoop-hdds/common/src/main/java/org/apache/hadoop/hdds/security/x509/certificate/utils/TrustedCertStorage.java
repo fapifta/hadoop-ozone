@@ -91,6 +91,7 @@ public class TrustedCertStorage extends CertificateStorage {
   }
 
   private boolean isCaCertPath(Path path) {
-    return path.getFileName().toString().startsWith(CAType.ROOT.getFileNamePrefix());
+    return path.getFileName().toString().startsWith(CAType.ROOT.getFileNamePrefix()) ||
+        path.getFileName().toString().startsWith(CAType.SUBORDINATE.getFileNamePrefix());
   }
 }

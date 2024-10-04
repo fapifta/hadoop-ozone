@@ -59,7 +59,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -766,15 +765,13 @@ public class RootCARotationManager extends StatefulService {
   }
 
   public boolean shouldSkipRootCert(String newRootCertId) throws IOException {
-    List<X509Certificate> scmCertChain = scmCertClient.getTrustChain();
-    Preconditions.checkArgument(scmCertChain.size() > 1);
-    X509Certificate rootCert = scmCertChain.get(scmCertChain.size() - 1);
+    X509Certificate rootCert = scmCertClient.getCACertificate();
     if (rootCert.getSerialNumber().compareTo(new BigInteger(newRootCertId))
         >= 0) {
       // usually this will happen when reapply RAFT log during SCM start
       LOG.info("Sub CA certificate {} is already signed by root " +
               "certificate {} or a newer root certificate.",
-          scmCertChain.get(0).getSerialNumber().toString(), newRootCertId);
+          rootCert.getSerialNumber().toString(), newRootCertId);
       return true;
     }
     return false;
@@ -792,10 +789,7 @@ public class RootCARotationManager extends StatefulService {
     X509Certificate cert =
         CertificateCodec.getX509Certificate(proto.getX509Certificate());
 
-    List<X509Certificate> scmCertChain = scmCertClient.getTrustChain();
-    Preconditions.checkArgument(scmCertChain.size() > 1);
-    X509Certificate rootCert = scmCertChain.get(scmCertChain.size() - 1);
-
+    X509Certificate rootCert = scmCertClient.getCACertificate();
     int result = rootCert.getSerialNumber().compareTo(cert.getSerialNumber());
     if (result > 0) {
       // this could happen if the previous stateful configuration is not deleted

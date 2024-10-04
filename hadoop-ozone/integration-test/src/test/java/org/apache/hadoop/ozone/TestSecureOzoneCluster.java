@@ -1328,6 +1328,14 @@ final class TestSecureOzoneCluster {
       GenericTestUtils.waitFor(() -> om.isLeaderReady(), 500, 10000);
       String transportCls = GrpcOmTransportFactory.class.getName();
       conf.set(OZONE_OM_TRANSPORT_CLASS, transportCls);
+      GenericTestUtils.waitFor(() -> {
+            try (OzoneClient client = OzoneClientFactory.getRpcClient(conf)) {
+              return true;
+            } catch (IOException e) {
+              return false;
+            }
+          }, 2000, 50000
+      );
       try (OzoneClient client = OzoneClientFactory.getRpcClient(conf)) {
 
         ServiceInfoEx serviceInfoEx = client.getObjectStore()

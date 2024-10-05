@@ -47,7 +47,6 @@ import java.security.spec.RSAPublicKeySpec;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -60,8 +59,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -127,8 +124,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private String rootCaCertId;
   private String component;
   private final String threadNamePrefix;
-  private List<String> pemEncodedCACerts = null;
-  private Lock pemEncodedCACertsLock = new ReentrantLock();
   private ReloadingX509KeyManager keyManager;
   private ReloadingX509TrustManager trustManager;
 
@@ -1443,6 +1438,5 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     String pemCert = CertificateCodec.getPEMEncodedString(cert);
     certificateMap.put(caCertId,
         CertificateCodec.getCertPathFromPemEncodedString(pemCert));
-    pemEncodedCACerts = Arrays.asList(pemCert);
   }
 }

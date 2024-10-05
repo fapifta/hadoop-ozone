@@ -355,7 +355,7 @@ final class TestSecureOzoneCluster {
     ScmInfo scmInfo = scm.getClientProtocolServer().getScmInfo();
     assertEquals(clusterId, scmInfo.getClusterId());
     assertEquals(scmId, scmInfo.getScmId());
-    assertEquals(2, scm.getScmCertificateClient().getTrustChain().size());
+    assertEquals(2, scm.getScmCertificateClient().getCertPath().getCertificates().size());
   }
 
   @Test
@@ -921,7 +921,7 @@ final class TestSecureOzoneCluster {
       assertNotNull(om.getCertificateClient().getPublicKey());
       assertNotNull(om.getCertificateClient().getPrivateKey());
       assertNotNull(om.getCertificateClient().getCertificate());
-      assertEquals(3, om.getCertificateClient().getTrustChain().size());
+      assertEquals(3, om.getCertificateClient().getCertPath().getCertificates().size());
       assertThat(omLogs.getOutput())
           .contains("Init response: GETCERT")
           .contains("Successfully stored OM signed certificate");

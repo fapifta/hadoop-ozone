@@ -47,7 +47,6 @@ import java.security.spec.RSAPublicKeySpec;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -412,41 +411,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       return null;
     }
     return firstCertificateFrom(caCertPath);
-  }
-
-  /**
-   * Return all certificates in this component's trust chain,
-   * the last one is the root CA certificate.
-   */
-  @Override
-  public synchronized List<X509Certificate> getTrustChain() {
-    CertPath path = getCertPath();
-    if (path == null || path.getCertificates() == null) {
-      return null;
-    }
-    List<X509Certificate> chain = new ArrayList<>();
-    // certificate bundle case
-    if (path.getCertificates().size() > 1) {
-      for (int i = 0; i < path.getCertificates().size(); i++) {
-        chain.add((X509Certificate) path.getCertificates().get(i));
-      }
-    } else {
-      // case before certificate bundle is supported
-      X509Certificate cert = getCertificate();
-      if (cert != null) {
-        chain.add(getCertificate());
-      }
-      cert = getCACertificate();
-      if (cert != null) {
-        chain.add(getCACertificate());
-      }
-      cert = getRootCACertificate();
-      if (cert != null) {
-        chain.add(cert);
-      }
-      Preconditions.checkState(chain.size() > 0, "Empty trust chain");
-    }
-    return chain;
   }
 
   public synchronized CertPath getCACertPath() {

@@ -46,6 +46,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
 import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.DefaultApprover;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultProfile;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
@@ -157,7 +159,7 @@ public class CertificateClientTestImpl implements CertificateClient {
     sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
     Mockito.when(sslIdentityStorage.getComponentName()).thenReturn(getComponentName());
     Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
-        getKeyStoreForSSLIdentity(getPrivateKey(), getTrustChain()));
+        getKeyStoreForSSLIdentity(getPrivateKey(), getCertPath()));
 
 
     notificationReceivers = new HashSet<>();
@@ -203,20 +205,21 @@ public class CertificateClientTestImpl implements CertificateClient {
 
   @Override
   public CertPath getCertPath() {
-    return null;
+    CertPath resultPath = null;
+    try {
+      List<X509Certificate> list = new ArrayList<>();
+      list.add(x509Certificate);
+      list.add(rootCert);
+      resultPath = CertificateCodec.getCertFactory().generateCertPath(list);
+    } catch (java.security.cert.CertificateException ignored) {
+
+    }
+    return resultPath;
   }
 
   @Override
   public X509Certificate getCertificate() {
     return x509Certificate;
-  }
-
-  @Override
-  public List<X509Certificate> getTrustChain() {
-    List<X509Certificate> list = new ArrayList<>();
-    list.add(x509Certificate);
-    list.add(rootCert);
-    return list;
   }
 
   @Override
@@ -320,7 +323,7 @@ public class CertificateClientTestImpl implements CertificateClient {
 
     Mockito.when(certificateStorage.getKeyStore()).thenReturn(getKeyStoreForTrustedCertificates(getAllRootCaCerts()));
     Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
-        getKeyStoreForSSLIdentity(getPrivateKey(), getTrustChain()));
+        getKeyStoreForSSLIdentity(getPrivateKey(), getCertPath()));
     // notify notification receivers
     notificationReceivers.forEach(r -> r.notifyCertificateRenewed(this,
         oldCert.getSerialNumber().toString(),
@@ -383,13 +386,22 @@ public class CertificateClientTestImpl implements CertificateClient {
     return keyStore;
   }
 
-  private KeyStore getKeyStoreForSSLIdentity(PrivateKey privateKey, List<X509Certificate> trustChain)
+  private KeyStore getKeyStoreForSSLIdentity(PrivateKey privateKey, CertPath trustChain)
       throws java.security.cert.CertificateException, KeyStoreException, IOException, NoSuchAlgorithmException {
     KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     keyStore.load(null, null);
-    keyStore.setKeyEntry(trustChain.get(0).getSerialNumber().toString(), privateKey, "".toCharArray(),
-        trustChain.toArray(new X509Certificate[0]));
+    insertCertsToKeystore(keyStore, privateKey, trustChain);
     return keyStore;
+  }
+
+  private void insertCertsToKeystore(KeyStore keyStore, PrivateKey privateKey, CertPath certPath)
+      throws KeyStoreException {
+    List<X509Certificate> certsFromPath =
+        certPath.getCertificates().stream()
+            .map(certificate -> (X509Certificate) certificate)
+            .collect(Collectors.toList());
+    keyStore.setKeyEntry(certsFromPath.get(0).getSerialNumber().toString(),
+        privateKey, "".toCharArray(), certsFromPath.toArray(new X509Certificate[0]));
   }
 
   @Override

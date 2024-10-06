@@ -413,28 +413,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   /**
-   * Get certificate from SCM and store it in local file system.
-   * @param certId
-   * @return certificate
-   */
-  private X509Certificate getCertificateFromScm(String certId)
-      throws CertificateException {
-
-    getLogger().info("Getting certificate with certSerialId:{}.",
-        certId);
-    try {
-      String pemEncodedCert = getScmSecureClient().getCertificate(certId);
-      this.storeCertificate(pemEncodedCert, CAType.NONE);
-      return CertificateCodec.getX509Certificate(pemEncodedCert);
-    } catch (Exception e) {
-      getLogger().error("Error while getting Certificate with " +
-          "certSerialId:{} from scm.", certId, e);
-      throw new CertificateException("Error while getting certificate for " +
-          "certSerialId:" + certId, e, CERTIFICATE_ERROR);
-    }
-  }
-
-  /**
    * Creates digital signature over the data stream using the s private key.
    *
    * @param data - Data to sign.

@@ -117,7 +117,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private PublicKey publicKey;
   private CertPath certPath;
   private Map<String, CertPath> certificateMap;
-  private Set<X509Certificate> rootCaCertificates;
   private Set<X509Certificate> caCertificates;
   private String certSerialId;
   private String caCertId;
@@ -157,7 +156,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     this.certIdSaveCallback = saveCertId;
     this.shutdownCallback = shutdown;
     this.notificationReceivers = new HashSet<>();
-    this.rootCaCertificates = ConcurrentHashMap.newKeySet();
     this.caCertificates = ConcurrentHashMap.newKeySet();
 
     updateCertSerialId(certSerialId);
@@ -207,9 +205,9 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   private void startRootCaRotationPoller() {
     if (rootCaRotationPoller == null) {
-      rootCaRotationPoller = new RootCaRotationPoller(securityConfig,
-          new HashSet<>(rootCaCertificates), scmSecurityClient,
-          threadNamePrefix);
+      rootCaRotationPoller =
+          new RootCaRotationPoller(securityConfig, trustedCertStorage.getLeafCertificates(), scmSecurityClient,
+              threadNamePrefix);
       rootCaRotationPoller.addRootCARotationProcessor(
           this::getRootCaRotationListener);
       rootCaRotationPoller.run();
@@ -242,7 +240,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       }
       certificateMap.put(readCertSerialId, allCertificates);
       addCertsToSubCaMapIfNeeded(fileName, allCertificates);
-      addCertToRootCaMapIfNeeded(fileName, allCertificates);
       //handleUpgradeCaseForSubCaType(fileName, allCertificates);
 
       updateCachedData(fileName, CAType.SUBORDINATE, this::updateCachedSubCAId);
@@ -260,17 +257,18 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     }
   }
 
-  private void handleUpgradeCaseForSubCaType(String fileName, CertPath allCerts) {
-    X509Certificate cert = firstCertificateFrom(allCerts);
-    if (!isSelfSignedCertificate(cert)) {
-      return;
+  /*
+    private void handleUpgradeCaseForSubCaType(String fileName, CertPath allCerts) {
+      X509Certificate cert = firstCertificateFrom(allCerts);
+      if (!isSelfSignedCertificate(cert)) {
+        return;
+      }
+      if (fileName.startsWith(CAType.SUBORDINATE.getFileNamePrefix())) {
+        rootCaCertificates.add(cert);
+        updateCachedRootCAId(cert.getSerialNumber().toString());
+      }
     }
-    if (fileName.startsWith(CAType.SUBORDINATE.getFileNamePrefix())) {
-      rootCaCertificates.add(cert);
-      updateCachedRootCAId(cert.getSerialNumber().toString());
-    }
-  }
-
+  */
   private void updateCachedData(
       String fileName,
       CAType tryCAType,
@@ -308,12 +306,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
           certs.getCertificates().stream()
               .map(x -> (X509Certificate) x)
               .collect(Collectors.toSet()));
-    }
-  }
-
-  private void addCertToRootCaMapIfNeeded(String fileName, CertPath certs) {
-    if (fileName.startsWith(CAType.ROOT.getFileNamePrefix())) {
-      rootCaCertificates.add(firstCertificateFrom(certs));
     }
   }
 
@@ -591,9 +583,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         certificateMap.put(cert.getSerialNumber().toString(), certificatePath);
         if (caType == CAType.SUBORDINATE) {
           caCertificates.add(cert);
-        }
-        if (caType == CAType.ROOT) {
-          rootCaCertificates.add(cert);
         }
       }
     } catch (IOException | java.security.cert.CertificateException e) {
@@ -964,7 +953,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   @Override
   public synchronized Set<X509Certificate> getAllRootCaCerts() {
     Set<X509Certificate> certs =
-        Collections.unmodifiableSet(rootCaCertificates);
+        Collections.unmodifiableSet(trustedCertStorage.getLeafCertificates());
     getLogger().info("{} has {} Root CA certificates", this.component,
         certs.size());
     return certs;
@@ -1327,7 +1316,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   public synchronized CompletableFuture<Void> getRootCaRotationListener(
       List<X509Certificate> rootCAs) {
-    if (rootCaCertificates.containsAll(rootCAs)) {
+    if (trustedCertStorage.getLeafCertificates().containsAll(rootCAs)) {
       return CompletableFuture.completedFuture(null);
     }
     CertificateRenewerService renewerService =

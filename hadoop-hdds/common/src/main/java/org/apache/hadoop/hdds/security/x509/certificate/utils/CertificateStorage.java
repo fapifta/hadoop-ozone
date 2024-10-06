@@ -25,7 +25,10 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 
@@ -74,5 +77,11 @@ public abstract class CertificateStorage {
       getLogger().error("Error reading certificate from file: {}.", filePath, e);
     }
     throw new RuntimeException();
+  }
+
+  public Set<X509Certificate> getLeafCertificates() {
+    return getCertificates().stream()
+        .map(certPath -> (X509Certificate) certPath.getCertificates().get(0))
+        .collect(Collectors.toSet());
   }
 }

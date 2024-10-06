@@ -385,6 +385,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     if (sslIdentityStorage == null) {
       getLogger().info("SSLIdentityStorage not yet initialized, reiniting with certId: {}", certSerialId);
       sslIdentityStorage = new SSLIdentityStorage(securityConfig, component, certSerialId);
+      //This has a side effect of filling up the certificate maps that's needed for now
       loadAllCertificates();
     }
     if (sslIdentityStorage.getCertificates() == null || sslIdentityStorage.getCertificates().isEmpty()) {

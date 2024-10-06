@@ -403,6 +403,10 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   public synchronized X509Certificate getCACertificate() {
     CertPath caCertPath = getCACertPath();
     if (caCertPath == null || caCertPath.getCertificates() == null) {
+      loadAllCertificates();
+    }
+    caCertPath = getCACertPath();
+    if (caCertPath == null || caCertPath.getCertificates() == null) {
       return null;
     }
     return firstCertificateFrom(caCertPath);
@@ -1426,17 +1430,5 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         cleanBackupDir();
       }
     }
-  }
-
-  /**
-   * Set the CA certificate. For TEST only.
-   */
-  @VisibleForTesting
-  public synchronized void setCACertificate(X509Certificate cert)
-      throws Exception {
-    caCertId = cert.getSerialNumber().toString();
-    String pemCert = CertificateCodec.getPEMEncodedString(cert);
-    certificateMap.put(caCertId,
-        CertificateCodec.getCertPathFromPemEncodedString(pemCert));
   }
 }

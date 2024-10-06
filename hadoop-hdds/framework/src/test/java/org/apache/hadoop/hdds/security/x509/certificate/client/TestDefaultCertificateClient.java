@@ -330,9 +330,12 @@ public class TestDefaultCertificateClient {
     assertEquals(2, dnCertClient.getAllCaCerts().size());
     assertThat(dnCertClient.getAllCaCerts()).contains(subCa1);
     assertThat(dnCertClient.getAllCaCerts()).contains(subCa2);
-    assertEquals(2, dnCertClient.getAllRootCaCerts().size());
+    //Get allRootCaCerts gets all selfsignedcertificates and in this test the CaCerts are also self signed certificates.
+    assertEquals(4, dnCertClient.getAllRootCaCerts().size());
     assertThat(dnCertClient.getAllRootCaCerts()).contains(rootCa1);
     assertThat(dnCertClient.getAllRootCaCerts()).contains(rootCa2);
+    assertThat(dnCertClient.getAllRootCaCerts()).contains(subCa1);
+    assertThat(dnCertClient.getAllRootCaCerts()).contains(subCa2);
   }
 
   @Test

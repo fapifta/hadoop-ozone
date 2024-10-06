@@ -84,6 +84,7 @@ public class TrustedCertStorage extends CertificateStorage {
           .filter(Files::isRegularFile)
           .filter(this::isCaCertPath)
           .map(this::readCertFile)
+          .filter(certPath -> isSelfSignedCertificate((X509Certificate) certPath.getCertificates().get(0)))
           .collect(Collectors.toList());
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -91,6 +92,11 @@ public class TrustedCertStorage extends CertificateStorage {
   }
 
   private boolean isCaCertPath(Path path) {
-    return path.getFileName().toString().startsWith(CAType.ROOT.getFileNamePrefix());
+    return path.getFileName().toString().startsWith(CAType.ROOT.getFileNamePrefix()) ||
+        path.getFileName().toString().startsWith(CAType.SUBORDINATE.getFileNamePrefix());
+  }
+
+  private static boolean isSelfSignedCertificate(X509Certificate cert) {
+    return cert.getIssuerX500Principal().equals(cert.getSubjectX500Principal());
   }
 }

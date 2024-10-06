@@ -38,6 +38,7 @@ import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.io.Text;
@@ -312,6 +313,8 @@ public final class TestDelegationToken {
     try {
       // Start OM
       om.setCertClient(new CertificateClientTestImpl(conf));
+      AllCertStorage allCertStorage = new AllCertStorage(new SecurityConfig(om.getConfiguration()), "om");
+      allCertStorage.storeCertificate(om.getCertificateClient().getCertificate());
       om.setScmTopologyClient(new ScmTopologyClient(
           new ScmBlockLocationTestingClient(null, null, 0)));
       om.start();
@@ -431,7 +434,6 @@ public final class TestDelegationToken {
         "scm/" + host + "@" + miniKdc.getRealm());
     omKeyTab = new File(workDir, "scm.keytab");
     config.set(OZONE_OM_KERBEROS_KEYTAB_FILE_KEY, omKeyTab.getAbsolutePath());
-
     OzoneManager.setTestSecureOmFlag(true);
     om = OzoneManager.createOm(config);
   }

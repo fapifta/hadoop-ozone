@@ -71,6 +71,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.Defaul
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DefaultCertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
@@ -669,6 +670,8 @@ final class TestSecureOzoneCluster {
       setupOm(conf);
       OzoneManager.setTestSecureOmFlag(true);
       om.setCertClient(new CertificateClientTestImpl(conf));
+      AllCertStorage allCertStorage = new AllCertStorage(new SecurityConfig(om.getConfiguration()), "om");
+      allCertStorage.storeCertificate(om.getCertificateClient().getCertificate());
       om.setScmTopologyClient(new ScmTopologyClient(scmBlockClient));
       om.start();
 
@@ -1207,6 +1210,8 @@ final class TestSecureOzoneCluster {
           new CertificateClientTestImpl(newConf, true);
       X509Certificate omCert = certClient.getCertificate();
       String omCertId1 = omCert.getSerialNumber().toString();
+      AllCertStorage allCertStorage = new AllCertStorage(new SecurityConfig(om.getConfiguration()), "om");
+      allCertStorage.storeCertificate(omCert);
       // Start OM
       om.setCertClient(certClient);
       om.setScmTopologyClient(new ScmTopologyClient(scmBlockClient));

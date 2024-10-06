@@ -51,7 +51,7 @@ public class AllCertStorage extends CertificateStorage {
   public List<CertPath> getCertificates() {
     Path certificateLocation = getSecurityConfig().getCertificateLocation(getComponentName());
     if (!certificateLocation.toFile().exists()) {
-      throw new RuntimeException("Certificate location doesn't exist: " + certificateLocation);
+      return null;
     }
     try (Stream<Path> certFiles = Files.list(certificateLocation)) {
       return certFiles
@@ -59,7 +59,7 @@ public class AllCertStorage extends CertificateStorage {
           .map(this::readCertFile)
           .collect(Collectors.toList());
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      return null;
     }
   }
 }

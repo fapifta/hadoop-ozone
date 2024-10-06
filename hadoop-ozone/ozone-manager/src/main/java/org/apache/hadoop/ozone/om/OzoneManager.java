@@ -1092,7 +1092,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         .setS3SecretManager(s3SecretManager)
         .setCertificateClient(certClient)
         .setOmServiceId(omNodeDetails.getServiceId())
-        .setCertStorage(new AllCertStorage(secConfig, omComponent))
+        .setCertStorage(new AllCertStorage(secConfig, "om"))
         .build();
   }
 

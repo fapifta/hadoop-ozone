@@ -85,6 +85,9 @@ public abstract class CertificateStorage {
   }
 
   public Set<X509Certificate> getLeafCertificates() {
+    if (getCertificates() == null) {
+      return null;
+    }
     return getCertificates().stream()
         .map(certPath -> (X509Certificate) certPath.getCertificates().get(0))
         .collect(Collectors.toSet());

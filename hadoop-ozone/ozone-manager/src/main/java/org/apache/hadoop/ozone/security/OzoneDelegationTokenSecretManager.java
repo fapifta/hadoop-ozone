@@ -25,14 +25,20 @@ import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.annotation.InterfaceStability;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.security.OzoneSecretManager;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.client.DefaultCertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -50,6 +56,7 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CERTIFICATE_ERROR;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_EXPIRED;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMTokenProto.Type.S3AUTHINFO;
 import org.slf4j.Logger;
@@ -73,6 +80,7 @@ public class OzoneDelegationTokenSecretManager
   private final long tokenRemoverScanInterval;
   private final String omServiceId;
   private final OzoneManager ozoneManager;
+  private final AllCertStorage allCertStorage;
 
   /**
    * If the delegation token update thread holds this lock, it will not get
@@ -101,7 +109,7 @@ public class OzoneDelegationTokenSecretManager
         OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
         OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
     loadTokenSecretState(store.loadState());
-
+    allCertStorage = b.certStorage;
   }
 
   /**
@@ -117,6 +125,7 @@ public class OzoneDelegationTokenSecretManager
     private CertificateClient certClient;
     private String omServiceId;
     private OzoneManager ozoneManager;
+    private AllCertStorage certStorage;
 
     public OzoneDelegationTokenSecretManager build() throws IOException {
       return new OzoneDelegationTokenSecretManager(this);
@@ -164,6 +173,11 @@ public class OzoneDelegationTokenSecretManager
 
     public Builder setOzoneManager(OzoneManager ozoneMgr) {
       this.ozoneManager = ozoneMgr;
+      return this;
+    }
+
+    public Builder setCertStorage(AllCertStorage certStorage) {
+      this.certStorage = certStorage;
       return this;
     }
   }
@@ -436,10 +450,20 @@ public class OzoneDelegationTokenSecretManager
    */
   public boolean verifySignature(OzoneTokenIdentifier identifier,
       byte[] password) {
-    X509Certificate signerCert;
+    X509Certificate signerCert = null;
     try {
-      signerCert = getCertClient().getCertificate(
-          identifier.getOmCertSerialId());
+      Optional<X509Certificate> certificateCandidate = allCertStorage.getLeafCertificates().stream()
+          .filter(certificate -> certificate.getSerialNumber().toString().equals(identifier.getOmCertSerialId()))
+          .findAny();
+      if (certificateCandidate.isPresent()) {
+        signerCert = certificateCandidate.get();
+      } else {
+        if (getCertClient() instanceof DefaultCertificateClient) {
+          DefaultCertificateClient certClient = (DefaultCertificateClient) getCertClient();
+          signerCert = getCertificateFromScm(certClient.getScmSecureClient(), identifier.getOmCertSerialId(),
+              allCertStorage);
+        }
+      }
     } catch (CertificateException e) {
       LOG.error("getCertificate failed for serialId {}", identifier.getOmCertSerialId(), e);
       return false;
@@ -467,9 +491,28 @@ public class OzoneDelegationTokenSecretManager
     }
   }
 
+  private X509Certificate getCertificateFromScm(SCMSecurityProtocolClientSideTranslatorPB scmClient, String certId,
+      CertificateStorage storage)
+      throws CertificateException {
+
+    LOG.info("Getting certificate with certSerialId:{}.",
+        certId);
+    try {
+      String pemEncodedCert = scmClient.getCertificate(certId);
+      X509Certificate x509Certificate = CertificateCodec.getX509Certificate(pemEncodedCert);
+      storage.storeCertificate(x509Certificate);
+      return x509Certificate;
+    } catch (Exception e) {
+      LOG.error("Error while getting Certificate with " +
+          "certSerialId:{} from scm.", certId, e);
+      throw new CertificateException("Error while getting certificate for " +
+          "certSerialId:" + certId, e, CERTIFICATE_ERROR);
+    }
+  }
+
   /**
    * Validates if a S3 identifier is valid or not.
-   * */
+   */
   private byte[] validateS3AuthInfo(OzoneTokenIdentifier identifier)
       throws InvalidToken {
     LOG.trace("Validating S3AuthInfo for identifier:{}", identifier);

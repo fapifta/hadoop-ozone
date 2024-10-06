@@ -29,12 +29,15 @@ import java.security.cert.CertPath;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.io.Text;
@@ -92,6 +95,7 @@ public class TestOzoneDelegationTokenSecretManager {
   private OzoneConfiguration conf;
   private static final Text TEST_USER = new Text("testUser");
   private S3SecretManager s3SecretManager;
+  private AllCertStorage certStorage;
 
   @TempDir
   private Path folder;
@@ -110,6 +114,10 @@ public class TestOzoneDelegationTokenSecretManager {
     s3Secrets.put("abc",
         S3SecretValue.of("abc", "djakjahkd"));
     om = mock(OzoneManager.class);
+    certStorage = mock(AllCertStorage.class);
+    Set<X509Certificate> certs = new HashSet<>();
+    certs.add(certificateClient.getCertificate());
+    when(certStorage.getLeafCertificates()).thenReturn(certs);
     OMMetadataManager metadataManager = new OmMetadataManagerImpl(conf, om);
     when(om.getMetadataManager()).thenReturn(metadataManager);
     s3SecretManager = new S3SecretLockedManager(
@@ -485,6 +493,7 @@ public class TestOzoneDelegationTokenSecretManager {
         .setS3SecretManager(s3SecretManager)
         .setCertificateClient(certificateClient)
         .setOmServiceId(OzoneConsts.OM_SERVICE_ID_DEFAULT)
+        .setCertStorage(certStorage)
         .build();
   }
 }

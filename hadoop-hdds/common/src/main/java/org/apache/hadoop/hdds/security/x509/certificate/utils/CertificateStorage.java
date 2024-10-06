@@ -79,6 +79,11 @@ public abstract class CertificateStorage {
     throw new RuntimeException();
   }
 
+  public void storeCertificate(X509Certificate certificate) throws IOException {
+    CertificateCodec codec = new CertificateCodec(securityConfig, componentName);
+    codec.writeCertificate(certificate);
+  }
+
   public Set<X509Certificate> getLeafCertificates() {
     return getCertificates().stream()
         .map(certPath -> (X509Certificate) certPath.getCertificates().get(0))

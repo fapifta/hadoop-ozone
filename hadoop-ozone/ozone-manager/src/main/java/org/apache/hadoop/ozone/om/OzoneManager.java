@@ -87,6 +87,7 @@ import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.client.ScmTopologyClient;
 import org.apache.hadoop.hdds.scm.ha.SCMHAUtils;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.server.OzoneAdmins;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.hdds.utils.db.Table.KeyValue;
@@ -1091,6 +1092,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         .setS3SecretManager(s3SecretManager)
         .setCertificateClient(certClient)
         .setOmServiceId(omNodeDetails.getServiceId())
+        .setCertStorage(new AllCertStorage(secConfig, omComponent))
         .build();
   }
 

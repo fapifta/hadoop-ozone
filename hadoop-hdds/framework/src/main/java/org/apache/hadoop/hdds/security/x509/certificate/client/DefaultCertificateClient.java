@@ -62,7 +62,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -117,7 +116,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private PublicKey publicKey;
   private CertPath certPath;
   private Map<String, CertPath> certificateMap;
-  private Set<X509Certificate> caCertificates;
   private String certSerialId;
   private String caCertId;
   private String rootCaCertId;
@@ -156,7 +154,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     this.certIdSaveCallback = saveCertId;
     this.shutdownCallback = shutdown;
     this.notificationReceivers = new HashSet<>();
-    this.caCertificates = ConcurrentHashMap.newKeySet();
 
     updateCertSerialId(certSerialId);
   }
@@ -239,7 +236,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         this.certPath = allCertificates;
       }
       certificateMap.put(readCertSerialId, allCertificates);
-      addCertsToSubCaMapIfNeeded(fileName, allCertificates);
       //handleUpgradeCaseForSubCaType(fileName, allCertificates);
 
       updateCachedData(fileName, CAType.SUBORDINATE, this::updateCachedSubCAId);
@@ -297,15 +293,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     if (caCertId == null
         || new BigInteger(caCertId).compareTo(candidateNewId) < 0) {
       caCertId = s;
-    }
-  }
-
-  private void addCertsToSubCaMapIfNeeded(String fileName, CertPath certs) {
-    if (fileName.startsWith(CAType.SUBORDINATE.getFileNamePrefix())) {
-      caCertificates.addAll(
-          certs.getCertificates().stream()
-              .map(x -> (X509Certificate) x)
-              .collect(Collectors.toSet()));
     }
   }
 
@@ -540,9 +527,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       codec.writeCertificate(certName, pemEncodedCert);
       if (addToCertMap) {
         certificateMap.put(cert.getSerialNumber().toString(), certificatePath);
-        if (caType == CAType.SUBORDINATE) {
-          caCertificates.add(cert);
-        }
       }
     } catch (IOException | java.security.cert.CertificateException e) {
       throw new CertificateException("Error while storing certificate.", e,
@@ -914,14 +898,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     Set<X509Certificate> certs =
         Collections.unmodifiableSet(trustedCertStorage.getLeafCertificates());
     getLogger().info("{} has {} Root CA certificates", this.component,
-        certs.size());
-    return certs;
-  }
-
-  @Override
-  public Set<X509Certificate> getAllCaCerts() {
-    Set<X509Certificate> certs = Collections.unmodifiableSet(caCertificates);
-    getLogger().info("{} has {} CA certificates", this.component,
         certs.size());
     return certs;
   }

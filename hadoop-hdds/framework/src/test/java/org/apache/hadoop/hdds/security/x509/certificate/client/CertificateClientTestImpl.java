@@ -256,11 +256,6 @@ public class CertificateClientTestImpl implements CertificateClient {
     return rootCerts;
   }
 
-  @Override
-  public Set<X509Certificate> getAllCaCerts() {
-    return rootCerts;
-  }
-
   public void renewRootCA() throws Exception {
     LocalDateTime start = LocalDateTime.now();
     Duration rootCACertDuration = securityConfig.getMaxCertificateDuration();

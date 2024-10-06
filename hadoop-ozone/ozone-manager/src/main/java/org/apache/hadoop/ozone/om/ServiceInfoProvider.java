@@ -138,8 +138,7 @@ final class ServiceInfoProvider {
   }
 
   private Set<X509Certificate> getCACertificates() {
-    Set<X509Certificate> rootCerts = certClient.getAllRootCaCerts();
-    return !rootCerts.isEmpty() ? rootCerts : certClient.getAllCaCerts();
+    return certClient.getAllRootCaCerts();
   }
 
   private X509Certificate newestOf(Collection<X509Certificate> certs) {

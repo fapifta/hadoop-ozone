@@ -77,16 +77,6 @@ public interface CertificateClient extends Closeable {
   X509Certificate getCertificate();
 
   /**
-   * Returns the certificate  of the specified component if it exists on the
-   * local system.
-   * @param certSerialId
-   *
-   * @return certificate or Null if there is no data.
-   */
-  X509Certificate getCertificate(String certSerialId)
-      throws CertificateException;
-
-  /**
    * Returns the full certificate path of the specified component if it
    * exists on the local system.
    *

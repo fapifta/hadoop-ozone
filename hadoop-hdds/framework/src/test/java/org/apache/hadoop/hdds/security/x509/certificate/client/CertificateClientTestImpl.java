@@ -191,18 +191,6 @@ public class CertificateClientTestImpl implements CertificateClient {
     return keyPair.getPublic();
   }
 
-  /**
-   * Returns the certificate  of the specified component if it exists on the
-   * local system.
-   *
-   * @return certificate or Null if there is no data.
-   */
-  @Override
-  public X509Certificate getCertificate(String certSerialId)
-      throws CertificateException {
-    return certificateMap.get(certSerialId);
-  }
-
   @Override
   public CertPath getCertPath() {
     CertPath resultPath = null;

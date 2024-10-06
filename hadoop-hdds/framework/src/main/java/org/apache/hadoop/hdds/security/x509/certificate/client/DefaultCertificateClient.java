@@ -413,25 +413,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   /**
-   * Returns the certificate  with the specified certificate serial id if it
-   * exists else try to get it from SCM.
-   *
-   * @param certId
-   * @return certificate or Null if there is no data.
-   */
-  @Override
-  public synchronized X509Certificate getCertificate(String certId)
-      throws CertificateException {
-    // Check if it is in cache.
-    if (certificateMap.containsKey(certId) &&
-        certificateMap.get(certId).getCertificates() != null) {
-      return firstCertificateFrom(certificateMap.get(certId));
-    }
-    // Try to get it from SCM.
-    return this.getCertificateFromScm(certId);
-  }
-
-  /**
    * Get certificate from SCM and store it in local file system.
    * @param certId
    * @return certificate

@@ -117,7 +117,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private CertPath certPath;
   private Map<String, CertPath> certificateMap;
   private String certSerialId;
-  private String caCertId;
   private String rootCaCertId;
   private String component;
   private final String threadNamePrefix;
@@ -238,7 +237,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       certificateMap.put(readCertSerialId, allCertificates);
       //handleUpgradeCaseForSubCaType(fileName, allCertificates);
 
-      updateCachedData(fileName, CAType.SUBORDINATE, this::updateCachedSubCAId);
       updateCachedData(fileName, CAType.ROOT, this::updateCachedRootCAId);
 
       getLogger().info("Added certificate {} from file: {}.", readCertSerialId,
@@ -285,14 +283,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     if (rootCaCertId == null
         || new BigInteger(rootCaCertId).compareTo(candidateNewId) < 0) {
       rootCaCertId = s;
-    }
-  }
-
-  private synchronized void updateCachedSubCAId(String s) {
-    BigInteger candidateNewId = new BigInteger(s);
-    if (caCertId == null
-        || new BigInteger(caCertId).compareTo(candidateNewId) < 0) {
-      caCertId = s;
     }
   }
 
@@ -381,22 +371,10 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    */
   @Override
   public synchronized X509Certificate getCACertificate() {
-    CertPath caCertPath = getCACertPath();
-    if (caCertPath == null || caCertPath.getCertificates() == null) {
-      loadAllCertificates();
+    if (trustedCertStorage == null) {
+      trustedCertStorage = new TrustedCertStorage(securityConfig, component);
     }
-    caCertPath = getCACertPath();
-    if (caCertPath == null || caCertPath.getCertificates() == null) {
-      return null;
-    }
-    return firstCertificateFrom(caCertPath);
-  }
-
-  public synchronized CertPath getCACertPath() {
-    if (caCertId != null) {
-      return certificateMap.get(caCertId);
-    }
-    return null;
+    return trustedCertStorage.getLatestRootCaCert();
   }
 
   /**
@@ -516,9 +494,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
           caType.getFileNamePrefix() + cert.getSerialNumber().toString());
 
       if (updateCA) {
-        if (caType == CAType.SUBORDINATE) {
-          caCertId = cert.getSerialNumber().toString();
-        }
         if (caType == CAType.ROOT) {
           rootCaCertId = cert.getSerialNumber().toString();
         }
@@ -1177,7 +1152,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     privateKey = null;
     publicKey = null;
     certPath = null;
-    caCertId = null;
     rootCaCertId = null;
 
     String oldCaCertId = updateCertSerialId(newCertId);

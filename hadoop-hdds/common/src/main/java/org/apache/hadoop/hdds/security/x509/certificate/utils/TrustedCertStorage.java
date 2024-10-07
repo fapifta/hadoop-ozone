@@ -33,7 +33,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -89,6 +91,16 @@ public class TrustedCertStorage extends CertificateStorage {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  public X509Certificate getLatestRootCaCert() {
+    Set<X509Certificate> leafCertificates = getLeafCertificates();
+    if (leafCertificates == null) {
+      return null;
+    }
+    return leafCertificates.stream()
+        .max(Comparator.comparing(X509Certificate::getSerialNumber))
+        .orElse(null);
   }
 
   private boolean isCaCertPath(Path path) {

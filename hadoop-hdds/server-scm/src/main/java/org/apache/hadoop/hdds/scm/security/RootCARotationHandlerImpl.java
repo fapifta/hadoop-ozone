@@ -32,9 +32,20 @@ import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.SignatureException;
+import java.security.cert.CertPath;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BACKUP_KEY_CERT_DIR_NAME_SUFFIX;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX;
@@ -127,8 +138,10 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
       // move current -> backup
       Files.move(currentSubCaDir.toPath(), backupSubCaDir.toPath(),
           StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+      LOG.info("Moving certs from {} to backup to {}", currentSubCaDir, backupSubCaDir);
     } catch (IOException e) {
-      LOG.error("Failed to move {} to {}", currentSubCaDir, backupSubCaDir, e);
+      LOG.error("Failed to move {} to {}, contents of backup dir: {}", currentSubCaDir, backupSubCaDir,
+          Files.list(backupSubCaDir.toPath()).map(Objects::toString).collect(Collectors.joining()), e);
       String message = "Terminate SCM, encounter IO exception(" +
           e.getMessage() + ") when move " + currentSubCaDir + " to " +
           backupSubCaDir;
@@ -163,10 +176,11 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
   @Override
   public void rotationCommitted(String rootCertId)
       throws IOException {
-    LOG.info("Received rotation committed command of root certificate {}",
-        rootCertId);
+    LOG.info("Received rotation committed command of root certificate {}", rootCertId);
     if (rotationManager.shouldSkipRootCert(rootCertId)) {
-      return;
+      if (isLastCertSignedBy(scmCertClient.getCertPath(), scmCertClient.getCACertificate())) {
+        return;
+      }
     }
 
     // turn on new root CA certificate and sub CA certificate
@@ -178,12 +192,30 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
             HDDS_BACKUP_KEY_CERT_DIR_NAME_SUFFIX).toString());
     try {
       FileUtils.deleteDirectory(backupSubCaDir);
+      LOG.info("Backup subca dir deleted: {}", backupSubCaDir);
     } catch (IOException e) {
       LOG.error("Failed to delete backup dir {}", backupSubCaDir, e);
     }
 
     // reset state
     newSubCACertId.set(null);
+  }
+
+  private boolean isLastCertSignedBy(CertPath certPath, X509Certificate signerCert) {
+    if (certPath == null) {
+      LOG.info("CertPath is null");
+      return false;
+    }
+    List<? extends Certificate> certChain = certPath.getCertificates();
+    boolean isCertSignedBy;
+    try {
+      certChain.get(certChain.size() - 1).verify(signerCert.getPublicKey());
+      isCertSignedBy = true;
+    } catch (CertificateException | NoSuchAlgorithmException | SignatureException | InvalidKeyException |
+             NoSuchProviderException e) {
+      isCertSignedBy = false;
+    }
+    return isCertSignedBy;
   }
 
   @Override

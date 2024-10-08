@@ -96,6 +96,7 @@ public class TrustedCertStorage extends CertificateStorage {
   public X509Certificate getLatestRootCaCert() {
     Set<X509Certificate> leafCertificates = getLeafCertificates();
     if (leafCertificates == null) {
+      LOG.info("Failed to find any non null RootCACertificates");
       return null;
     }
     return leafCertificates.stream()

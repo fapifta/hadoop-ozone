@@ -21,7 +21,6 @@ package org.apache.hadoop.hdds.security.x509.certificate.client;
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -117,7 +116,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private CertPath certPath;
   private Map<String, CertPath> certificateMap;
   private String certSerialId;
-  private String rootCaCertId;
   private String component;
   private final String threadNamePrefix;
   private ReloadingX509KeyManager keyManager;
@@ -237,8 +235,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       certificateMap.put(readCertSerialId, allCertificates);
       //handleUpgradeCaseForSubCaType(fileName, allCertificates);
 
-      updateCachedData(fileName, CAType.ROOT, this::updateCachedRootCAId);
-
       getLogger().info("Added certificate {} from file: {}.", readCertSerialId,
           filePath.toAbsolutePath());
       if (getLogger().isDebugEnabled()) {
@@ -263,28 +259,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       }
     }
   */
-  private void updateCachedData(
-      String fileName,
-      CAType tryCAType,
-      Consumer<String> updateCachedId
-  ) throws IOException {
-    String caTypePrefix = tryCAType.getFileNamePrefix();
-
-    if (fileName.startsWith(caTypePrefix)) {
-      updateCachedId.accept(
-          fileName.substring(caTypePrefix.length(),
-              fileName.length() - CERT_FILE_EXTENSION.length()
-          ));
-    }
-  }
-
-  private synchronized void updateCachedRootCAId(String s) {
-    BigInteger candidateNewId = new BigInteger(s);
-    if (rootCaCertId == null
-        || new BigInteger(rootCaCertId).compareTo(candidateNewId) < 0) {
-      rootCaCertId = s;
-    }
-  }
 
   /**
    * Returns the private key of the specified  if it exists on the local
@@ -492,12 +466,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
       String certName = String.format(CERT_FILE_NAME_FORMAT,
           caType.getFileNamePrefix() + cert.getSerialNumber().toString());
-
-      if (updateCA) {
-        if (caType == CAType.ROOT) {
-          rootCaCertId = cert.getSerialNumber().toString();
-        }
-      }
 
       codec.writeCertificate(certName, pemEncodedCert);
       if (addToCertMap) {
@@ -1144,7 +1112,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     privateKey = null;
     publicKey = null;
     certPath = null;
-    rootCaCertId = null;
 
     String oldCaCertId = updateCertSerialId(newCertId);
     getLogger().info("Reset and reloaded key and all certificates for new " +

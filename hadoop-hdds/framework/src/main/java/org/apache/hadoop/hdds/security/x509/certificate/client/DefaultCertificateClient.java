@@ -50,11 +50,9 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -114,7 +112,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private PrivateKey privateKey;
   private PublicKey publicKey;
   private CertPath certPath;
-  private Map<String, CertPath> certificateMap;
   private String certSerialId;
   private String component;
   private final String threadNamePrefix;
@@ -145,7 +142,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     this.scmSecurityClient = scmSecurityClient;
     keyCodec = new KeyCodec(securityConfig, component);
     this.logger = log;
-    this.certificateMap = new ConcurrentHashMap<>();
     this.component = component;
     this.threadNamePrefix = threadNamePrefix;
     this.certIdSaveCallback = saveCertId;
@@ -232,7 +228,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       if (readCertSerialId.equals(certSerialId)) {
         this.certPath = allCertificates;
       }
-      certificateMap.put(readCertSerialId, allCertificates);
 
       getLogger().info("Added certificate {} from file: {}.", readCertSerialId,
           filePath.toAbsolutePath());
@@ -454,9 +449,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
           caType.getFileNamePrefix() + cert.getSerialNumber().toString());
 
       codec.writeCertificate(certName, pemEncodedCert);
-      if (addToCertMap) {
-        certificateMap.put(cert.getSerialNumber().toString(), certificatePath);
-      }
     } catch (IOException | java.security.cert.CertificateException e) {
       throw new CertificateException("Error while storing certificate.", e,
           CERTIFICATE_ERROR);

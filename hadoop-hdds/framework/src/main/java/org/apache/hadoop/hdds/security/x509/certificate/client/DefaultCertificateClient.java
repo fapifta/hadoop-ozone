@@ -58,7 +58,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -160,14 +159,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     }
     sslIdentityStorage = new SSLIdentityStorage(securityConfig, component, certSerialId);
     trustedCertStorage = new TrustedCertStorage(securityConfig, component);
-    try (Stream<Path> certFiles = Files.list(path)) {
-      certFiles
-          .filter(Files::isRegularFile)
-          .forEach(this::readCertificateFile);
-    } catch (IOException e) {
-      getLogger().warn("Certificates could not be loaded.", e);
-      return;
-    }
 
     if (shouldStartCertificateRenewerService()) {
       if (securityConfig.isAutoCARotationEnabled()) {
@@ -212,28 +203,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       Function<List<X509Certificate>, CompletableFuture<Void>> listener) {
     if (securityConfig.isAutoCARotationEnabled()) {
       rootCaRotationPoller.addRootCARotationProcessor(listener);
-    }
-  }
-
-  private synchronized void readCertificateFile(Path filePath) {
-    CertificateCodec codec = new CertificateCodec(securityConfig, component);
-    String fileName = filePath.getFileName().toString();
-
-    X509Certificate cert;
-    try {
-      CertPath allCertificates = codec.getCertPath(fileName);
-      cert = firstCertificateFrom(allCertificates);
-      String readCertSerialId = cert.getSerialNumber().toString();
-
-      getLogger().info("Added certificate {} from file: {}.", readCertSerialId,
-          filePath.toAbsolutePath());
-      if (getLogger().isDebugEnabled()) {
-        getLogger().debug("Certificate: {}", cert);
-      }
-    } catch (java.security.cert.CertificateException
-             | IOException | IndexOutOfBoundsException e) {
-      getLogger().error("Error reading certificate from file: {}.",
-          filePath.toAbsolutePath(), e);
     }
   }
 

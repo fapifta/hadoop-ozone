@@ -111,7 +111,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private final KeyCodec keyCodec;
   private PrivateKey privateKey;
   private PublicKey publicKey;
-  private CertPath certPath;
   private String certSerialId;
   private String component;
   private final String threadNamePrefix;
@@ -174,7 +173,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       if (securityConfig.isAutoCARotationEnabled()) {
         startRootCaRotationPoller();
       }
-      if (certPath != null && executorService == null) {
+      List<CertPath> certPaths = sslIdentityStorage.getCertificates();
+      if (certPaths != null && !certPaths.isEmpty() && executorService == null) {
         startCertificateRenewerService();
       } else {
         if (executorService != null) {
@@ -224,10 +224,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       CertPath allCertificates = codec.getCertPath(fileName);
       cert = firstCertificateFrom(allCertificates);
       String readCertSerialId = cert.getSerialNumber().toString();
-
-      if (readCertSerialId.equals(certSerialId)) {
-        this.certPath = allCertificates;
-      }
 
       getLogger().info("Added certificate {} from file: {}.", readCertSerialId,
           filePath.toAbsolutePath());
@@ -1089,7 +1085,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   public synchronized void reloadKeyAndCertificate(String newCertId) {
     privateKey = null;
     publicKey = null;
-    certPath = null;
 
     String oldCaCertId = updateCertSerialId(newCertId);
     getLogger().info("Reset and reloaded key and all certificates for new " +

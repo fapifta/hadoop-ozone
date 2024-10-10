@@ -88,7 +88,7 @@ public class SSLIdentityStorage extends CertificateStorage {
           .filter(certPath -> isLeafCertIdEqual(certPath, certId))
           .collect(Collectors.toList());
     } catch (IOException e) {
-      getLogger().error("No certificates found at location: {}", certificateLocation);
+      getLogger().error("No certificates found at location: {}", certificateLocation, e);
       return null;
     }
   }

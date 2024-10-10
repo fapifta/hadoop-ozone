@@ -861,14 +861,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   @Override
-  public synchronized X509Certificate getRootCACertificate() {
-    if (rootCaCertId != null) {
-      return firstCertificateFrom(certificateMap.get(rootCaCertId));
-    }
-    return null;
-  }
-
-  @Override
   public synchronized Set<X509Certificate> getAllRootCaCerts() {
     Set<X509Certificate> certs =
         Collections.unmodifiableSet(trustedCertStorage.getLeafCertificates());

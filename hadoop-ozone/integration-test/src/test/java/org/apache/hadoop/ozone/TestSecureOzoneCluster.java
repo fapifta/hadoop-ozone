@@ -75,6 +75,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
@@ -1321,10 +1322,9 @@ final class TestSecureOzoneCluster {
 
       CertificateClient omCertClient = om.getCertificateClient();
       X509Certificate omCert = omCertClient.getCertificate();
-      X509Certificate caCert = omCertClient.getRootCACertificate();
-      X509Certificate rootCaCert = omCertClient.getRootCACertificate();
+      TrustedCertStorage trustedCertStorage = new TrustedCertStorage(new SecurityConfig(om.getConfiguration()), "om");
+      X509Certificate rootCaCert = trustedCertStorage.getLatestRootCaCert();
       List<X509Certificate> certList = new ArrayList<>();
-      certList.add(caCert);
       certList.add(rootCaCert);
       // set certificates in GrpcOmTransport
       GrpcOmTransport.setCaCerts(certList);
@@ -1344,7 +1344,7 @@ final class TestSecureOzoneCluster {
 
         ServiceInfoEx serviceInfoEx = client.getObjectStore()
             .getClientProxy().getOzoneManagerClient().getServiceInfo();
-        assertEquals(CertificateCodec.getPEMEncodedString(caCert), serviceInfoEx.getCaCertificate());
+        assertEquals(CertificateCodec.getPEMEncodedString(rootCaCert), serviceInfoEx.getCaCertificate());
 
         // Wait for OM certificate to renewed
         GenericTestUtils.waitFor(() ->
@@ -1355,7 +1355,7 @@ final class TestSecureOzoneCluster {
         // rerun the command using old client, it should succeed
         serviceInfoEx = client.getObjectStore()
             .getClientProxy().getOzoneManagerClient().getServiceInfo();
-        assertEquals(CertificateCodec.getPEMEncodedString(caCert), serviceInfoEx.getCaCertificate());
+        assertEquals(CertificateCodec.getPEMEncodedString(rootCaCert), serviceInfoEx.getCaCertificate());
       }
 
       // get new client, it should succeed.

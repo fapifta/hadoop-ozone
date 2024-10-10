@@ -41,6 +41,7 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.ozone.test.GenericTestUtils;
@@ -350,9 +351,8 @@ public class TestHddsSecureDatanodeInit {
     }, 1000, CERT_LIFETIME * 1000);
     PrivateKey privateKey1 = client.getPrivateKey();
     PublicKey publicKey1 = client.getPublicKey();
-    String caCertId1 = client.getRootCACertificate().getSerialNumber().toString();
-    String rootCaCertId1 =
-        client.getRootCACertificate().getSerialNumber().toString();
+    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, DN_COMPONENT);
+    String caCertId1 = trustedCertStorage.getLatestRootCaCert().getSerialNumber().toString();
 
     // test the second time certificate rotation, generate a new cert
     newCert = generateX509Cert(null, null, Duration.ofSeconds(CERT_LIFETIME));
@@ -378,8 +378,7 @@ public class TestHddsSecureDatanodeInit {
     }, 1000, CERT_LIFETIME * 1000);
     assertNotEquals(privateKey1, client.getPrivateKey());
     assertNotEquals(publicKey1, client.getPublicKey());
-    assertNotEquals(caCertId1, client.getRootCACertificate().getSerialNumber().toString());
-    assertNotEquals(rootCaCertId1, client.getRootCACertificate().getSerialNumber().toString());
+    assertNotEquals(caCertId1, trustedCertStorage.getLatestRootCaCert().getSerialNumber().toString());
   }
 
   /**

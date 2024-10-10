@@ -233,7 +233,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         this.certPath = allCertificates;
       }
       certificateMap.put(readCertSerialId, allCertificates);
-      //handleUpgradeCaseForSubCaType(fileName, allCertificates);
 
       getLogger().info("Added certificate {} from file: {}.", readCertSerialId,
           filePath.toAbsolutePath());
@@ -246,19 +245,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
           filePath.toAbsolutePath(), e);
     }
   }
-
-  /*
-    private void handleUpgradeCaseForSubCaType(String fileName, CertPath allCerts) {
-      X509Certificate cert = firstCertificateFrom(allCerts);
-      if (!isSelfSignedCertificate(cert)) {
-        return;
-      }
-      if (fileName.startsWith(CAType.SUBORDINATE.getFileNamePrefix())) {
-        rootCaCertificates.add(cert);
-        updateCachedRootCAId(cert.getSerialNumber().toString());
-      }
-    }
-  */
 
   /**
    * Returns the private key of the specified  if it exists on the local

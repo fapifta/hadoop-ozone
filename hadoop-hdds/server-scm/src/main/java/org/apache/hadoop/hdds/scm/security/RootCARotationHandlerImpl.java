@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.scm.ha.SCMRatisServer;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +62,7 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
 
   private final StorageContainerManager scm;
   private final SCMCertificateClient scmCertClient;
+  private final TrustedCertStorage trustedCertStorage;
   private final SecurityConfig secConfig;
   private Set<String> newScmCertIdSet = new HashSet<>();
   private final String newSubCAPath;
@@ -78,6 +80,7 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
     this.scm = scm;
     this.rotationManager = manager;
     this.scmCertClient = (SCMCertificateClient) scm.getScmCertificateClient();
+    this.trustedCertStorage = scm.getTrustedCertStorage();
     this.secConfig = scmCertClient.getSecurityConfig();
 
     this.newSubCAPath = secConfig.getLocation(
@@ -178,7 +181,7 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
       throws IOException {
     LOG.info("Received rotation committed command of root certificate {}", rootCertId);
     if (rotationManager.shouldSkipRootCert(rootCertId)) {
-      if (isLastCertSignedBy(scmCertClient.getCertPath(), scmCertClient.getCACertificate())) {
+      if (isLastCertSignedBy(scmCertClient.getCertPath(), trustedCertStorage.getLatestRootCaCert())) {
         return;
       }
     }

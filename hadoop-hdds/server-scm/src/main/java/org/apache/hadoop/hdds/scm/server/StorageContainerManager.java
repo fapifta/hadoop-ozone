@@ -991,6 +991,11 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     return scmCertificateClient;
   }
 
+  public TrustedCertStorage getTrustedCertStorage() {
+    return trustedCertStorage;
+  }
+
+
   public Clock getSystemClock() {
     return systemClock;
   }

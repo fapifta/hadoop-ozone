@@ -39,6 +39,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.Defaul
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.slf4j.Logger;
@@ -94,6 +95,7 @@ public class RootCARotationManager extends StatefulService {
   private final Duration ackTimeout;
   private final Duration rootCertPollInterval;
   private final SCMCertificateClient scmCertClient;
+  private final TrustedCertStorage trustedCertStorage;
   private final AtomicBoolean isRunning = new AtomicBoolean(false);
   private final AtomicBoolean isProcessing = new AtomicBoolean(false);
   private final AtomicReference<Long> processStartTime =
@@ -144,6 +146,7 @@ public class RootCARotationManager extends StatefulService {
     this.ozoneConf = scm.getConfiguration();
     this.secConf = new SecurityConfig(ozoneConf);
     this.scmContext = scm.getScmContext();
+    this.trustedCertStorage = scm.getTrustedCertStorage();
 
     checkInterval = secConf.getCaCheckInterval();
     ackTimeout = secConf.getCaAckTimeout();
@@ -236,10 +239,10 @@ public class RootCARotationManager extends StatefulService {
   @Override
   public void start() throws SCMServiceException {
     executorService.scheduleAtFixedRate(
-        new MonitorTask(scmCertClient, scm.getScmStorageConfig()),
+        new MonitorTask(trustedCertStorage, scm.getScmStorageConfig()),
         0, checkInterval.toMillis(), TimeUnit.MILLISECONDS);
     LOG.info("Monitor task for root certificate {} is started with " +
-            "interval {}.", scmCertClient.getCACertificate().getSerialNumber(),
+            "interval {}.", trustedCertStorage.getLatestRootCaCert().getSerialNumber(),
         checkInterval);
     executorService.scheduleAtFixedRate(this::removeExpiredCertTask, 0,
         secConf.getExpiredCertificateCheckInterval().toMillis(),
@@ -282,12 +285,12 @@ public class RootCARotationManager extends StatefulService {
    *  Task to monitor certificate lifetime and start rotation if needed.
    */
   public class MonitorTask implements Runnable {
-    private SCMCertificateClient certClient;
+    private TrustedCertStorage certStorage;
     private SCMStorageConfig scmStorageConfig;
 
-    public MonitorTask(SCMCertificateClient client,
-                       SCMStorageConfig storageConfig) {
-      this.certClient = client;
+    public MonitorTask(TrustedCertStorage certStorage,
+        SCMStorageConfig storageConfig) {
+      this.certStorage = certStorage;
       this.scmStorageConfig = storageConfig;
     }
 
@@ -306,7 +309,7 @@ public class RootCARotationManager extends StatefulService {
           return;
         }
         try {
-          X509Certificate rootCACert = certClient.getCACertificate();
+          X509Certificate rootCACert = certStorage.getLatestRootCaCert();
           Duration timeLeft = timeBefore2ExpiryGracePeriod(rootCACert);
           if (timeLeft.isZero()) {
             LOG.info("Root certificate {} has entered the 2 * expiry" +
@@ -333,7 +336,7 @@ public class RootCARotationManager extends StatefulService {
             }
 
             rotationTask = executorService.schedule(
-                new RotationTask(certClient, scmStorageConfig), delay,
+                new RotationTask(certStorage, scmStorageConfig), delay,
                 TimeUnit.MILLISECONDS);
             isProcessing.set(true);
             metrics.incrTotalRotationNum();
@@ -352,12 +355,12 @@ public class RootCARotationManager extends StatefulService {
    *  Task to rotate root certificate.
    */
   public class RotationTask implements Runnable {
-    private SCMCertificateClient certClient;
+    private TrustedCertStorage certStorage;
     private SCMStorageConfig scmStorageConfig;
 
-    public RotationTask(SCMCertificateClient client,
+    public RotationTask(TrustedCertStorage certStorage,
         SCMStorageConfig storageConfig) {
-      this.certClient = client;
+      this.certStorage = certStorage;
       this.scmStorageConfig = storageConfig;
     }
 
@@ -378,7 +381,7 @@ public class RootCARotationManager extends StatefulService {
       //  5. send scm Sub-CA rotation commit request through RATIS
       //  6. send scm Sub-CA rotation finish request through RATIS
       synchronized (RootCARotationManager.class) {
-        X509Certificate rootCACert = certClient.getCACertificate();
+        X509Certificate rootCACert = certStorage.getLatestRootCaCert();
         Duration timeLeft = timeBefore2ExpiryGracePeriod(rootCACert);
         if (timeLeft.isZero()) {
           LOG.info("Root certificate {} rotation is started.",
@@ -765,7 +768,7 @@ public class RootCARotationManager extends StatefulService {
   }
 
   public boolean shouldSkipRootCert(String newRootCertId) throws IOException {
-    X509Certificate rootCert = scmCertClient.getCACertificate();
+    X509Certificate rootCert = trustedCertStorage.getLatestRootCaCert();
     if (rootCert.getSerialNumber().compareTo(new BigInteger(newRootCertId))
         >= 0) {
       // usually this will happen when reapply RAFT log during SCM start
@@ -789,7 +792,7 @@ public class RootCARotationManager extends StatefulService {
     X509Certificate cert =
         CertificateCodec.getX509Certificate(proto.getX509Certificate());
 
-    X509Certificate rootCert = scmCertClient.getCACertificate();
+    X509Certificate rootCert = trustedCertStorage.getLatestRootCaCert();
     int result = rootCert.getSerialNumber().compareTo(cert.getSerialNumber());
     if (result > 0) {
       // this could happen if the previous stateful configuration is not deleted

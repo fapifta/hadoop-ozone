@@ -34,6 +34,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.ozone.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -92,6 +93,7 @@ public class TestRootCARotationManager {
   private SCMStorageConfig scmStorageConfig;
   private SCMSecurityProtocolServer scmSecurityProtocolServer;
   private RootCARotationHandlerImpl handler;
+  private TrustedCertStorage certStorage;
   private StatefulServiceStateManager statefulServiceStateManager;
   @TempDir
   private File testDir;
@@ -122,6 +124,7 @@ public class TestRootCARotationManager {
     scmSecurityProtocolServer = mock(SCMSecurityProtocolServer.class);
     handler = mock(RootCARotationHandlerImpl.class);
     statefulServiceStateManager = mock(StatefulServiceStateManager.class);
+    certStorage = new TrustedCertStorage(securityConfig, scmCertClient.getComponentName());
     when(scmContext.isLeader()).thenReturn(true);
     when(scm.getConfiguration()).thenReturn(ozoneConfig);
     when(scm.getScmCertificateClient()).thenReturn(scmCertClient);
@@ -133,6 +136,7 @@ public class TestRootCARotationManager {
     when(sequenceIdGenerator.getNextId(anyString())).thenReturn(2L);
     when(scm.getScmStorageConfig()).thenReturn(scmStorageConfig);
     when(scm.getSecurityProtocolServer()).thenReturn(scmSecurityProtocolServer);
+    when(scm.getTrustedCertStorage()).thenReturn(certStorage);
     doNothing().when(scmSecurityProtocolServer).setRootCertificateServer(any());
     doNothing().when(handler).rotationPrepare(anyString());
     when(scm.getStatefulServiceStateManager()).thenReturn(statefulServiceStateManager);

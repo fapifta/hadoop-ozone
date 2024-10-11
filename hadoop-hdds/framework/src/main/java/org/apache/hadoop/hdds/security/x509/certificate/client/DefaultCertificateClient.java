@@ -285,19 +285,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   /**
-   * Return the latest CA certificate known to the client.
-   *
-   * @return latest ca certificate known to the client.
-   */
-  @Override
-  public synchronized X509Certificate getCACertificate() {
-    if (trustedCertStorage == null) {
-      trustedCertStorage = new TrustedCertStorage(securityConfig, component);
-    }
-    return trustedCertStorage.getLatestRootCaCert();
-  }
-
-  /**
    * Creates digital signature over the data stream using the s private key.
    *
    * @param data - Data to sign.

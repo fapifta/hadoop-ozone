@@ -71,6 +71,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.Defaul
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DefaultCertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
@@ -935,7 +936,8 @@ final class TestSecureOzoneCluster {
           scm.getSecurityProtocolServer().getRootCACertificate();
       X509Certificate caCert =
           CertificateCodec.getX509Certificate(pemEncodedCACert);
-      X509Certificate caCertStored = om.getCertificateClient().getCACertificate();
+      TrustedCertStorage trustedCertStorage = new TrustedCertStorage(new SecurityConfig(om.getConfiguration()), "om");
+      X509Certificate caCertStored = trustedCertStorage.getLatestRootCaCert();
       assertEquals(caCert, caCertStored);
     } finally {
       if (scm != null) {
@@ -1296,14 +1298,16 @@ final class TestSecureOzoneCluster {
       CertificateClient scmCertClient = scm.getScmCertificateClient();
       CertificateCodec certCodec = new CertificateCodec(securityConfig, "om");
       X509Certificate scmCert = scmCertClient.getCertificate();
-      X509Certificate rootCert = scmCertClient.getCACertificate();
+      TrustedCertStorage trustedCertStorage = new TrustedCertStorage(
+          ((SCMCertificateClient) scmCertClient).getSecurityConfig(), scmCertClient.getComponentName());
+      X509Certificate rootCert = trustedCertStorage.getLatestRootCaCert();
       X509Certificate cert = signX509Cert(securityConfig, keyPair, new KeyPair(scmCertClient.getPublicKey(),
           scmCertClient.getPrivateKey()), scmCert, "om_cert", clusterId);
       String certId = cert.getSerialNumber().toString();
       certCodec.writeCertificate(cert);
       certCodec.writeCertificate(scmCert, String.format(DefaultCertificateClient.CERT_FILE_NAME_FORMAT,
           CAType.SUBORDINATE.getFileNamePrefix() + scmCert.getSerialNumber().toString()));
-      certCodec.writeCertificate(scmCertClient.getCACertificate(),
+      certCodec.writeCertificate(trustedCertStorage.getLatestRootCaCert(),
           String.format(DefaultCertificateClient.CERT_FILE_NAME_FORMAT,
               CAType.ROOT.getFileNamePrefix() + rootCert.getSerialNumber().toString()));
       omStore.setOmCertSerialId(certId);
@@ -1322,7 +1326,7 @@ final class TestSecureOzoneCluster {
 
       CertificateClient omCertClient = om.getCertificateClient();
       X509Certificate omCert = omCertClient.getCertificate();
-      TrustedCertStorage trustedCertStorage = new TrustedCertStorage(new SecurityConfig(om.getConfiguration()), "om");
+      trustedCertStorage = new TrustedCertStorage(new SecurityConfig(om.getConfiguration()), "om");
       X509Certificate rootCaCert = trustedCertStorage.getLatestRootCaCert();
       List<X509Certificate> certList = new ArrayList<>();
       certList.add(rootCaCert);

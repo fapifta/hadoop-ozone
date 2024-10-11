@@ -85,13 +85,6 @@ public interface CertificateClient extends Closeable {
   CertPath getCertPath();
 
   /**
-   * Return the latest CA certificate known to the client.
-   *
-   * @return latest ca certificate known to the client.
-   */
-  X509Certificate getCACertificate();
-
-  /**
    * Return the root ca certs saved in this client's file system.
    *
    * @return all the Root CA certificates known to the client

@@ -78,6 +78,10 @@ public class SSLIdentityStorage extends CertificateStorage {
     }
   }
 
+  public X509Certificate getLeafCertificate() {
+    return (X509Certificate) getCertificates().get(0).getCertificates().get(0);
+  }
+
   @Override
   public List<CertPath> getCertificates() {
     Path certificateLocation = getSecurityConfig().getCertificateLocation(getComponentName());

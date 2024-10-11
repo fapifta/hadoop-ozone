@@ -90,6 +90,8 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.Defaul
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.server.OzoneAdmins;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.events.FixedThreadPoolWithAffinityExecutor;
@@ -947,20 +949,22 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    * Persist primary SCM root ca cert and sub-ca certs to DB.
    */
   private void persistPrimarySCMCerts() throws IOException {
-    BigInteger certSerial =
-        scmCertificateClient.getCertificate().getSerialNumber();
+    BigInteger certSerial = new BigInteger(scmStorageConfig.getScmCertSerialId());
     // Store the certificate in DB. On primary SCM when init happens, the
     // certificate is not persisted to DB. As we don't have Metadatstore
     // and ratis server initialized with statemachine. We need to do only
     // for primary scm, for other bootstrapped scm's certificates will be
     // persisted via ratis.
+    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig,
+        SCMCertificateClient.COMPONENT_NAME, certSerial.toString());
     if (certificateStore.getCertificateByID(certSerial) == null) {
       LOG.info("Storing sub-ca certificate serialId {} on primary SCM",
           certSerial);
       certificateStore.storeValidScmCertificate(
-          certSerial, scmCertificateClient.getCertificate());
+          certSerial, sslIdentityStorage.getLeafCertificate());
     }
-    X509Certificate rootCACert = scmCertificateClient.getCACertificate();
+    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, SCMCertificateClient.COMPONENT_NAME);
+    X509Certificate rootCACert = trustedCertStorage.getLatestRootCaCert();
     if (certificateStore.getCertificateByID(rootCACert.getSerialNumber()) == null) {
       LOG.info("Storing root certificate serialId {}",
           rootCACert.getSerialNumber());

@@ -331,6 +331,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
   private Clock systemClock;
   private DNSToSwitchMapping dnsToSwitchMapping;
+  private TrustedCertStorage trustedCertStorage;
+  private SSLIdentityStorage sslIdentityStorage;
 
   /**
    * Creates a new StorageContainerManager. Configuration will be
@@ -591,11 +593,15 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         scmStorageConfig.checkPrimarySCMIdInitialized()) {
       SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
           getScmSecurityClientWithMaxRetry(configuration, getCurrentUser());
+      String scmCertSerialId = scmStorageConfig.getScmCertSerialId();
       scmCertificateClient = new SCMCertificateClient(
           securityConfig, scmSecurityClient, scmStorageConfig.getScmId(),
           scmStorageConfig.getClusterID(),
-          scmStorageConfig.getScmCertSerialId(),
+          scmCertSerialId,
           getScmAddress(scmHANodeDetails, configuration).getHostName());
+      sslIdentityStorage = new SSLIdentityStorage(securityConfig,
+          scmCertificateClient.getComponentName(), scmCertSerialId);
+      trustedCertStorage = new TrustedCertStorage(securityConfig, scmCertificateClient.getComponentName());
     }
   }
 
@@ -933,7 +939,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     securityProtocolServer = new SCMSecurityProtocolServer(conf,
         rootCertificateServer,
         scmCertificateServer,
-        scmCertificateClient,
+        trustedCertStorage,
         this,
         secretKeyManager);
 
@@ -955,15 +961,13 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     // and ratis server initialized with statemachine. We need to do only
     // for primary scm, for other bootstrapped scm's certificates will be
     // persisted via ratis.
-    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig,
-        SCMCertificateClient.COMPONENT_NAME, certSerial.toString());
     if (certificateStore.getCertificateByID(certSerial) == null) {
       LOG.info("Storing sub-ca certificate serialId {} on primary SCM",
           certSerial);
       certificateStore.storeValidScmCertificate(
           certSerial, sslIdentityStorage.getLeafCertificate());
     }
-    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, SCMCertificateClient.COMPONENT_NAME);
+    trustedCertStorage = new TrustedCertStorage(securityConfig, scmCertificateClient.getComponentName());
     X509Certificate rootCACert = trustedCertStorage.getLatestRootCaCert();
     if (certificateStore.getCertificateByID(rootCACert.getSerialNumber()) == null) {
       LOG.info("Storing root certificate serialId {}",

@@ -55,7 +55,7 @@ import org.apache.hadoop.hdds.security.exception.SCMSecretKeyException;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.symmetric.ManagedSecretKey;
 import org.apache.hadoop.hdds.security.symmetric.SecretKeyManager;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.utils.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmConfig;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
@@ -102,7 +102,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
   private final ProtocolMessageMetrics metrics;
   private final ProtocolMessageMetrics secretKeyMetrics;
   private final StorageContainerManager storageContainerManager;
-  private final CertificateClient scmCertificateClient;
+  private final TrustedCertStorage trustedCertStorage;
   private final OzoneConfiguration config;
   private final SequenceIdGenerator sequenceIdGen;
 
@@ -113,14 +113,14 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
   SCMSecurityProtocolServer(OzoneConfiguration conf,
       @Nullable CertificateServer rootCertificateServer,
       CertificateServer scmCertificateServer,
-      CertificateClient scmCertClient,
+      TrustedCertStorage trustedCertStorage,
       StorageContainerManager scm,
       @Nullable SecretKeyManager secretKeyManager)
       throws IOException {
     this.storageContainerManager = scm;
     this.rootCertificateServer = rootCertificateServer;
     this.scmCertificateServer = scmCertificateServer;
-    this.scmCertificateClient = scmCertClient;
+    this.trustedCertStorage = trustedCertStorage;
     this.config = conf;
     this.sequenceIdGen = scm.getSequenceIdGen();
     this.secretKeyManager = secretKeyManager;
@@ -256,7 +256,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
   public synchronized List<String> getAllRootCaCertificates()
       throws IOException {
     List<String> pemEncodedList = new ArrayList<>();
-    Set<X509Certificate> certList = scmCertificateClient.getAllRootCaCerts();
+    Set<X509Certificate> certList = trustedCertStorage.getLeafCertificates();
     for (X509Certificate cert : certList) {
       pemEncodedList.add(getPEMEncodedString(cert));
     }
@@ -330,8 +330,8 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
   /**
    * Request certificate for the specified role.
    *
-   * @param certSignReq - Certificate signing request.
-   * @param nodeType    - role OM/SCM/DATANODE
+   * @param csr      - Certificate signing request.
+   * @param nodeType - role OM/SCM/DATANODE
    * @return String         - SCM signed pem encoded certificate.
    * @throws IOException
    */
@@ -464,8 +464,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
       }
     }
 
-    return CertificateCodec.getPEMEncodedString(
-        scmCertificateClient.getCACertificate());
+    return CertificateCodec.getPEMEncodedString(trustedCertStorage.getLatestRootCaCert());
   }
 
   @Override

@@ -1128,7 +1128,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     // Schedule task to refresh certificate before it expires
     Duration gracePeriod = securityConfig.getRenewalGracePeriod();
     long timeBeforeGracePeriod =
-        timeBeforeExpiryGracePeriod(firstCertificateFrom(getCertPath())).toMillis();
+        timeBeforeExpiryGracePeriod(getCertificate()).toMillis();
     // At least three chances to renew the certificate before it expires
     long interval =
         Math.min(gracePeriod.toMillis() / 3, TimeUnit.DAYS.toMillis(1));

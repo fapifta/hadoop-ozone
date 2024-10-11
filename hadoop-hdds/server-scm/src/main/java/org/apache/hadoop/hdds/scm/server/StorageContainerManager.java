@@ -995,6 +995,9 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     return trustedCertStorage;
   }
 
+  public SSLIdentityStorage getSslIdentityStorage() {
+    return sslIdentityStorage;
+  }
 
   public Clock getSystemClock() {
     return systemClock;

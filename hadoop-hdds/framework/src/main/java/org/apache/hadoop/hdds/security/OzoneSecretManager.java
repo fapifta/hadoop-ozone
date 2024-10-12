@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.annotation.InterfaceStability;
 import org.apache.hadoop.hdds.security.exception.OzoneSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateNotification;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.SecretManager;
@@ -192,12 +193,14 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
     if (!newCertId.equals(
         certClient.getCertificate().getSerialNumber().toString())) {
       logger.info("New certificate Id doesn't match. Holding in caClient {}," +
-          " newCertId {}", newCertId,
+              " newCertId {}", newCertId,
           certClient.getCertificate().getSerialNumber().toString());
     }
     logger.info("Certificate is changed from {} to {}", oldCertId, newCertId);
-    updateCurrentKey(new KeyPair(certClient.getPublicKey(),
-        certClient.getPrivateKey()), certClient.getCertificate());
+    SSLIdentityStorage sslIdentityStorage =
+        new SSLIdentityStorage(securityConfig, certClient.getComponentName(), newCertId);
+    updateCurrentKey(new KeyPair(certClient.getPublicKey(), certClient.getPrivateKey()),
+        sslIdentityStorage.getLeafCertificate());
   }
 
   public String formatTokenId(T id) {

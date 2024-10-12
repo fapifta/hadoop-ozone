@@ -164,8 +164,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       if (securityConfig.isAutoCARotationEnabled()) {
         startRootCaRotationPoller();
       }
-      List<CertPath> certPaths = sslIdentityStorage.getCertificates();
-      if (certPaths != null && !certPaths.isEmpty() && executorService == null) {
+      List<CertPath> certPaths = sslIdentityStorage.getCertPaths();
+      if (!certPaths.isEmpty() && executorService == null) {
         startCertificateRenewerService();
       } else {
         if (executorService != null) {
@@ -271,11 +271,11 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       //This has a side effect of filling up the certificate maps that's needed for now
       loadAllCertificates();
     }
-    if (sslIdentityStorage.getCertificates() == null || sslIdentityStorage.getCertificates().isEmpty()) {
+    if (sslIdentityStorage.getCertPaths().isEmpty()) {
       getLogger().info("No certificates found for certificate client with certificate id: {}", certSerialId);
       return null;
     }
-    return sslIdentityStorage.getCertificates().get(0);
+    return sslIdentityStorage.getCertPaths().get(0);
   }
 
   /**

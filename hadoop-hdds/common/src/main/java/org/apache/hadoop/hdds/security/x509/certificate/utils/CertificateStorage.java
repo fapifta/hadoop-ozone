@@ -22,13 +22,21 @@ package org.apache.hadoop.hdds.security.x509.certificate.utils;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 
@@ -47,7 +55,45 @@ public abstract class CertificateStorage {
     certificateCodec = new CertificateCodec(securityConfig, componentName);
   }
 
-  public abstract List<CertPath> getCertificates();
+  public final List<CertPath> getCertPaths() {
+    Path certificateLocation = getSecurityConfig().getCertificateLocation(getComponentName());
+    if (!certificateLocation.toFile().exists()) {
+      getLogger().error("CertificateLocation: {} doesn't exist", certificateLocation);
+      return new ArrayList<>();
+    }
+    try (Stream<Path> certFiles = Files.list(certificateLocation)) {
+      return certFiles
+          .filter(Files::isRegularFile)
+          .map(this::readCertFile)
+          .filter(getCertificateFilter())
+          .collect(Collectors.toList());
+    } catch (IOException e) {
+      getLogger().error("Error while reading certificates from path: {}", certificateLocation, e);
+      return new ArrayList<>();
+    }
+  }
+
+  public final KeyStore getKeyStore() throws IOException {
+    try {
+      KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+      keyStore.load(null, null);
+      getCertPaths().forEach(certPath -> insertCertsToKeystore(keyStore, certPath));
+      return keyStore;
+    } catch (KeyStoreException | IOException | CertificateException | NoSuchAlgorithmException e) {
+      throw new IOException("Error while creating keystore", e);
+    }
+  }
+
+  void insertCertsToKeystore(KeyStore keyStore, CertPath certPath) {
+    X509Certificate cert = (X509Certificate) certPath.getCertificates().get(0);
+    try {
+      keyStore.setCertificateEntry(cert.getSerialNumber().toString(), cert);
+    } catch (KeyStoreException e) {
+      getLogger().info("There was an error while creating the keystore.", e);
+    }
+  }
+
+  abstract Predicate<CertPath> getCertificateFilter();
 
   public SecurityConfig getSecurityConfig() {
     return securityConfig;
@@ -58,8 +104,8 @@ public abstract class CertificateStorage {
   }
 
   public abstract Logger getLogger();
-  
-  CertPath readCertFile(Path filePath) {
+
+  private CertPath readCertFile(Path filePath) {
     try {
       Path fileName;
       //do this to avoid the findbugs error about possible nullpointer dereference
@@ -85,10 +131,11 @@ public abstract class CertificateStorage {
   }
 
   public Set<X509Certificate> getLeafCertificates() {
-    if (getCertificates() == null) {
-      return null;
+    if (getCertPaths().isEmpty()) {
+      getLogger().info("Leaf certificates are empty");
+      return new HashSet<>();
     }
-    return getCertificates().stream()
+    return getCertPaths().stream()
         .map(certPath -> (X509Certificate) certPath.getCertificates().get(0))
         .collect(Collectors.toSet());
   }

@@ -363,7 +363,7 @@ final class TestSecureOzoneCluster {
     SSLIdentityStorage sslIdentityStorage =
         new SSLIdentityStorage(scmCertificateClient.getSecurityConfig(), scmCertificateClient.getComponentName(),
             scmCertificateClient.getCertSerialId());
-    assertEquals(2, sslIdentityStorage.getCertificates().get(0).getCertificates().size());
+    assertEquals(2, sslIdentityStorage.getCertPaths().get(0).getCertificates().size());
   }
 
   @Test
@@ -934,7 +934,7 @@ final class TestSecureOzoneCluster {
       assertNotNull(sslIdentityStorage.getPrivateKey());
 
       assertNotNull(sslIdentityStorage.getLeafCertificate());
-      assertEquals(3, sslIdentityStorage.getCertificates().get(0).getCertificates().size());
+      assertEquals(3, sslIdentityStorage.getCertPaths().get(0).getCertificates().size());
       assertThat(omLogs.getOutput())
           .contains("Init response: GETCERT")
           .contains("Successfully stored OM signed certificate");

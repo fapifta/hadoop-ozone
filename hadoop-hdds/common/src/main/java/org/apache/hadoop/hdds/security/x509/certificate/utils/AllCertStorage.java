@@ -23,13 +23,8 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.cert.CertPath;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.function.Predicate;
 
 /**
  * Certificate storage for reading in all certificates.
@@ -47,19 +42,13 @@ public class AllCertStorage extends CertificateStorage {
     return LOG;
   }
 
+  /**
+   * Returns true for all certificates.
+   *
+   * @return true for all certificates
+   */
   @Override
-  public List<CertPath> getCertificates() {
-    Path certificateLocation = getSecurityConfig().getCertificateLocation(getComponentName());
-    if (!certificateLocation.toFile().exists()) {
-      return null;
-    }
-    try (Stream<Path> certFiles = Files.list(certificateLocation)) {
-      return certFiles
-          .filter(Files::isRegularFile)
-          .map(this::readCertFile)
-          .collect(Collectors.toList());
-    } catch (IOException e) {
-      return null;
-    }
+  public Predicate<CertPath> getCertificateFilter() {
+    return certPath -> true;
   }
 }

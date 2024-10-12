@@ -184,7 +184,7 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
       throws IOException {
     LOG.info("Received rotation committed command of root certificate {}", rootCertId);
     if (rotationManager.shouldSkipRootCert(rootCertId)) {
-      if (isLastCertSignedBy(sslIdentityStorage.getCertificates(), trustedCertStorage.getLatestRootCaCert())) {
+      if (isLastCertSignedBy(sslIdentityStorage.getCertPaths(), trustedCertStorage.getLatestRootCaCert())) {
         return;
       }
     }
@@ -208,7 +208,7 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
   }
 
   private boolean isLastCertSignedBy(List<CertPath> certPaths, X509Certificate signerCert) {
-    if (certPaths == null || certPaths.isEmpty()) {
+    if (certPaths.isEmpty()) {
       return false;
     }
     CertPath certPath = certPaths.get(0);

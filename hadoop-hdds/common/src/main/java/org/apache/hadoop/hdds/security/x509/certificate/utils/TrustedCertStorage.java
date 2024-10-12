@@ -23,20 +23,11 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertPath;
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.function.Predicate;
 
 /**
  * Certificate storage for reading in trusted certificates.
@@ -55,51 +46,27 @@ public class TrustedCertStorage extends CertificateStorage {
     return LOG;
   }
 
-  public KeyStore getKeyStore() throws IOException {
-    try {
-      KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-      keyStore.load(null, null);
-      getCertificates().forEach(certPath -> insertCertsToKeystore(keyStore, certPath));
-      return keyStore;
-    } catch (KeyStoreException | IOException | CertificateException | NoSuchAlgorithmException e) {
-      throw new IOException("Error while creating keystore", e);
-    }
-  }
-
-  private void insertCertsToKeystore(KeyStore keyStore, CertPath certPath) {
-    X509Certificate cert = (X509Certificate) certPath.getCertificates().get(0);
-    try {
-      keyStore.setCertificateEntry(cert.getSerialNumber().toString(), cert);
-    } catch (KeyStoreException ignored) {
-    }
-  }
-
+  /**
+   * Returns true for self-signed certificates.
+   *
+   * @return true if the certificate is self-signed, false otherwise
+   */
   @Override
-  public List<CertPath> getCertificates() {
-    Path certificateLocation = getSecurityConfig().getCertificateLocation(getComponentName());
-    if (!certificateLocation.toFile().exists()) {
-      throw new RuntimeException("Certificate location doesn't exist: " + certificateLocation);
-    }
-    try (Stream<Path> certFiles = Files.list(certificateLocation)) {
-      return certFiles
-          .filter(Files::isRegularFile)
-          .map(this::readCertFile)
-          .filter(certPath -> isSelfSignedCertificate((X509Certificate) certPath.getCertificates().get(0)))
-          .collect(Collectors.toList());
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+  public Predicate<CertPath> getCertificateFilter() {
+    return certPath -> isSelfSignedCertificate((X509Certificate) certPath.getCertificates().get(0));
   }
+
   public X509Certificate getLatestRootCaCert() {
     Set<X509Certificate> leafCertificates = getLeafCertificates();
-    if (leafCertificates == null) {
-      LOG.info("Failed to find any non null RootCACertificates");
+    if (leafCertificates.isEmpty()) {
+      LOG.error("Failed to find any non null RootCACertificates");
       return null;
     }
     return leafCertificates.stream()
         .max(Comparator.comparing(X509Certificate::getSerialNumber))
         .orElse(null);
   }
+
   private static boolean isSelfSignedCertificate(X509Certificate cert) {
     return cert.getIssuerX500Principal().equals(cert.getSubjectX500Principal());
   }

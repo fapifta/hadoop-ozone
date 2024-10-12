@@ -23,20 +23,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.CertPath;
-import java.security.cert.CertificateException;
+import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.function.Predicate;
 
 /**
  * Certificate storage implementation responsible for reading the certificate client's own certificate and keys.
@@ -54,47 +50,28 @@ public class SSLIdentityStorage extends CertificateStorage {
     this.certId = certId;
   }
 
-  public KeyStore getKeyStore() throws IOException {
-    try {
-      KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-      keyStore.load(null, null);
-      getCertificates().forEach(certPath -> insertCertsToKeystore(keyStore, certPath));
-      return keyStore;
-    } catch (KeyStoreException | IOException | CertificateException | NoSuchAlgorithmException e) {
-      throw new IOException("Error while creating keystore", e);
-    }
-  }
-
-  private void insertCertsToKeystore(KeyStore keyStore, CertPath certPath) {
+  @Override
+  void insertCertsToKeystore(KeyStore keyStore, CertPath certPath) {
     try {
       PrivateKey privateKey = getPrivateKey();
-      List<X509Certificate> certsFromPath =
-          certPath.getCertificates().stream()
-              .map(certificate -> (X509Certificate) certificate)
-              .collect(Collectors.toList());
-      keyStore.setKeyEntry(certsFromPath.get(0).getSerialNumber().toString(),
-          privateKey, "".toCharArray(), certsFromPath.toArray(new X509Certificate[0]));
+      keyStore.setKeyEntry(((X509Certificate) certPath.getCertificates().get(0)).getSerialNumber().toString(),
+          privateKey, "".toCharArray(), certPath.getCertificates().toArray(new Certificate[0]));
     } catch (KeyStoreException | InvalidKeySpecException | NoSuchAlgorithmException | IOException ignored) {
     }
   }
 
   public X509Certificate getLeafCertificate() {
-    return (X509Certificate) getCertificates().get(0).getCertificates().get(0);
+    return (X509Certificate) getCertPaths().get(0).getCertificates().get(0);
   }
 
+  /**
+   * Return only the certificate path that has the same id at the leaf certificate as the known certId.
+   *
+   * @return True if the Certificate path leaf certificate has the same id as the known certId, false otherwise
+   */
   @Override
-  public List<CertPath> getCertificates() {
-    Path certificateLocation = getSecurityConfig().getCertificateLocation(getComponentName());
-    try (Stream<Path> certFiles = Files.list(certificateLocation)) {
-      return certFiles
-          .filter(Files::isRegularFile)
-          .map(this::readCertFile)
-          .filter(certPath -> isLeafCertIdEqual(certPath, certId))
-          .collect(Collectors.toList());
-    } catch (IOException e) {
-      getLogger().error("No certificates found at location: {}", certificateLocation, e);
-      return null;
-    }
+  public Predicate<CertPath> getCertificateFilter() {
+    return certPath -> isLeafCertIdEqual(certPath, certId);
   }
 
   public PublicKey getPublicKey() throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {

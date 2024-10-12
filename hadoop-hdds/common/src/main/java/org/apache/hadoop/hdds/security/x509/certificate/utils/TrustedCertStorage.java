@@ -20,7 +20,6 @@
 package org.apache.hadoop.hdds.security.x509.certificate.utils;
 
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,7 +83,6 @@ public class TrustedCertStorage extends CertificateStorage {
     try (Stream<Path> certFiles = Files.list(certificateLocation)) {
       return certFiles
           .filter(Files::isRegularFile)
-          .filter(this::isCaCertPath)
           .map(this::readCertFile)
           .filter(certPath -> isSelfSignedCertificate((X509Certificate) certPath.getCertificates().get(0)))
           .collect(Collectors.toList());
@@ -92,7 +90,6 @@ public class TrustedCertStorage extends CertificateStorage {
       throw new RuntimeException(e);
     }
   }
-
   public X509Certificate getLatestRootCaCert() {
     Set<X509Certificate> leafCertificates = getLeafCertificates();
     if (leafCertificates == null) {
@@ -103,12 +100,6 @@ public class TrustedCertStorage extends CertificateStorage {
         .max(Comparator.comparing(X509Certificate::getSerialNumber))
         .orElse(null);
   }
-
-  private boolean isCaCertPath(Path path) {
-    return path.getFileName().toString().startsWith(CAType.ROOT.getFileNamePrefix()) ||
-        path.getFileName().toString().startsWith(CAType.SUBORDINATE.getFileNamePrefix());
-  }
-
   private static boolean isSelfSignedCertificate(X509Certificate cert) {
     return cert.getIssuerX500Principal().equals(cert.getSubjectX500Principal());
   }

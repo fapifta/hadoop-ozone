@@ -39,6 +39,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.Defaul
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
@@ -96,6 +97,7 @@ public class RootCARotationManager extends StatefulService {
   private final Duration rootCertPollInterval;
   private final SCMCertificateClient scmCertClient;
   private final TrustedCertStorage trustedCertStorage;
+  private final SSLIdentityStorage sslIdentityStorage;
   private final AtomicBoolean isRunning = new AtomicBoolean(false);
   private final AtomicBoolean isProcessing = new AtomicBoolean(false);
   private final AtomicReference<Long> processStartTime =
@@ -147,6 +149,7 @@ public class RootCARotationManager extends StatefulService {
     this.secConf = new SecurityConfig(ozoneConf);
     this.scmContext = scm.getScmContext();
     this.trustedCertStorage = scm.getTrustedCertStorage();
+    this.sslIdentityStorage = scm.getSslIdentityStorage();
 
     checkInterval = secConf.getCaCheckInterval();
     ackTimeout = secConf.getCaAckTimeout();
@@ -533,8 +536,7 @@ public class RootCARotationManager extends StatefulService {
 
           if (shouldSkipRootCert(rootCACertId)) {
             // Send ack to rotationPrepare request
-            sendRotationPrepareAck(rootCACertId,
-                scmCertClient.getCertificate().getSerialNumber().toString());
+            sendRotationPrepareAck(rootCACertId, sslIdentityStorage.getLeafCertificate().getSerialNumber().toString());
             return;
           }
 

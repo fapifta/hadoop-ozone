@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.annotation.InterfaceStability;
 import org.apache.hadoop.hdds.security.exception.OzoneSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateNotification;
+import org.apache.hadoop.hdds.security.x509.certificate.client.DefaultCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
@@ -186,16 +187,6 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
 
   public void notifyCertificateRenewed(CertificateClient client,
       String oldCertId, String newCertId) {
-    if (!oldCertId.equals(getCertSerialId())) {
-      logger.info("Old certificate Id doesn't match. Holding {}, oldCertId {}",
-          getCertSerialId(), oldCertId);
-    }
-    if (!newCertId.equals(
-        certClient.getCertificate().getSerialNumber().toString())) {
-      logger.info("New certificate Id doesn't match. Holding in caClient {}," +
-              " newCertId {}", newCertId,
-          certClient.getCertificate().getSerialNumber().toString());
-    }
     logger.info("Certificate is changed from {} to {}", oldCertId, newCertId);
     SSLIdentityStorage sslIdentityStorage =
         new SSLIdentityStorage(securityConfig, certClient.getComponentName(), newCertId);
@@ -217,8 +208,10 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
       throws IOException {
     Preconditions.checkState(!isRunning());
     setCertClient(client);
+    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, certClient.getComponentName(),
+        ((DefaultCertificateClient) certClient).getCertSerialId());
     updateCurrentKey(new KeyPair(certClient.getPublicKey(),
-        certClient.getPrivateKey()), certClient.getCertificate());
+        certClient.getPrivateKey()), sslIdentityStorage.getLeafCertificate());
     client.registerNotificationReceiver(this);
     setIsRunning(true);
   }

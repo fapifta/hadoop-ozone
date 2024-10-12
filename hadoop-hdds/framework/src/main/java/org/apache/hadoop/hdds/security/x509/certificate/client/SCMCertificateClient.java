@@ -216,7 +216,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
           storeCertificate(
               CertificateCodec.getPEMEncodedString(cert), CAType.SUBORDINATE);
         }
-        String scmCertId = getCertificate().getSerialNumber().toString();
+        String scmCertId = getCertSerialId();
         notifyNotificationReceivers(scmCertId, scmCertId);
       } catch (IOException e) {
         LOG.error("Failed to refresh CA certificates", e);

@@ -264,13 +264,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     return firstCertificateFrom(currentCertPath);
   }
 
-  /**
-   * Returns the default certificate of given client if it exists.
-   *
-   * @return certificate or Null if there is no data.
-   */
-  @Override
-  public synchronized CertPath getCertPath() {
+  private synchronized CertPath getCertPath() {
     if (sslIdentityStorage == null) {
       getLogger().info("SSLIdentityStorage not yet initialized, reiniting with certId: {}", certSerialId);
       sslIdentityStorage = new SSLIdentityStorage(securityConfig, component, certSerialId);
@@ -1106,6 +1100,12 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   public SCMSecurityProtocolClientSideTranslatorPB getScmSecureClient() {
     return scmSecurityClient;
   }
+
+  @VisibleForTesting
+  public String getCertSerialId() {
+    return certSerialId;
+  }
+
 
   protected boolean shouldStartCertificateRenewerService() {
     return true;

@@ -75,6 +75,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateCli
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
@@ -358,7 +359,11 @@ final class TestSecureOzoneCluster {
     ScmInfo scmInfo = scm.getClientProtocolServer().getScmInfo();
     assertEquals(clusterId, scmInfo.getClusterId());
     assertEquals(scmId, scmInfo.getScmId());
-    assertEquals(2, scm.getScmCertificateClient().getCertPath().getCertificates().size());
+    SCMCertificateClient scmCertificateClient = (SCMCertificateClient) scm.getScmCertificateClient();
+    SSLIdentityStorage sslIdentityStorage =
+        new SSLIdentityStorage(scmCertificateClient.getSecurityConfig(), scmCertificateClient.getComponentName(),
+            scmCertificateClient.getCertSerialId());
+    assertEquals(2, sslIdentityStorage.getCertificates().get(0).getCertificates().size());
   }
 
   @Test
@@ -921,16 +926,19 @@ final class TestSecureOzoneCluster {
       initializeOmStorage(omStore);
       OzoneManager.setTestSecureOmFlag(true);
       om = OzoneManager.createOm(conf);
+      CertificateClient omCertClient = om.getCertificateClient();
+      assertNotNull(omCertClient);
+      SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(new SecurityConfig(conf),
+          omCertClient.getComponentName(), ((DefaultCertificateClient) omCertClient).getCertSerialId());
+      assertNotNull(sslIdentityStorage.getPublicKey());
+      assertNotNull(sslIdentityStorage.getPrivateKey());
 
-      assertNotNull(om.getCertificateClient());
-      assertNotNull(om.getCertificateClient().getPublicKey());
-      assertNotNull(om.getCertificateClient().getPrivateKey());
-      assertNotNull(om.getCertificateClient().getCertificate());
-      assertEquals(3, om.getCertificateClient().getCertPath().getCertificates().size());
+      assertNotNull(sslIdentityStorage.getLeafCertificate());
+      assertEquals(3, sslIdentityStorage.getCertificates().get(0).getCertificates().size());
       assertThat(omLogs.getOutput())
           .contains("Init response: GETCERT")
           .contains("Successfully stored OM signed certificate");
-      X509Certificate certificate = om.getCertificateClient().getCertificate();
+      X509Certificate certificate = omCertClient.getCertificate();
       validateCertificate(certificate);
       String pemEncodedCACert =
           scm.getSecurityProtocolServer().getRootCACertificate();

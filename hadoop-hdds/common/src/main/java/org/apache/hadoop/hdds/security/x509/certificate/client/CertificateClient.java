@@ -30,7 +30,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Objects;
@@ -75,14 +74,6 @@ public interface CertificateClient extends Closeable {
    * @return the target certificate or null if there is no data.
    */
   X509Certificate getCertificate();
-
-  /**
-   * Returns the full certificate path of the specified component if it
-   * exists on the local system.
-   *
-   * @return certificate or Null if there is no data.
-   */
-  CertPath getCertPath();
 
   /**
    * Return the root ca certs saved in this client's file system.

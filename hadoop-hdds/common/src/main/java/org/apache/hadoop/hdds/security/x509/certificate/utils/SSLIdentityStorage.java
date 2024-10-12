@@ -67,7 +67,7 @@ public class SSLIdentityStorage extends CertificateStorage {
 
   private void insertCertsToKeystore(KeyStore keyStore, CertPath certPath) {
     try {
-      PrivateKey privateKey = readPrivateKey();
+      PrivateKey privateKey = getPrivateKey();
       List<X509Certificate> certsFromPath =
           certPath.getCertificates().stream()
               .map(certificate -> (X509Certificate) certificate)
@@ -97,11 +97,11 @@ public class SSLIdentityStorage extends CertificateStorage {
     }
   }
 
-  public PublicKey readPublicKey() throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {
+  public PublicKey getPublicKey() throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {
     return keyCodec.readPublicKey();
   }
 
-  public PrivateKey readPrivateKey() throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {
+  public PrivateKey getPrivateKey() throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {
     return keyCodec.readPrivateKey();
   }
 

@@ -191,7 +191,6 @@ public class CertificateClientTestImpl implements CertificateClient {
     return keyPair.getPublic();
   }
 
-  @Override
   public CertPath getCertPath() {
     CertPath resultPath = null;
     try {

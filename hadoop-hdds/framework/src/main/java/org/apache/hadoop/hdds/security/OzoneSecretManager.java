@@ -188,7 +188,7 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
       String oldCertId, String newCertId) {
     logger.info("Certificate is changed from {} to {}", oldCertId, newCertId);
     SSLIdentityStorage sslIdentityStorage =
-        new SSLIdentityStorage(securityConfig, certClient.getComponentName(), newCertId);
+        new SSLIdentityStorage(certClient.getSecurityConfig(), certClient.getComponentName(), newCertId);
     updateCurrentKey(new KeyPair(certClient.getPublicKey(), certClient.getPrivateKey()),
         sslIdentityStorage.getLeafCertificate());
   }
@@ -207,7 +207,8 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
       throws IOException {
     Preconditions.checkState(!isRunning());
     setCertClient(client);
-    X509Certificate leafCertificate = new SSLIdentityStorage(securityConfig, certClient.getComponentName(),
+    X509Certificate leafCertificate = new SSLIdentityStorage(
+        certClient.getSecurityConfig(), certClient.getComponentName(),
         certClient.getCertSerialId()).getLeafCertificate();
     updateCurrentKey(new KeyPair(certClient.getPublicKey(),
         certClient.getPrivateKey()), leafCertificate);

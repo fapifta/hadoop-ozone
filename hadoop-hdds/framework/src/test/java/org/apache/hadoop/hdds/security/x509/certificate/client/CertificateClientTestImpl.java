@@ -167,6 +167,8 @@ public class CertificateClientTestImpl implements CertificateClient {
       Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
           getKeyStoreForSSLIdentity(getPrivateKey(), getCertPath()));
     } else {
+      FileUtils.deleteDirectory(securityConfig.getKeyLocation(getComponentName()).toFile());
+      FileUtils.deleteDirectory(securityConfig.getCertificateLocation(getComponentName()).toFile());
       sslIdentityStorage = new SSLIdentityStorage(securityConfig, getComponentName(),
           x509Certificate.getSerialNumber().toString());
       sslIdentityStorage.storeKeyPair(keyPair);
@@ -254,6 +256,11 @@ public class CertificateClientTestImpl implements CertificateClient {
   @Override
   public String getComponentName() {
     return this.getClass().getSimpleName();
+  }
+
+  @Override
+  public SecurityConfig getSecurityConfig() {
+    return securityConfig;
   }
 
   public X509Certificate getRootCACertificate() {

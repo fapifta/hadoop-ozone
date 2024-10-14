@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hdds.security.x509.certificate.client;
 
+import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.OzoneSecurityException;
 import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
 import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
@@ -47,9 +48,12 @@ public interface CertificateClient extends Closeable {
 
   /**
    * Return component name of this certificate client.
+   *
    * @return component name
    */
   String getComponentName();
+
+  SecurityConfig getSecurityConfig();
 
   /**
    * Returns the private key of the specified component if it exists on the

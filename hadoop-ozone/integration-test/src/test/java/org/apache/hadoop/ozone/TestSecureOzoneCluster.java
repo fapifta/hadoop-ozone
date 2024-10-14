@@ -928,8 +928,8 @@ final class TestSecureOzoneCluster {
       om = OzoneManager.createOm(conf);
       CertificateClient omCertClient = om.getCertificateClient();
       assertNotNull(omCertClient);
-      SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(new SecurityConfig(conf),
-          omCertClient.getComponentName(), ((DefaultCertificateClient) omCertClient).getCertSerialId());
+      SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(omCertClient.getSecurityConfig(),
+          omCertClient.getComponentName(), omCertClient.getCertSerialId());
       assertNotNull(sslIdentityStorage.getPublicKey());
       assertNotNull(sslIdentityStorage.getPrivateKey());
 

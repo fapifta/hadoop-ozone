@@ -57,6 +57,7 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_COMMAND_STATUS_REPORT_INTERVAL;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
+import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -95,7 +96,7 @@ public class TestContainerStateMachineFlushDelay {
         .getTempPath(TestContainerStateMachineFlushDelay.class.getSimpleName());
     File baseDir = new File(path);
     baseDir.mkdirs();
-
+    conf.set(OZONE_METADATA_DIRS, path);
     conf.setBoolean(HDDS_BLOCK_TOKEN_ENABLED, true);
     //  conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
     conf.setTimeDuration(HDDS_CONTAINER_REPORT_INTERVAL, 200,

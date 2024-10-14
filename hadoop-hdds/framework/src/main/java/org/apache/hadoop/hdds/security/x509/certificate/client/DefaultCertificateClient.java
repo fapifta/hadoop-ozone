@@ -377,13 +377,11 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       CAType caType) throws CertificateException {
     CertificateCodec certificateCodec = new CertificateCodec(securityConfig,
         component);
-    storeCertificate(pemEncodedCert, caType,
-        certificateCodec, true, false);
+    storeCertificate(pemEncodedCert, caType, certificateCodec);
   }
 
   public synchronized void storeCertificate(String pemEncodedCert,
-      CAType caType, CertificateCodec codec, boolean addToCertMap,
-      boolean updateCA) throws CertificateException {
+      CAType caType, CertificateCodec codec) throws CertificateException {
     try {
       CertPath certificatePath =
           CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
@@ -598,7 +596,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       break;
     case GETCERT:
       Path certLocation = securityConfig.getCertificateLocation(getComponentName());
-      String certId = signAndStoreCertificate(configureCSRBuilder().build(), certLocation, true);
+      String certId = signAndStoreCertificate(configureCSRBuilder().build(), certLocation);
       if (certIdSaveCallback != null) {
         certIdSaveCallback.accept(certId);
       } else {
@@ -893,7 +891,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       CertificateSignRequest.Builder csrBuilder = configureCSRBuilder();
       csrBuilder.setKey(newKeyPair);
       newCertSerialId = signAndStoreCertificate(csrBuilder.build(),
-          Paths.get(newCertPath), true);
+          Paths.get(newCertPath));
     } catch (Exception e) {
       throw new CertificateException("Error while signing and storing new" +
           " certificates.", e, RENEW_ERROR);
@@ -1057,7 +1055,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   protected abstract SCMGetCertResponseProto sign(CertificateSignRequest request) throws IOException;
 
-  protected String signAndStoreCertificate(CertificateSignRequest csr, Path certificatePath, boolean renew)
+  protected String signAndStoreCertificate(CertificateSignRequest csr, Path certificatePath)
       throws CertificateException {
     try {
       SCMGetCertResponseProto response = sign(csr);
@@ -1068,12 +1066,10 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         CertificateCodec certCodec = new CertificateCodec(
             getSecurityConfig(), certificatePath);
         // Certs will be added to cert map after reloadAllCertificate called
-        storeCertificate(pemEncodedCert, CAType.NONE,
-            certCodec, false, !renew);
-        storeCertificate(response.getX509CACertificate(),
-            CAType.SUBORDINATE, certCodec, false, !renew);
+        storeCertificate(pemEncodedCert, CAType.NONE, certCodec);
+        storeCertificate(response.getX509CACertificate(), CAType.SUBORDINATE, certCodec);
 
-        getAndStoreAllRootCAs(certCodec, renew);
+        getAndStoreAllRootCAs(certCodec);
         // Return the default certificate ID
         return updateCertSerialId(CertificateCodec
             .getX509Certificate(pemEncodedCert).getSerialNumber().toString());
@@ -1089,12 +1085,11 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     }
   }
 
-  private void getAndStoreAllRootCAs(CertificateCodec certCodec, boolean renew)
+  private void getAndStoreAllRootCAs(CertificateCodec certCodec)
       throws IOException {
     List<String> rootCAPems = scmSecurityClient.getAllRootCaCertificates();
     for (String rootCAPem : rootCAPems) {
-      storeCertificate(rootCAPem, CAType.ROOT, certCodec,
-          false, !renew);
+      storeCertificate(rootCAPem, CAType.ROOT, certCodec);
     }
   }
 

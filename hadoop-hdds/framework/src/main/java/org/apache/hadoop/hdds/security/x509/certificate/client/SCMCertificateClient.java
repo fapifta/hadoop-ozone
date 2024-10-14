@@ -129,7 +129,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
   }
 
   @Override
-  public String signAndStoreCertificate(CertificateSignRequest csr, Path certPath, boolean renew) {
+  public String signAndStoreCertificate(CertificateSignRequest csr, Path certPath) {
     try {
       HddsProtos.ScmNodeDetailsProto scmNodeDetailsProto =
           HddsProtos.ScmNodeDetailsProto.newBuilder()
@@ -148,10 +148,8 @@ public class SCMCertificateClient extends DefaultCertificateClient {
       // Store SCM sub CA and root CA certificate.
       if (response.hasX509CACertificate()) {
         String pemEncodedRootCert = response.getX509CACertificate();
-        storeCertificate(pemEncodedRootCert,
-            CAType.SUBORDINATE, certCodec, false, !renew);
-        storeCertificate(pemEncodedCert, CAType.NONE, certCodec,
-            false, !renew);
+        storeCertificate(pemEncodedRootCert, CAType.SUBORDINATE, certCodec);
+        storeCertificate(pemEncodedCert, CAType.NONE, certCodec);
         //note: this does exactly the same as store certificate
         certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
             getSecurityConfig().getCertificateFileName(), pemEncodedCert);

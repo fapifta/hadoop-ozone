@@ -594,8 +594,8 @@ public class RootCARotationManager extends StatefulService {
             csrBuilder.setKey(newKeyPair);
             newCertSerialId = scmCertClient.signAndStoreCertificate(
                 csrBuilder.build(),
-                Paths.get(newSubCAProgressPath, HDDS_X509_DIR_NAME_DEFAULT),
-                true);
+                Paths.get(newSubCAProgressPath, HDDS_X509_DIR_NAME_DEFAULT)
+            );
             LOG.info("SubCARotationPrepareTask[rootCertId = {}] - " +
                 "scm certificate {} signed.", rootCACertId, newCertSerialId);
           } catch (Exception e) {

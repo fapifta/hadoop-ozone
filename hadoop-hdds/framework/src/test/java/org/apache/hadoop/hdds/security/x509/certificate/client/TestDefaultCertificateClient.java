@@ -516,9 +516,7 @@ public class TestDefaultCertificateClient {
         "CN=OzoneMaster", keyPair, 30, "SHA256withRSA");
     certCodec = new CertificateCodec(dnSecurityConfig,
         newCertDir.toPath());
-    dnCertClient.storeCertificate(getPEMEncodedString(cert),
-        CAType.NONE,
-        certCodec, false, false);
+    dnCertClient.storeCertificate(getPEMEncodedString(cert), CAType.NONE, certCodec);
     // a success renew after auto cleanup new key and cert dir
     dnCertClient.renewAndStoreKeyAndCertificate(true);
   }
@@ -561,7 +559,7 @@ public class TestDefaultCertificateClient {
       }
 
       @Override
-      protected String signAndStoreCertificate(CertificateSignRequest request, Path certificatePath, boolean renew) {
+      protected String signAndStoreCertificate(CertificateSignRequest request, Path certificatePath) {
         return null;
       }
     };

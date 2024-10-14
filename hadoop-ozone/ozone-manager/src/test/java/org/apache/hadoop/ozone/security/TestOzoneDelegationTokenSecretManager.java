@@ -156,7 +156,7 @@ public class TestOzoneDelegationTokenSecretManager {
     CertPath certPath = fact.generateCertPath(ImmutableList.of(singleCert));
 
     OMStorage omStorage = mock(OMStorage.class);
-    when(omStorage.getOmCertSerialId()).thenReturn(null);
+    when(omStorage.getOmCertSerialId()).thenReturn(singleCert.getSerialNumber().toString());
     when(omStorage.getClusterID()).thenReturn("test");
     when(omStorage.getOmId()).thenReturn(UUID.randomUUID().toString());
     OMCertificateClient omCertificateClient = new OMCertificateClient(

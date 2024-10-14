@@ -1099,7 +1099,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     return scmSecurityClient;
   }
 
-  @VisibleForTesting
   public String getCertSerialId() {
     return certSerialId;
   }

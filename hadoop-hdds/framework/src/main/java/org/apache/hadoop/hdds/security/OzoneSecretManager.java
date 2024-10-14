@@ -23,7 +23,6 @@ import org.apache.hadoop.hdds.annotation.InterfaceStability;
 import org.apache.hadoop.hdds.security.exception.OzoneSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateNotification;
-import org.apache.hadoop.hdds.security.x509.certificate.client.DefaultCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
@@ -208,10 +207,10 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
       throws IOException {
     Preconditions.checkState(!isRunning());
     setCertClient(client);
-    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, certClient.getComponentName(),
-        ((DefaultCertificateClient) certClient).getCertSerialId());
+    X509Certificate leafCertificate = new SSLIdentityStorage(securityConfig, certClient.getComponentName(),
+        certClient.getCertSerialId()).getLeafCertificate();
     updateCurrentKey(new KeyPair(certClient.getPublicKey(),
-        certClient.getPrivateKey()), sslIdentityStorage.getLeafCertificate());
+        certClient.getPrivateKey()), leafCertificate);
     client.registerNotificationReceiver(this);
     setIsRunning(true);
   }

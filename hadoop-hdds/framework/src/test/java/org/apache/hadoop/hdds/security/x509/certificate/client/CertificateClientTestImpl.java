@@ -49,6 +49,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.SecurityConfig;
@@ -69,6 +71,7 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_DEFAULT_DURATION;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_DEFAULT_DURATION_DEFAULT;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_MAX_DURATION;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_MAX_DURATION_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CRYPTO_SIGNATURE_VERIFICATION_ERROR;
 
 /**
@@ -79,6 +82,7 @@ import static org.apache.hadoop.hdds.security.x509.exception.CertificateExceptio
 public class CertificateClientTestImpl implements CertificateClient {
 
   private final SecurityConfig securityConfig;
+  private final ConfigurationSource configurationSource;
   private KeyPair keyPair;
   private X509Certificate x509Certificate;
   private KeyPair rootKeyPair;
@@ -102,6 +106,7 @@ public class CertificateClientTestImpl implements CertificateClient {
 
   public CertificateClientTestImpl(OzoneConfiguration conf, boolean autoRenew)
       throws Exception {
+    this.configurationSource = conf;
     certificateMap = new ConcurrentHashMap<>();
     securityConfig = new SecurityConfig(conf);
     rootCerts = new HashSet<>();
@@ -156,11 +161,17 @@ public class CertificateClientTestImpl implements CertificateClient {
 
     certificateStorage = Mockito.mock(TrustedCertStorage.class);
     Mockito.when(certificateStorage.getKeyStore()).thenReturn(getKeyStoreForTrustedCertificates(getAllRootCaCerts()));
-    sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
-    Mockito.when(sslIdentityStorage.getComponentName()).thenReturn(getComponentName());
-    Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
-        getKeyStoreForSSLIdentity(getPrivateKey(), getCertPath()));
-
+    if (conf.get(OZONE_METADATA_DIRS) == null) {
+      sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
+      Mockito.when(sslIdentityStorage.getComponentName()).thenReturn(getComponentName());
+      Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
+          getKeyStoreForSSLIdentity(getPrivateKey(), getCertPath()));
+    } else {
+      sslIdentityStorage = new SSLIdentityStorage(securityConfig, getComponentName(),
+          x509Certificate.getSerialNumber().toString());
+      sslIdentityStorage.storeKeyPair(keyPair);
+      sslIdentityStorage.storeCertificate(x509Certificate);
+    }
 
     notificationReceivers = new HashSet<>();
 
@@ -207,6 +218,11 @@ public class CertificateClientTestImpl implements CertificateClient {
   @Override
   public X509Certificate getCertificate() {
     return x509Certificate;
+  }
+
+  @Override
+  public String getCertSerialId() {
+    return x509Certificate.getSerialNumber().toString();
   }
 
   @Override
@@ -296,10 +312,19 @@ public class CertificateClientTestImpl implements CertificateClient {
     x509Certificate = newX509Certificate;
     certificateMap.put(x509Certificate.getSerialNumber().toString(),
         x509Certificate);
-
+    if (configurationSource.get(OZONE_METADATA_DIRS) == null) {
+      Mockito.when(certificateStorage.getKeyStore()).thenReturn(getKeyStoreForTrustedCertificates(getAllRootCaCerts()));
+      Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
+          getKeyStoreForSSLIdentity(getPrivateKey(), getCertPath()));
+    } else {
+      FileUtils.deleteDirectory(securityConfig.getKeyLocation(getComponentName()).toFile());
+      FileUtils.deleteDirectory(securityConfig.getCertificateLocation(getComponentName()).toFile());
+      sslIdentityStorage = new SSLIdentityStorage(securityConfig, getComponentName(),
+          x509Certificate.getSerialNumber().toString());
+      sslIdentityStorage.storeKeyPair(keyPair);
+      sslIdentityStorage.storeCertificate(x509Certificate);
+    }
     Mockito.when(certificateStorage.getKeyStore()).thenReturn(getKeyStoreForTrustedCertificates(getAllRootCaCerts()));
-    Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
-        getKeyStoreForSSLIdentity(getPrivateKey(), getCertPath()));
     // notify notification receivers
     notificationReceivers.forEach(r -> r.notifyCertificateRenewed(this,
         oldCert.getSerialNumber().toString(),

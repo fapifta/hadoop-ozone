@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -93,5 +94,9 @@ public class SSLIdentityStorage extends CertificateStorage {
 
   public void setCertId(String certId) {
     this.certId = certId;
+  }
+
+  public void storeKeyPair(KeyPair keyPair) throws IOException {
+    keyCodec.writeKey(keyPair);
   }
 }

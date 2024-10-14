@@ -75,6 +75,8 @@ public interface CertificateClient extends Closeable {
    */
   X509Certificate getCertificate();
 
+  String getCertSerialId();
+
   /**
    * Return the root ca certs saved in this client's file system.
    *

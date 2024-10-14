@@ -193,7 +193,7 @@ public class RootCARotationManager extends StatefulService {
           waitAckTask.cancel(true);
         }
         if (waitAckTimeoutTask != null) {
-          waitAckTask.cancel(true);
+          waitAckTimeoutTask.cancel(true);
         }
         if (clearPostProcessingTask != null) {
           clearPostProcessingTask.cancel(true);

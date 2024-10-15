@@ -597,6 +597,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     case GETCERT:
       Path certLocation = securityConfig.getCertificateLocation(getComponentName());
       String certId = signAndStoreCertificate(configureCSRBuilder().build(), certLocation);
+      getAndStoreAllRootCAs(certLocation);
       if (certIdSaveCallback != null) {
         certIdSaveCallback.accept(certId);
       } else {
@@ -890,8 +891,10 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     try {
       CertificateSignRequest.Builder csrBuilder = configureCSRBuilder();
       csrBuilder.setKey(newKeyPair);
+      Path certificatePath = Paths.get(newCertPath);
       newCertSerialId = signAndStoreCertificate(csrBuilder.build(),
-          Paths.get(newCertPath));
+          certificatePath);
+      getAndStoreAllRootCAs(certificatePath);
     } catch (Exception e) {
       throw new CertificateException("Error while signing and storing new" +
           " certificates.", e, RENEW_ERROR);
@@ -1066,7 +1069,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       // Certs will be added to cert map after reloadAllCertificate called
       storeCertificate(pemEncodedCert, CAType.NONE, certCodec);
 
-      getAndStoreAllRootCAs(certCodec);
       // Return the default certificate ID
       return updateCertSerialId(CertificateCodec
           .getX509Certificate(pemEncodedCert).getSerialNumber().toString());
@@ -1078,8 +1080,9 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     }
   }
 
-  private void getAndStoreAllRootCAs(CertificateCodec certCodec)
+  private void getAndStoreAllRootCAs(Path certificatePath)
       throws IOException {
+    CertificateCodec certCodec = new CertificateCodec(getSecurityConfig(), certificatePath);
     List<String> rootCAPems = scmSecurityClient.getAllRootCaCertificates();
     for (String rootCAPem : rootCAPems) {
       storeCertificate(rootCAPem, CAType.ROOT, certCodec);

@@ -181,6 +181,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.INFO;
@@ -1085,7 +1086,7 @@ final class TestSecureOzoneCluster {
             .setX509Certificate(pemCert)
             .build();
     when(scmClient.getOMCertChain(any(), anyString()))
-        .thenReturn(responseProto);
+        .thenThrow(new IOException());
 
     try (OMCertificateClient client =
         new OMCertificateClient(
@@ -1118,8 +1119,8 @@ final class TestSecureOzoneCluster {
           .setX509Certificate(pemCert)
           .setX509CACertificate(pemCert)
           .build();
-      when(scmClient.getOMCertChain(any(), anyString()))
-          .thenReturn(responseProto);
+      doReturn(responseProto).when(scmClient).getOMCertChain(any(), anyString());
+
       String certId2 = newCertHolder.getSerialNumber().toString();
 
       // check after renew, client will have the new cert ID

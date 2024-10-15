@@ -62,6 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -394,16 +395,14 @@ public class TestHddsSecureDatanodeInit {
     X509Certificate newCert =
         generateX509Cert(null, LocalDateTime.now().plus(gracePeriod), Duration.ofSeconds(CERT_LIFETIME));
     String pemCert = CertificateCodec.getPEMEncodedString(newCert);
-    // provide an invalid SCMGetCertResponseProto. Without
-    // setX509CACertificate(pemCert), signAndStoreCert will throw exception.
+
     SCMSecurityProtocolProtos.SCMGetCertResponseProto responseProto =
         SCMSecurityProtocolProtos.SCMGetCertResponseProto
             .newBuilder().setResponseCode(SCMSecurityProtocolProtos
                 .SCMGetCertResponseProto.ResponseCode.success)
             .setX509Certificate(pemCert)
             .build();
-    when(scmClient.getDataNodeCertificateChain(any(), anyString()))
-        .thenReturn(responseProto);
+    when(scmClient.getDataNodeCertificateChain(any(), anyString())).thenReturn(responseProto);
 
     // check that new cert ID should not equal to current cert ID
     String certId = newCert.getSerialNumber().toString();
@@ -411,6 +410,8 @@ public class TestHddsSecureDatanodeInit {
 
     // start monitor task to renew key and cert
     client.startCertificateRenewerService();
+
+    when(scmClient.getDataNodeCertificateChain(any(), anyString())).thenThrow(new IOException());
 
     // certificate failed to renew, client still hold the old expired cert.
     Thread.sleep(CERT_LIFETIME * 1000);
@@ -428,10 +429,8 @@ public class TestHddsSecureDatanodeInit {
         .newBuilder().setResponseCode(SCMSecurityProtocolProtos
             .SCMGetCertResponseProto.ResponseCode.success)
         .setX509Certificate(pemCert)
-        .setX509CACertificate(pemCert)
         .build();
-    when(scmClient.getDataNodeCertificateChain(any(), anyString()))
-        .thenReturn(responseProto);
+    doReturn(responseProto).when(scmClient).getDataNodeCertificateChain(any(), anyString());
     String certId2 = newCert.getSerialNumber().toString();
 
     // check after renew, client will have the new cert ID

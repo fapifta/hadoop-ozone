@@ -1069,7 +1069,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       getAndStoreAllRootCAs(certCodec);
       // Return the default certificate ID
       return updateCertSerialId(CertificateCodec
-            .getX509Certificate(pemEncodedCert).getSerialNumber().toString());
+          .getX509Certificate(pemEncodedCert).getSerialNumber().toString());
     } catch (IOException | java.security.cert.CertificateException e) {
       logger.error("Error while signing and storing SCM signed certificate.",
           e);

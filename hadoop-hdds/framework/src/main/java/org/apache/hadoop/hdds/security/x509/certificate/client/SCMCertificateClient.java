@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyPair;
+import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Set;
@@ -129,7 +130,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
   }
 
   @Override
-  public String signCertificate(CertificateSignRequest csr, Path certPath) {
+  public CertPath signCertificate(CertificateSignRequest csr, Path certPath) {
     try {
       HddsProtos.ScmNodeDetailsProto scmNodeDetailsProto =
           HddsProtos.ScmNodeDetailsProto.newBuilder()
@@ -154,10 +155,10 @@ public class SCMCertificateClient extends DefaultCertificateClient {
         certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
             getSecurityConfig().getCertificateFileName(), pemEncodedCert);
 
-        X509Certificate certificate =
-            CertificateCodec.getX509Certificate(pemEncodedCert);
+        CertPath certificate =
+            CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
         // return new scm cert serial ID.
-        return certificate.getSerialNumber().toString();
+        return certificate;
       } else {
         throw new RuntimeException("Unable to retrieve SCM certificate chain");
       }

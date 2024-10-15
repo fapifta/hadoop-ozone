@@ -596,7 +596,12 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       break;
     case GETCERT:
       Path certLocation = securityConfig.getCertificateLocation(getComponentName());
-      String certId = signCertificate(configureCSRBuilder().build(), certLocation);
+      CertPath signedCertPath = signCertificate(configureCSRBuilder().build(), certLocation);
+      CertificateCodec certCodec = new CertificateCodec(getSecurityConfig(), certLocation);
+      storeCertificate(CertificateCodec.getPEMEncodedString(signedCertPath), CAType.NONE, certCodec);
+      // Return the default certificate ID
+      String certId = firstCertificateFrom(signedCertPath).getSerialNumber().toString();
+      updateCertSerialId(certId);
       getAndStoreAllRootCAs(certLocation);
       if (certIdSaveCallback != null) {
         certIdSaveCallback.accept(certId);
@@ -892,8 +897,13 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       CertificateSignRequest.Builder csrBuilder = configureCSRBuilder();
       csrBuilder.setKey(newKeyPair);
       Path certificatePath = Paths.get(newCertPath);
-      newCertSerialId = signCertificate(csrBuilder.build(),
+      CertPath signedCertPath = signCertificate(csrBuilder.build(),
           certificatePath);
+      CertificateCodec certCodec = new CertificateCodec(getSecurityConfig(), certificatePath);
+      storeCertificate(CertificateCodec.getPEMEncodedString(signedCertPath), CAType.NONE, certCodec);
+      // Return the default certificate ID
+      newCertSerialId = firstCertificateFrom(signedCertPath).getSerialNumber().toString();
+      updateCertSerialId(newCertSerialId);
       getAndStoreAllRootCAs(certificatePath);
     } catch (Exception e) {
       throw new CertificateException("Error while signing and storing new" +
@@ -1058,20 +1068,13 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   protected abstract SCMGetCertResponseProto sign(CertificateSignRequest request) throws IOException;
 
-  protected String signCertificate(CertificateSignRequest csr, Path certificatePath)
+  protected CertPath signCertificate(CertificateSignRequest csr, Path certificatePath)
       throws CertificateException {
     try {
       SCMGetCertResponseProto response = sign(csr);
-
-      // Persist certificates.
       String pemEncodedCert = response.getX509Certificate();
-      CertificateCodec certCodec = new CertificateCodec(getSecurityConfig(), certificatePath);
-      // Certs will be added to cert map after reloadAllCertificate called
-      storeCertificate(pemEncodedCert, CAType.NONE, certCodec);
+      return CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
 
-      // Return the default certificate ID
-      return updateCertSerialId(CertificateCodec
-          .getX509Certificate(pemEncodedCert).getSerialNumber().toString());
     } catch (IOException | java.security.cert.CertificateException e) {
       logger.error("Error while signing and storing SCM signed certificate.",
           e);

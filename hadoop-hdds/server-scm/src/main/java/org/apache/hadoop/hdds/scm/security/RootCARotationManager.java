@@ -54,6 +54,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.KeyPair;
+import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
@@ -592,10 +593,11 @@ public class RootCARotationManager extends StatefulService {
             CertificateSignRequest.Builder csrBuilder =
                 scmCertClient.configureCSRBuilder();
             csrBuilder.setKey(newKeyPair);
-            newCertSerialId = scmCertClient.signCertificate(
+            CertPath certPath = scmCertClient.signCertificate(
                 csrBuilder.build(),
                 Paths.get(newSubCAProgressPath, HDDS_X509_DIR_NAME_DEFAULT)
             );
+            newCertSerialId = ((X509Certificate) certPath.getCertificates().get(0)).getSerialNumber().toString();
             LOG.info("SubCARotationPrepareTask[rootCertId = {}] - " +
                 "scm certificate {} signed.", rootCACertId, newCertSerialId);
           } catch (Exception e) {

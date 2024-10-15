@@ -155,10 +155,8 @@ public class SCMCertificateClient extends DefaultCertificateClient {
         certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
             getSecurityConfig().getCertificateFileName(), pemEncodedCert);
 
-        CertPath certificate =
-            CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
         // return new scm cert serial ID.
-        return certificate;
+        return CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
       } else {
         throw new RuntimeException("Unable to retrieve SCM certificate chain");
       }

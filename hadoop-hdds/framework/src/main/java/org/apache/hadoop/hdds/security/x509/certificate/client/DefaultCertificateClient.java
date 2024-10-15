@@ -1074,7 +1074,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       SCMGetCertResponseProto response = sign(csr);
       String pemEncodedCert = response.getX509Certificate();
       return CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
-
     } catch (IOException | java.security.cert.CertificateException e) {
       logger.error("Error while signing and storing SCM signed certificate.",
           e);

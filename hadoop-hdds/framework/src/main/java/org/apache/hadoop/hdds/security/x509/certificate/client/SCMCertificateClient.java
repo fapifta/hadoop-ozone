@@ -129,7 +129,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
   }
 
   @Override
-  public String signAndStoreCertificate(CertificateSignRequest csr, Path certPath) {
+  public String signCertificate(CertificateSignRequest csr, Path certPath) {
     try {
       HddsProtos.ScmNodeDetailsProto scmNodeDetailsProto =
           HddsProtos.ScmNodeDetailsProto.newBuilder()

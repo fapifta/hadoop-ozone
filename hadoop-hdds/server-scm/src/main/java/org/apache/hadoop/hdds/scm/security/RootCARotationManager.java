@@ -592,7 +592,7 @@ public class RootCARotationManager extends StatefulService {
             CertificateSignRequest.Builder csrBuilder =
                 scmCertClient.configureCSRBuilder();
             csrBuilder.setKey(newKeyPair);
-            newCertSerialId = scmCertClient.signAndStoreCertificate(
+            newCertSerialId = scmCertClient.signCertificate(
                 csrBuilder.build(),
                 Paths.get(newSubCAProgressPath, HDDS_X509_DIR_NAME_DEFAULT)
             );

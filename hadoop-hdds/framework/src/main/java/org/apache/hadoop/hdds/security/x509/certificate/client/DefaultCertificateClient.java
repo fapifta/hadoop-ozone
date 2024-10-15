@@ -596,7 +596,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       break;
     case GETCERT:
       Path certLocation = securityConfig.getCertificateLocation(getComponentName());
-      String certId = signAndStoreCertificate(configureCSRBuilder().build(), certLocation);
+      String certId = signCertificate(configureCSRBuilder().build(), certLocation);
       getAndStoreAllRootCAs(certLocation);
       if (certIdSaveCallback != null) {
         certIdSaveCallback.accept(certId);
@@ -892,7 +892,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       CertificateSignRequest.Builder csrBuilder = configureCSRBuilder();
       csrBuilder.setKey(newKeyPair);
       Path certificatePath = Paths.get(newCertPath);
-      newCertSerialId = signAndStoreCertificate(csrBuilder.build(),
+      newCertSerialId = signCertificate(csrBuilder.build(),
           certificatePath);
       getAndStoreAllRootCAs(certificatePath);
     } catch (Exception e) {
@@ -1058,7 +1058,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   protected abstract SCMGetCertResponseProto sign(CertificateSignRequest request) throws IOException;
 
-  protected String signAndStoreCertificate(CertificateSignRequest csr, Path certificatePath)
+  protected String signCertificate(CertificateSignRequest csr, Path certificatePath)
       throws CertificateException {
     try {
       SCMGetCertResponseProto response = sign(csr);

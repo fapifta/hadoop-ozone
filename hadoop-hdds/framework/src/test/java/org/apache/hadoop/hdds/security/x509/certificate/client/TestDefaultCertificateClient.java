@@ -559,7 +559,7 @@ public class TestDefaultCertificateClient {
       }
 
       @Override
-      protected String signAndStoreCertificate(CertificateSignRequest request, Path certificatePath) {
+      protected String signCertificate(CertificateSignRequest request, Path certificatePath) {
         return null;
       }
     };

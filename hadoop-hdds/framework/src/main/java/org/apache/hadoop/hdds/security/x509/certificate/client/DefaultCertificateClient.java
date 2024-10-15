@@ -375,8 +375,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    */
   public void storeCertificate(String pemEncodedCert,
       CAType caType) throws CertificateException {
-    CertificateCodec certificateCodec = new CertificateCodec(securityConfig,
-        component);
+    CertificateCodec certificateCodec = new CertificateCodec(securityConfig, component);
     storeCertificate(pemEncodedCert, caType, certificateCodec);
   }
 

@@ -145,21 +145,12 @@ public class SCMCertificateClient extends DefaultCertificateClient {
       CertificateCodec certCodec = new CertificateCodec(
           getSecurityConfig(), certPath);
       String pemEncodedCert = response.getX509Certificate();
+      //note: this does exactly the same as store certificate
+      certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
+          getSecurityConfig().getCertificateFileName(), pemEncodedCert);
 
-      // Store SCM sub CA and root CA certificate.
-      if (response.hasX509CACertificate()) {
-        String pemEncodedRootCert = response.getX509CACertificate();
-        storeCertificate(pemEncodedRootCert, CAType.SUBORDINATE, certCodec);
-        storeCertificate(pemEncodedCert, CAType.NONE, certCodec);
-        //note: this does exactly the same as store certificate
-        certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
-            getSecurityConfig().getCertificateFileName(), pemEncodedCert);
-
-        // return new scm cert serial ID.
-        return CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
-      } else {
-        throw new RuntimeException("Unable to retrieve SCM certificate chain");
-      }
+      // return new scm cert serial ID.
+      return CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
     } catch (Throwable e) {
       LOG.error("Error while fetching/storing SCM signed certificate.", e);
       throw new RuntimeException(e);

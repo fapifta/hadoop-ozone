@@ -34,6 +34,7 @@ import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.CertInfo;
+import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateServer;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultCAProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
@@ -593,10 +594,13 @@ public class RootCARotationManager extends StatefulService {
             CertificateSignRequest.Builder csrBuilder =
                 scmCertClient.configureCSRBuilder();
             csrBuilder.setKey(newKeyPair);
-            CertPath certPath = scmCertClient.signCertificate(
-                csrBuilder.build(),
-                Paths.get(newSubCAProgressPath, HDDS_X509_DIR_NAME_DEFAULT)
-            );
+            Path newSubCaProgressPathX509 = Paths.get(newSubCAProgressPath, HDDS_X509_DIR_NAME_DEFAULT);
+            CertPath certPath = scmCertClient.signCertificate(csrBuilder.build(), newSubCaProgressPathX509);
+            CertificateCodec certificateCodec = new CertificateCodec(securityConfig, newSubCaProgressPathX509);
+            String rootCACertificate = scmCertClient.getScmSecureClient().getRootCACertificate();
+            scmCertClient.storeCertificate(
+                CertificateCodec.getPEMEncodedString(certPath), CAType.NONE, certificateCodec);
+            scmCertClient.storeCertificate(rootCACertificate, CAType.SUBORDINATE);
             newCertSerialId = ((X509Certificate) certPath.getCertificates().get(0)).getSerialNumber().toString();
             LOG.info("SubCARotationPrepareTask[rootCertId = {}] - " +
                 "scm certificate {} signed.", rootCACertId, newCertSerialId);

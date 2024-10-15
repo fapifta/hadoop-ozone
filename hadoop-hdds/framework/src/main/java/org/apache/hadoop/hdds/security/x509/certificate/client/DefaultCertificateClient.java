@@ -1061,22 +1061,15 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       SCMGetCertResponseProto response = sign(csr);
 
       // Persist certificates.
-      if (response.hasX509CACertificate()) {
-        String pemEncodedCert = response.getX509Certificate();
-        CertificateCodec certCodec = new CertificateCodec(
-            getSecurityConfig(), certificatePath);
-        // Certs will be added to cert map after reloadAllCertificate called
-        storeCertificate(pemEncodedCert, CAType.NONE, certCodec);
-        storeCertificate(response.getX509CACertificate(), CAType.SUBORDINATE, certCodec);
+      String pemEncodedCert = response.getX509Certificate();
+      CertificateCodec certCodec = new CertificateCodec(getSecurityConfig(), certificatePath);
+      // Certs will be added to cert map after reloadAllCertificate called
+      storeCertificate(pemEncodedCert, CAType.NONE, certCodec);
 
-        getAndStoreAllRootCAs(certCodec);
-        // Return the default certificate ID
-        return updateCertSerialId(CertificateCodec
+      getAndStoreAllRootCAs(certCodec);
+      // Return the default certificate ID
+      return updateCertSerialId(CertificateCodec
             .getX509Certificate(pemEncodedCert).getSerialNumber().toString());
-      } else {
-        throw new CertificateException("Unable to retrieve " +
-            "certificate chain.");
-      }
     } catch (IOException | java.security.cert.CertificateException e) {
       logger.error("Error while signing and storing SCM signed certificate.",
           e);

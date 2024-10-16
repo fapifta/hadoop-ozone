@@ -323,7 +323,7 @@ public class SCMSecurityProtocolServerSideTranslatorPB
   }
 
   public SCMGetCertResponseProto getRootCACertificate() throws IOException {
-    if (scm.getScmStorageConfig().checkPrimarySCMIdInitialized()) {
+    if (!scm.getScmStorageConfig().isSCMHAEnabled()) {
       throw createNotHAException();
     }
     String rootCACertificate = impl.getRootCACertificate();

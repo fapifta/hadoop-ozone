@@ -600,7 +600,7 @@ public class RootCARotationManager extends StatefulService {
             String rootCACertificate = scmCertClient.getScmSecureClient().getRootCACertificate();
             scmCertClient.storeCertificate(
                 CertificateCodec.getPEMEncodedString(certPath), CAType.NONE, certificateCodec);
-            scmCertClient.storeCertificate(rootCACertificate, CAType.SUBORDINATE);
+            scmCertClient.storeCertificate(rootCACertificate, CAType.SUBORDINATE, certificateCodec);
             newCertSerialId = ((X509Certificate) certPath.getCertificates().get(0)).getSerialNumber().toString();
             LOG.info("SubCARotationPrepareTask[rootCertId = {}] - " +
                 "scm certificate {} signed.", rootCACertId, newCertSerialId);

@@ -34,26 +34,20 @@ import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.CertInfo;
-import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateServer;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultCAProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.RotationHandlerStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
-import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
-import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.security.KeyPair;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
@@ -72,7 +66,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_NEW_KEY_CERT_DIR_NAME_PROGRESS_SUFFIX;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX;
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_DIR_NAME_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ha.SequenceIdGenerator.CERTIFICATE_ID;
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_ROOT_CA_COMPONENT_NAME;
 
@@ -541,6 +534,10 @@ public class RootCARotationManager extends StatefulService {
             sendRotationPrepareAck(rootCACertId, sslIdentityStorage.getLeafCertificate().getSerialNumber().toString());
             return;
           }
+          RotationHandlerStorage rotationHandlerStorage =
+              new RotationHandlerStorage(scmCertClient.getSecurityConfig(), scmCertClient.getComponentName(),
+                  scm::shutDown);
+          rotationHandlerStorage.initNextDirs();
           SecurityConfig securityConfig =
               scmCertClient.getSecurityConfig();
           String progressComponent = SCMCertificateClient.COMPONENT_NAME +
@@ -548,43 +545,10 @@ public class RootCARotationManager extends StatefulService {
               HDDS_NEW_KEY_CERT_DIR_NAME_PROGRESS_SUFFIX;
           final String newSubCAProgressPath =
               securityConfig.getLocation(progressComponent).toString();
-          final String newSubCAPath = securityConfig.getLocation(
-              SCMCertificateClient.COMPONENT_NAME +
-                  HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX).toString();
 
           File newProgressDir = new File(newSubCAProgressPath);
-          File newDir = new File(newSubCAPath);
-          try {
-            FileUtils.deleteDirectory(newProgressDir);
-            FileUtils.deleteDirectory(newDir);
-            Files.createDirectories(newProgressDir.toPath());
-          } catch (IOException e) {
-            LOG.error("Failed to delete and create {}, or delete {}",
-                newProgressDir, newDir, e);
-            String message = "Terminate SCM, encounter IO exception(" +
-                e.getMessage() + ") when deleting and create directory";
-            scm.shutDown(message);
-          }
-
-          // Generate key
-          Path keyDir = securityConfig.getKeyLocation(progressComponent);
-          KeyCodec keyCodec = new KeyCodec(securityConfig, keyDir);
-          KeyPair newKeyPair = null;
-          try {
-            HDDSKeyGenerator keyGenerator =
-                new HDDSKeyGenerator(securityConfig);
-            newKeyPair = keyGenerator.generateKey();
-            keyCodec.writePublicKey(newKeyPair.getPublic());
-            keyCodec.writePrivateKey(newKeyPair.getPrivate());
-            LOG.info("SubCARotationPrepareTask[rootCertId = {}] - " +
-                "scm key generated.", rootCACertId);
-          } catch (Exception e) {
-            LOG.error("Failed to generate key under {}", newProgressDir, e);
-            String message = "Terminate SCM, encounter exception(" +
-                e.getMessage() + ") when generating new key under " +
-                newProgressDir;
-            scm.shutDown(message);
-          }
+          rotationHandlerStorage.initNextDirs();
+          KeyPair newKeyPair = rotationHandlerStorage.generateNewKeys(rootCACertId);
 
           checkInterruptState();
           // Get certificate signed
@@ -593,16 +557,10 @@ public class RootCARotationManager extends StatefulService {
             CertificateSignRequest.Builder csrBuilder =
                 scmCertClient.configureCSRBuilder();
             csrBuilder.setKey(newKeyPair);
-            Path newSubCaProgressPathX509 = Paths.get(newSubCAProgressPath, HDDS_X509_DIR_NAME_DEFAULT);
             CertPath certPath = scmCertClient.signCertificate(csrBuilder.build());
-            CertificateCodec certCodec = new CertificateCodec(securityConfig, newSubCaProgressPathX509);
             String rootCACertificate = scmCertClient.getScmSecureClient().getRootCACertificate();
-            String pemEncodedCert = CertificateCodec.getPEMEncodedString(certPath);
-            scmCertClient.storeCertificate(pemEncodedCert, CAType.NONE, certCodec);
-            scmCertClient.storeCertificate(rootCACertificate, CAType.SUBORDINATE, certCodec);
-            certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
-                scmCertClient.getSecurityConfig().getCertificateFileName(), pemEncodedCert);
-
+            rotationHandlerStorage.storeNewCerts(certPath,
+                CertificateCodec.getCertPathFromPemEncodedString(rootCACertificate));
             newCertSerialId = ((X509Certificate) certPath.getCertificates().get(0)).getSerialNumber().toString();
             LOG.info("SubCARotationPrepareTask[rootCertId = {}] - " +
                 "scm certificate {} signed.", rootCACertId, newCertSerialId);
@@ -616,18 +574,7 @@ public class RootCARotationManager extends StatefulService {
           }
 
           // move dir from *-next-progress to *-next
-          try {
-            Files.move(newProgressDir.toPath(), newDir.toPath(),
-                StandardCopyOption.ATOMIC_MOVE,
-                StandardCopyOption.REPLACE_EXISTING);
-          } catch (IOException e) {
-            LOG.error("Failed to move {} to {}",
-                newSubCAProgressPath, newSubCAPath, e);
-            String message = "Terminate SCM, encounter exception(" +
-                e.getMessage() + ") when moving " + newSubCAProgressPath +
-                " to " + newSubCAPath;
-            scm.shutDown(message);
-          }
+          rotationHandlerStorage.moveFromProgressToNext();
 
           // Send ack to rotationPrepare request
           checkInterruptState();

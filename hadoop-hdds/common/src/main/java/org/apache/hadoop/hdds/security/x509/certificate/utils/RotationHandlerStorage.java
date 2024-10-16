@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.KeyPair;
 import java.security.cert.CertPath;
 import java.util.function.Consumer;
@@ -117,9 +118,27 @@ public class RotationHandlerStorage extends CertificateStorage {
     return newKeyPair;
   }
 
-  private void storeNewCerts(CertPath newCert, CertPath newRootCaCert) throws IOException {
+  public void storeNewCerts(CertPath newCert, CertPath newRootCaCert) throws IOException {
     Path newSubCaProgressPathX509 = Paths.get(newProgressDir.toString(), HDDS_X509_DIR_NAME_DEFAULT);
     storeCertificate(newCert, CAType.NONE, newSubCaProgressPathX509);
     storeCertificate(newRootCaCert, CAType.SUBORDINATE, newSubCaProgressPathX509);
+    CertificateCodec certCodec = new CertificateCodec(getSecurityConfig(), newSubCaProgressPathX509);
+    certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
+        getSecurityConfig().getCertificateFileName(), CertificateCodec.getPEMEncodedString(newCert));
+  }
+
+  public void moveFromProgressToNext() {
+    try {
+      Files.move(newProgressDir.toPath(), newDir.toPath(),
+          StandardCopyOption.ATOMIC_MOVE,
+          StandardCopyOption.REPLACE_EXISTING);
+    } catch (IOException e) {
+      LOG.error("Failed to move {} to {}",
+          newProgressDir.toString(), newDir.toString(), e);
+      String message = "Terminate SCM, encounter exception(" +
+          e.getMessage() + ") when moving " + newProgressDir.toString() +
+          " to " + newDir.toString();
+      scmShutdownHook.accept(message);
+    }
   }
 }

@@ -547,14 +547,16 @@ public class RootCARotationManager extends StatefulService {
           String progressComponent = SCMCertificateClient.COMPONENT_NAME +
               HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX +
               HDDS_NEW_KEY_CERT_DIR_NAME_PROGRESS_SUFFIX;
-          final String newSubCAProgressPath =
+           String newSubCAProgressPath =
               securityConfig.getLocation(progressComponent).toString();
-          final String newSubCAPath = securityConfig.getLocation(
+           String newSubCAPath = securityConfig.getLocation(
               SCMCertificateClient.COMPONENT_NAME +
                   HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX).toString();
 
           File newProgressDir = new File(newSubCAProgressPath);
           File newDir = new File(newSubCAPath);
+          newSubCAProgressPath = newProgressDir.toString();
+          newSubCAPath = newDir.toString();
           try {
             FileUtils.deleteDirectory(newProgressDir);
             FileUtils.deleteDirectory(newDir);

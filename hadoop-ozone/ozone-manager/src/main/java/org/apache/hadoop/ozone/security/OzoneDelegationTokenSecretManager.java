@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.security;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.security.cert.CertPath;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.security.OzoneSecretManager;
 import org.apache.hadoop.hdds.security.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DefaultCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
@@ -461,7 +463,7 @@ public class OzoneDelegationTokenSecretManager
         if (getCertClient() instanceof DefaultCertificateClient) {
           DefaultCertificateClient certClient = (DefaultCertificateClient) getCertClient();
           signerCert = getCertificateFromScm(certClient.getScmSecureClient(), identifier.getOmCertSerialId(),
-              allCertStorage);
+              allCertStorage, certClient);
         }
       }
     } catch (CertificateException e) {
@@ -492,16 +494,17 @@ public class OzoneDelegationTokenSecretManager
   }
 
   private X509Certificate getCertificateFromScm(SCMSecurityProtocolClientSideTranslatorPB scmClient, String certId,
-      CertificateStorage storage)
+      CertificateStorage storage, CertificateClient certificateClient)
       throws CertificateException {
 
     LOG.info("Getting certificate with certSerialId:{}.",
         certId);
     try {
       String pemEncodedCert = scmClient.getCertificate(certId);
-      X509Certificate x509Certificate = CertificateCodec.getX509Certificate(pemEncodedCert);
-      storage.storeCertificate(x509Certificate);
-      return x509Certificate;
+      CertPath certPath = CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
+      storage.storeCertificate(certPath, CAType.NONE, certificateClient.getSecurityConfig()
+          .getCertificateLocation(certificateClient.getComponentName()));
+      return (X509Certificate) certPath.getCertificates().get(0);
     } catch (Exception e) {
       LOG.error("Error while getting Certificate with " +
           "certSerialId:{} from scm.", certId, e);

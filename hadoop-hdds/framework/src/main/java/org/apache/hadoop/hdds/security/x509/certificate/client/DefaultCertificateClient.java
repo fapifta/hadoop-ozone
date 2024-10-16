@@ -595,7 +595,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       break;
     case GETCERT:
       Path certLocation = securityConfig.getCertificateLocation(getComponentName());
-      CertPath signedCertPath = signCertificate(configureCSRBuilder().build(), certLocation);
+      CertPath signedCertPath = signCertificate(configureCSRBuilder().build());
       CertificateCodec certCodec = new CertificateCodec(getSecurityConfig(), certLocation);
       storeCertificate(CertificateCodec.getPEMEncodedString(signedCertPath), CAType.NONE, certCodec);
       // Return the default certificate ID
@@ -896,8 +896,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       CertificateSignRequest.Builder csrBuilder = configureCSRBuilder();
       csrBuilder.setKey(newKeyPair);
       Path certificatePath = Paths.get(newCertPath);
-      CertPath signedCertPath = signCertificate(csrBuilder.build(),
-          certificatePath);
+      CertPath signedCertPath = signCertificate(csrBuilder.build()
+      );
       CertificateCodec certCodec = new CertificateCodec(getSecurityConfig(), certificatePath);
       storeCertificate(CertificateCodec.getPEMEncodedString(signedCertPath), CAType.NONE, certCodec);
       // Return the default certificate ID
@@ -1067,7 +1067,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   protected abstract SCMGetCertResponseProto sign(CertificateSignRequest request) throws IOException;
 
-  protected CertPath signCertificate(CertificateSignRequest csr, Path certificatePath)
+  protected CertPath signCertificate(CertificateSignRequest csr)
       throws CertificateException {
     try {
       SCMGetCertResponseProto response = sign(csr);

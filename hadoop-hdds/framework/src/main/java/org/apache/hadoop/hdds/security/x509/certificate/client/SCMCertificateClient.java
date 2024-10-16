@@ -34,7 +34,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.security.cert.CertPath;
@@ -130,7 +129,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
   }
 
   @Override
-  public CertPath signCertificate(CertificateSignRequest csr, Path certPath) {
+  public CertPath signCertificate(CertificateSignRequest csr) {
     try {
       HddsProtos.ScmNodeDetailsProto scmNodeDetailsProto =
           HddsProtos.ScmNodeDetailsProto.newBuilder()
@@ -142,13 +141,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
       SCMGetCertResponseProto response =
           getScmSecureClient().getSCMCertChain(scmNodeDetailsProto, csr.toEncodedFormat(), true);
 
-      CertificateCodec certCodec = new CertificateCodec(
-          getSecurityConfig(), certPath);
       String pemEncodedCert = response.getX509Certificate();
-      //note: this does exactly the same as store certificate
-      certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
-          getSecurityConfig().getCertificateFileName(), pemEncodedCert);
-
       // return new scm cert serial ID.
       return CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
     } catch (Throwable e) {

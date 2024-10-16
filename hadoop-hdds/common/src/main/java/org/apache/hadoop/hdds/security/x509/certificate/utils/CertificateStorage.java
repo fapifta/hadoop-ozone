@@ -38,12 +38,19 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.slf4j.Logger;
+
+import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec.firstCertificateFrom;
+import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CERTIFICATE_ERROR;
 
 /**
  * Abstract base class for performing certificate related IO operations with the filesystem.
  */
 public abstract class CertificateStorage {
+
+  private static final String CERT_FILE_EXTENSION = ".crt";
+  public static final String CERT_FILE_NAME_FORMAT = "%s" + CERT_FILE_EXTENSION;
 
   private final SecurityConfig securityConfig;
   private final String componentName;
@@ -108,7 +115,7 @@ public abstract class CertificateStorage {
   private CertPath readCertFile(Path filePath) {
     try {
       Path fileName;
-      //do this to avoid the findbugs error about possible nullpointer dereference
+      //do this to avoid the findbugs error about possible null pointer dereference
       if (filePath != null) {
         fileName = filePath.getFileName();
         if (fileName != null) {
@@ -125,11 +132,6 @@ public abstract class CertificateStorage {
     throw new RuntimeException();
   }
 
-  public void storeCertificate(X509Certificate certificate) throws IOException {
-    CertificateCodec codec = new CertificateCodec(securityConfig, componentName);
-    codec.writeCertificate(certificate);
-  }
-
   public Set<X509Certificate> getLeafCertificates() {
     if (getCertPaths().isEmpty()) {
       getLogger().info("Leaf certificates are empty");
@@ -138,5 +140,25 @@ public abstract class CertificateStorage {
     return getCertPaths().stream()
         .map(certPath -> (X509Certificate) certPath.getCertificates().get(0))
         .collect(Collectors.toSet());
+  }
+
+  public void storeCertificate(X509Certificate certificate) throws IOException {
+    CertificateCodec codec = new CertificateCodec(securityConfig, componentName);
+    codec.writeCertificate(certificate);
+  }
+
+  public void storeCertificate(CertPath certificatePath, CAType caType, Path path) throws IOException {
+    try {
+      CertificateCodec codec = new CertificateCodec(getSecurityConfig(), path);
+      X509Certificate cert = firstCertificateFrom(certificatePath);
+
+      String certName = String.format(CERT_FILE_NAME_FORMAT,
+          caType.getFileNamePrefix() + cert.getSerialNumber().toString());
+
+      codec.writeCertificate(certName, CertificateCodec.getPEMEncodedString(certificatePath));
+    } catch (IOException e) {
+      throw new org.apache.hadoop.hdds.security.x509.exception.CertificateException(
+          "Error while storing certificate.", e, CERTIFICATE_ERROR);
+    }
   }
 }

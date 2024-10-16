@@ -541,22 +541,19 @@ public class RootCARotationManager extends StatefulService {
             sendRotationPrepareAck(rootCACertId, sslIdentityStorage.getLeafCertificate().getSerialNumber().toString());
             return;
           }
-
           SecurityConfig securityConfig =
               scmCertClient.getSecurityConfig();
           String progressComponent = SCMCertificateClient.COMPONENT_NAME +
               HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX +
               HDDS_NEW_KEY_CERT_DIR_NAME_PROGRESS_SUFFIX;
-           String newSubCAProgressPath =
+          final String newSubCAProgressPath =
               securityConfig.getLocation(progressComponent).toString();
-           String newSubCAPath = securityConfig.getLocation(
+          final String newSubCAPath = securityConfig.getLocation(
               SCMCertificateClient.COMPONENT_NAME +
                   HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX).toString();
 
           File newProgressDir = new File(newSubCAProgressPath);
           File newDir = new File(newSubCAPath);
-          newSubCAProgressPath = newProgressDir.toString();
-          newSubCAPath = newDir.toString();
           try {
             FileUtils.deleteDirectory(newProgressDir);
             FileUtils.deleteDirectory(newDir);
@@ -597,12 +594,15 @@ public class RootCARotationManager extends StatefulService {
                 scmCertClient.configureCSRBuilder();
             csrBuilder.setKey(newKeyPair);
             Path newSubCaProgressPathX509 = Paths.get(newSubCAProgressPath, HDDS_X509_DIR_NAME_DEFAULT);
-            CertPath certPath = scmCertClient.signCertificate(csrBuilder.build(), newSubCaProgressPathX509);
-            CertificateCodec certificateCodec = new CertificateCodec(securityConfig, newSubCaProgressPathX509);
+            CertPath certPath = scmCertClient.signCertificate(csrBuilder.build());
+            CertificateCodec certCodec = new CertificateCodec(securityConfig, newSubCaProgressPathX509);
             String rootCACertificate = scmCertClient.getScmSecureClient().getRootCACertificate();
-            scmCertClient.storeCertificate(
-                CertificateCodec.getPEMEncodedString(certPath), CAType.NONE, certificateCodec);
-            scmCertClient.storeCertificate(rootCACertificate, CAType.SUBORDINATE, certificateCodec);
+            String pemEncodedCert = CertificateCodec.getPEMEncodedString(certPath);
+            scmCertClient.storeCertificate(pemEncodedCert, CAType.NONE, certCodec);
+            scmCertClient.storeCertificate(rootCACertificate, CAType.SUBORDINATE, certCodec);
+            certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
+                scmCertClient.getSecurityConfig().getCertificateFileName(), pemEncodedCert);
+
             newCertSerialId = ((X509Certificate) certPath.getCertificates().get(0)).getSerialNumber().toString();
             LOG.info("SubCARotationPrepareTask[rootCertId = {}] - " +
                 "scm certificate {} signed.", rootCACertId, newCertSerialId);

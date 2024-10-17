@@ -88,6 +88,7 @@ import org.apache.hadoop.hdds.scm.client.ScmTopologyClient;
 import org.apache.hadoop.hdds.scm.ha.SCMHAUtils;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.server.OzoneAdmins;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.hdds.utils.db.Table.KeyValue;
@@ -372,6 +373,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private OzoneDelegationTokenSecretManager delegationTokenMgr;
   private OzoneBlockTokenSecretManager blockTokenMgr;
   private CertificateClient certClient;
+  private SSLIdentityStorage sslIdentityStorage;
   private SecretKeySignerClient secretKeyClient;
   private ScmTopologyClient scmTopologyClient;
   private final Text omRpcAddressTxt;
@@ -670,6 +672,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
           scmInfo == null ? null : scmInfo.getScmId(),
           this::saveNewCertId, this::terminateOM);
 
+      sslIdentityStorage = new SSLIdentityStorage(secConfig, "om", omStorage.getOmCertSerialId());
       SecretKeyProtocol secretKeyProtocol =
           HddsServerUtil.getSecretKeyClientForOm(conf);
       secretKeyClient = new DefaultSecretKeySignerClient(secretKeyProtocol,
@@ -1092,6 +1095,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         .setCertificateClient(certClient)
         .setOmServiceId(omNodeDetails.getServiceId())
         .setCertStorage(new AllCertStorage(secConfig, "om"))
+        .setSSLIdentityStorage(sslIdentityStorage)
         .build();
   }
 
@@ -1146,7 +1150,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     if (delegationTokenMgr != null) {
       try {
         LOG.info("Starting OM delegation token secret manager");
-        delegationTokenMgr.start(certClient);
+        delegationTokenMgr.start(certClient, sslIdentityStorage);
       } catch (IOException e) {
         // Unable to start secret manager.
         LOG.error("Error starting delegation token secret manager.", e);
@@ -1165,6 +1169,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
     certClient = newClient;
     serviceInfo = new ServiceInfoProvider(secConfig, this, certClient);
+  }
+
+  @VisibleForTesting
+  public void setSslIdentityStorage(SSLIdentityStorage sslIdentityStorage) {
+    this.sslIdentityStorage = sslIdentityStorage;
   }
 
   /**

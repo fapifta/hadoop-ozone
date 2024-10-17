@@ -40,6 +40,7 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -78,6 +79,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 
 /**
  * Test class for {@link OzoneDelegationTokenSecretManager}.
@@ -91,6 +93,7 @@ public class TestOzoneDelegationTokenSecretManager {
   private OzoneDelegationTokenSecretManager secretManager;
   private SecurityConfig securityConfig;
   private OMCertificateClient certificateClient;
+  private SSLIdentityStorage sslIdentityStorage;
   private long expiryTime;
   private Text serviceRpcAdd;
   private OzoneConfiguration conf;
@@ -107,6 +110,10 @@ public class TestOzoneDelegationTokenSecretManager {
     securityConfig = new SecurityConfig(conf);
     certificateClient = setupCertificateClient();
     certificateClient.init();
+    sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
+    when(sslIdentityStorage.getPublicKey()).thenReturn(certificateClient.getPublicKey());
+    when(sslIdentityStorage.getPrivateKey()).thenReturn(certificateClient.getPrivateKey());
+    when(sslIdentityStorage.getLeafCertificate()).thenReturn(certificateClient.getCertificate());
     expiryTime = Time.monotonicNow() + 60 * 60 * 24;
     serviceRpcAdd = new Text("localhost");
     final Map<String, S3SecretValue> s3Secrets = new HashMap<>();
@@ -226,7 +233,7 @@ public class TestOzoneDelegationTokenSecretManager {
   public void testCreateToken() throws Exception {
     secretManager = createSecretManager(conf, TOKEN_MAX_LIFETIME,
         expiryTime, TOKEN_REMOVER_SCAN_INTERVAL);
-    secretManager.start(certificateClient);
+    secretManager.start(certificateClient, sslIdentityStorage);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
         TEST_USER, TEST_USER);
     OzoneTokenIdentifier identifier =
@@ -250,7 +257,7 @@ public class TestOzoneDelegationTokenSecretManager {
       throws Exception {
     secretManager = createSecretManager(conf, TOKEN_MAX_LIFETIME,
         expiryTime, TOKEN_REMOVER_SCAN_INTERVAL);
-    secretManager.start(certificateClient);
+    secretManager.start(certificateClient, sslIdentityStorage);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
         TEST_USER,
         TEST_USER);
@@ -281,7 +288,7 @@ public class TestOzoneDelegationTokenSecretManager {
   public void testRenewTokenFailure() throws Exception {
     secretManager = createSecretManager(conf, TOKEN_MAX_LIFETIME,
         expiryTime, TOKEN_REMOVER_SCAN_INTERVAL);
-    secretManager.start(certificateClient);
+    secretManager.start(certificateClient, sslIdentityStorage);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
         TEST_USER, TEST_USER);
     AccessControlException exception =
@@ -298,7 +305,7 @@ public class TestOzoneDelegationTokenSecretManager {
   public void testRenewTokenFailureMaxTime() throws Exception {
     secretManager = createSecretManager(conf, 100,
         100, TOKEN_REMOVER_SCAN_INTERVAL);
-    secretManager.start(certificateClient);
+    secretManager.start(certificateClient, sslIdentityStorage);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
         TEST_USER,
         TEST_USER);
@@ -318,7 +325,7 @@ public class TestOzoneDelegationTokenSecretManager {
   public void testRenewTokenFailureRenewalTime() throws Exception {
     secretManager = createSecretManager(conf, 1000 * 10,
         10, TOKEN_REMOVER_SCAN_INTERVAL);
-    secretManager.start(certificateClient);
+    secretManager.start(certificateClient, sslIdentityStorage);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
         TEST_USER,
         TEST_USER);
@@ -336,7 +343,7 @@ public class TestOzoneDelegationTokenSecretManager {
   public void testCreateIdentifier() throws Exception {
     secretManager = createSecretManager(conf, TOKEN_MAX_LIFETIME,
         expiryTime, TOKEN_REMOVER_SCAN_INTERVAL);
-    secretManager.start(certificateClient);
+    secretManager.start(certificateClient, sslIdentityStorage);
     OzoneTokenIdentifier identifier = secretManager.createIdentifier();
     // Check basic details.
     assertEquals(identifier.getOwner(), new Text(""));
@@ -348,7 +355,7 @@ public class TestOzoneDelegationTokenSecretManager {
   public void testCancelTokenSuccess() throws Exception {
     secretManager = createSecretManager(conf, TOKEN_MAX_LIFETIME,
         expiryTime, TOKEN_REMOVER_SCAN_INTERVAL);
-    secretManager.start(certificateClient);
+    secretManager.start(certificateClient, sslIdentityStorage);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
         TEST_USER, TEST_USER);
     secretManager.cancelToken(token, TEST_USER.toString());
@@ -358,7 +365,7 @@ public class TestOzoneDelegationTokenSecretManager {
   public void testCancelTokenFailure() throws Exception {
     secretManager = createSecretManager(conf, TOKEN_MAX_LIFETIME,
         expiryTime, TOKEN_REMOVER_SCAN_INTERVAL);
-    secretManager.start(certificateClient);
+    secretManager.start(certificateClient, sslIdentityStorage);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
         TEST_USER,
         TEST_USER);
@@ -374,7 +381,7 @@ public class TestOzoneDelegationTokenSecretManager {
   public void testVerifySignatureSuccess() throws Exception {
     secretManager = createSecretManager(conf, TOKEN_MAX_LIFETIME,
         expiryTime, TOKEN_REMOVER_SCAN_INTERVAL);
-    secretManager.start(certificateClient);
+    secretManager.start(certificateClient, sslIdentityStorage);
     OzoneTokenIdentifier id = new OzoneTokenIdentifier();
     id.setOmCertSerialId(certificateClient.getCertificate()
         .getSerialNumber().toString());
@@ -388,7 +395,7 @@ public class TestOzoneDelegationTokenSecretManager {
   public void testVerifySignatureFailure() throws Exception {
     secretManager = createSecretManager(conf, TOKEN_MAX_LIFETIME,
         expiryTime, TOKEN_REMOVER_SCAN_INTERVAL);
-    secretManager.start(certificateClient);
+    secretManager.start(certificateClient, sslIdentityStorage);
     OzoneTokenIdentifier id = new OzoneTokenIdentifier();
     // set invalid om cert serial id
     id.setOmCertSerialId("1927393");
@@ -401,7 +408,7 @@ public class TestOzoneDelegationTokenSecretManager {
   public void testValidateS3AUTHINFOSuccess() throws Exception {
     secretManager = createSecretManager(conf, TOKEN_MAX_LIFETIME,
         expiryTime, TOKEN_REMOVER_SCAN_INTERVAL);
-    secretManager.start(certificateClient);
+    secretManager.start(certificateClient, sslIdentityStorage);
 
     OzoneTokenIdentifier identifier = new OzoneTokenIdentifier();
     identifier.setTokenType(S3AUTHINFO);
@@ -420,7 +427,7 @@ public class TestOzoneDelegationTokenSecretManager {
   public void testValidateS3AUTHINFOFailure() throws Exception {
     secretManager = createSecretManager(conf, TOKEN_MAX_LIFETIME,
         expiryTime, TOKEN_REMOVER_SCAN_INTERVAL);
-    secretManager.start(certificateClient);
+    secretManager.start(certificateClient, sslIdentityStorage);
 
     OzoneTokenIdentifier identifier = new OzoneTokenIdentifier();
     identifier.setTokenType(S3AUTHINFO);
@@ -494,6 +501,7 @@ public class TestOzoneDelegationTokenSecretManager {
         .setCertificateClient(certificateClient)
         .setOmServiceId(OzoneConsts.OM_SERVICE_ID_DEFAULT)
         .setCertStorage(certStorage)
+        .setSSLIdentityStorage(sslIdentityStorage)
         .build();
   }
 }

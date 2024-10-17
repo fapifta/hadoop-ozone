@@ -19,10 +19,12 @@ package org.apache.hadoop.hdds.security.x509.certificate.utils;
 
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
+import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -57,7 +59,8 @@ public class SSLIdentityStorage extends CertificateStorage {
       PrivateKey privateKey = getPrivateKey();
       keyStore.setKeyEntry(((X509Certificate) certPath.getCertificates().get(0)).getSerialNumber().toString(),
           privateKey, "".toCharArray(), certPath.getCertificates().toArray(new Certificate[0]));
-    } catch (KeyStoreException | InvalidKeySpecException | NoSuchAlgorithmException | IOException ignored) {
+    } catch (KeyStoreException e) {
+      LOG.error("Error while trying to insert keys to keystore", e);
     }
   }
 
@@ -75,12 +78,34 @@ public class SSLIdentityStorage extends CertificateStorage {
     return certPath -> isLeafCertIdEqual(certPath, certId);
   }
 
-  public PublicKey getPublicKey() throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {
-    return keyCodec.readPublicKey();
+  public PublicKey getPublicKey() {
+    Path keyPath = getSecurityConfig().getKeyLocation(getComponentName());
+    PublicKey publicKey = null;
+    if (OzoneSecurityUtil.checkIfFileExist(keyPath,
+        getSecurityConfig().getPublicKeyFileName())) {
+      try {
+        publicKey = keyCodec.readPublicKey();
+      } catch (InvalidKeySpecException | NoSuchAlgorithmException
+               | IOException e) {
+        getLogger().error("Error while getting public key.", e);
+      }
+    }
+    return publicKey;
   }
 
-  public PrivateKey getPrivateKey() throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {
-    return keyCodec.readPrivateKey();
+  public PrivateKey getPrivateKey() {
+    Path keyPath = getSecurityConfig().getKeyLocation(getComponentName());
+    PrivateKey privateKey = null;
+    if (OzoneSecurityUtil.checkIfFileExist(keyPath,
+        getSecurityConfig().getPrivateKeyFileName())) {
+      try {
+        privateKey = keyCodec.readPrivateKey();
+      } catch (InvalidKeySpecException | NoSuchAlgorithmException
+               | IOException e) {
+        getLogger().error("Error while getting private key.", e);
+      }
+    }
+    return privateKey;
   }
 
   private boolean isLeafCertIdEqual(CertPath certPath, String certSerial) {

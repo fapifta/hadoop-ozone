@@ -41,6 +41,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.client.DefaultCertificat
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -100,6 +101,7 @@ public class OzoneDelegationTokenSecretManager
     super(new SecurityConfig(b.ozoneConf), b.tokenMaxLifetime,
         b.tokenRenewInterval, b.service, LOG);
     setCertClient(b.certClient);
+    setSslIdentityStorage(b.sslIdentityStorage);
     this.omServiceId = b.omServiceId;
     currentTokens = new ConcurrentHashMap<>();
     this.tokenRemoverScanInterval = b.tokenRemoverScanInterval;
@@ -128,6 +130,7 @@ public class OzoneDelegationTokenSecretManager
     private String omServiceId;
     private OzoneManager ozoneManager;
     private AllCertStorage certStorage;
+    private SSLIdentityStorage sslIdentityStorage;
 
     public OzoneDelegationTokenSecretManager build() throws IOException {
       return new OzoneDelegationTokenSecretManager(this);
@@ -180,6 +183,11 @@ public class OzoneDelegationTokenSecretManager
 
     public Builder setCertStorage(AllCertStorage certStorage) {
       this.certStorage = certStorage;
+      return this;
+    }
+
+    public Builder setSSLIdentityStorage(SSLIdentityStorage identityStorage) {
+      this.sslIdentityStorage = identityStorage;
       return this;
     }
   }
@@ -592,9 +600,9 @@ public class OzoneDelegationTokenSecretManager
    * Should be called before this object is used.
    */
   @Override
-  public synchronized void start(CertificateClient certClient)
+  public synchronized void start(CertificateClient certClient, SSLIdentityStorage sslIdentityStorage)
       throws IOException {
-    super.start(certClient);
+    super.start(certClient, sslIdentityStorage);
     tokenRemoverThread = new Daemon(new ExpiredTokenRemover());
     tokenRemoverThread.setName(
         ozoneManager.getThreadNamePrefix() +

@@ -60,6 +60,7 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
   private final long tokenRenewInterval;
   private final Text service;
   private CertificateClient certClient;
+  private SSLIdentityStorage sslIdentityStorage;
   private volatile boolean running;
   private AtomicReference<OzoneSecretKey> currentKey;
   private AtomicInteger currentKeyId;
@@ -187,9 +188,8 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
   public void notifyCertificateRenewed(CertificateClient client,
       String oldCertId, String newCertId) {
     logger.info("Certificate is changed from {} to {}", oldCertId, newCertId);
-    SSLIdentityStorage sslIdentityStorage =
-        new SSLIdentityStorage(certClient.getSecurityConfig(), certClient.getComponentName(), newCertId);
-    updateCurrentKey(new KeyPair(certClient.getPublicKey(), certClient.getPrivateKey()),
+    sslIdentityStorage.setCertId(newCertId);
+    updateCurrentKey(new KeyPair(sslIdentityStorage.getPublicKey(), sslIdentityStorage.getPrivateKey()),
         sslIdentityStorage.getLeafCertificate());
   }
 
@@ -203,15 +203,14 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
    * @param client
    * @throws IOException
    */
-  public synchronized void start(CertificateClient client)
+  public synchronized void start(CertificateClient client, SSLIdentityStorage identityStorage)
       throws IOException {
     Preconditions.checkState(!isRunning());
     setCertClient(client);
-    X509Certificate leafCertificate = new SSLIdentityStorage(
-        certClient.getSecurityConfig(), certClient.getComponentName(),
-        certClient.getCertSerialId()).getLeafCertificate();
-    updateCurrentKey(new KeyPair(certClient.getPublicKey(),
-        certClient.getPrivateKey()), leafCertificate);
+    setSslIdentityStorage(identityStorage);
+    X509Certificate leafCertificate = sslIdentityStorage.getLeafCertificate();
+    updateCurrentKey(new KeyPair(sslIdentityStorage.getPublicKey(),
+        sslIdentityStorage.getPrivateKey()), leafCertificate);
     client.registerNotificationReceiver(this);
     setIsRunning(true);
   }
@@ -276,6 +275,10 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
 
   public void setCertClient(CertificateClient client) {
     this.certClient = client;
+  }
+
+  public void setSslIdentityStorage(SSLIdentityStorage sslIdentityStorage) {
+    this.sslIdentityStorage = sslIdentityStorage;
   }
 }
 

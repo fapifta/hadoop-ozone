@@ -166,6 +166,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -609,8 +610,12 @@ final class TestSecureOzoneCluster {
       scm.start();
 
       setupOm(conf);
-      om.setCertClient(new CertificateClientTestImpl(conf));
+      CertificateClientTestImpl certificateClientTest = new CertificateClientTestImpl(conf);
+      om.setCertClient(certificateClientTest);
       om.setScmTopologyClient(new ScmTopologyClient(scmBlockClient));
+      SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(certificateClientTest.getSecurityConfig(),
+          certificateClientTest.getComponentName(), certificateClientTest.getCertSerialId());
+      om.setSslIdentityStorage(sslIdentityStorage);
       om.start();
     } catch (Exception ex) {
       // Expects timeout failure from scmClient in om but om user login via
@@ -677,9 +682,16 @@ final class TestSecureOzoneCluster {
       conf.setLong(DELEGATION_TOKEN_MAX_LIFETIME_KEY, tokenMaxLifetime);
       setupOm(conf);
       OzoneManager.setTestSecureOmFlag(true);
-      om.setCertClient(new CertificateClientTestImpl(conf));
+      CertificateClientTestImpl certClientTestImpl = new CertificateClientTestImpl(conf);
+      om.setCertClient(certClientTestImpl);
       AllCertStorage allCertStorage = new AllCertStorage(new SecurityConfig(om.getConfiguration()), "om");
       allCertStorage.storeCertificate(om.getCertificateClient().getCertificate());
+
+      SSLIdentityStorage sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
+      when(sslIdentityStorage.getPublicKey()).thenReturn(certClientTestImpl.getPublicKey());
+      when(sslIdentityStorage.getPrivateKey()).thenReturn(certClientTestImpl.getPrivateKey());
+      when(sslIdentityStorage.getLeafCertificate()).thenReturn(certClientTestImpl.getCertificate());
+      om.setSslIdentityStorage(sslIdentityStorage);
       om.setScmTopologyClient(new ScmTopologyClient(scmBlockClient));
       om.start();
 
@@ -767,8 +779,12 @@ final class TestSecureOzoneCluster {
       // Setup secure OM for start
       setupOm(conf);
       // Start OM
-      om.setCertClient(new CertificateClientTestImpl(conf));
+      CertificateClientTestImpl certificateClientTest = new CertificateClientTestImpl(conf);
+      om.setCertClient(certificateClientTest);
       om.setScmTopologyClient(new ScmTopologyClient(scmBlockClient));
+      SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(certificateClientTest.getSecurityConfig(),
+          certificateClientTest.getComponentName(), certificateClientTest.getCertSerialId());
+      om.setSslIdentityStorage(sslIdentityStorage);
       om.start();
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       String username = ugi.getUserName();
@@ -1226,6 +1242,9 @@ final class TestSecureOzoneCluster {
       allCertStorage.storeCertificate(omCert);
       // Start OM
       om.setCertClient(certClient);
+      SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(certClient.getSecurityConfig(),
+          certClient.getComponentName(), certClient.getCertSerialId());
+      om.setSslIdentityStorage(sslIdentityStorage);
       om.setScmTopologyClient(new ScmTopologyClient(scmBlockClient));
       om.start();
       GenericTestUtils.waitFor(() -> om.isLeaderReady(), 100, 10000);
@@ -1252,7 +1271,6 @@ final class TestSecureOzoneCluster {
       // Renew delegation token
       long expiryTime = omClient.renewDelegationToken(token1);
       assertThat(expiryTime).isGreaterThan(0);
-
       // Wait for OM certificate to renew
       LambdaTestUtils.await(certLifetime, 100, () ->
           !StringUtils.equals(token1.decodeIdentifier().getOmCertSerialId(),

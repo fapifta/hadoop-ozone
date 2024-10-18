@@ -1020,9 +1020,11 @@ final class TestSecureOzoneCluster {
         mock(SCMSecurityProtocolClientSideTranslatorPB.class);
     when(scmClient.getOMCertChain(any(), anyString()))
         .thenReturn(responseProto);
-
+    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, OMCertificateClient.COMPONENT_NAME,
+        omStorage.getOmCertSerialId());
+    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, OMCertificateClient.COMPONENT_NAME);
     try (OMCertificateClient client = new OMCertificateClient(
-        securityConfig, scmClient, omStorage, omInfo, "", scmId, null, null)) {
+        securityConfig, scmClient, omStorage, omInfo, "", scmId, null, null, sslIdentityStorage, trustedCertStorage)) {
       client.init();
 
       // create Ozone Manager instance, it will start the monitor task
@@ -1103,10 +1105,13 @@ final class TestSecureOzoneCluster {
             .build();
     when(scmClient.getOMCertChain(any(), anyString()))
         .thenThrow(new IOException());
-
+    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, OMCertificateClient.COMPONENT_NAME,
+        omStorage.getOmCertSerialId());
+    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, OMCertificateClient.COMPONENT_NAME);
     try (OMCertificateClient client =
-        new OMCertificateClient(
-            securityConfig, scmClient, omStorage, omInfo, "", scmId, null, null)
+             new OMCertificateClient(
+                 securityConfig, scmClient, omStorage, omInfo, "", scmId, null, null, sslIdentityStorage,
+                 trustedCertStorage)
     ) {
       client.init();
 
@@ -1164,9 +1169,13 @@ final class TestSecureOzoneCluster {
     OzoneManager.setTestSecureOmFlag(true);
 
     SecurityConfig securityConfig = new SecurityConfig(conf);
+    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, OMCertificateClient.COMPONENT_NAME,
+        omStorage.getOmCertSerialId());
+    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, OMCertificateClient.COMPONENT_NAME);
     CertificateCodec certCodec = new CertificateCodec(securityConfig, "om");
     try (OMCertificateClient client =
-             new OMCertificateClient(securityConfig, null, omStorage, omInfo, "", scmId, null, null)
+             new OMCertificateClient(securityConfig, null, omStorage, omInfo, "", scmId, null, null,
+                 sslIdentityStorage, trustedCertStorage)
     ) {
       client.init();
 
@@ -1185,9 +1194,8 @@ final class TestSecureOzoneCluster {
       om = OzoneManager.createOm(conf);
       om.getCertificateClient().close();
       om.setScmTopologyClient(new ScmTopologyClient(scmBlockClient));
-
       OMCertificateClient mockClient = new OMCertificateClient(securityConfig, null, omStorage, omInfo,
-          om.getOMServiceId(), scmId, null, om::terminateOM) {
+          om.getOMServiceId(), scmId, null, om::terminateOM, sslIdentityStorage, trustedCertStorage) {
 
         @Override
         public Duration timeBeforeExpiryGracePeriod(X509Certificate certificate) {

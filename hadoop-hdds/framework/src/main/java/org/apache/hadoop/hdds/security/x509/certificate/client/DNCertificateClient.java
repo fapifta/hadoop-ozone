@@ -25,6 +25,8 @@ import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslator
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
@@ -48,16 +50,17 @@ public class DNCertificateClient extends DefaultCertificateClient {
   public static final String COMPONENT_NAME = "dn";
   private final DatanodeDetails dn;
 
+  @SuppressWarnings("checkstyle:ParameterNumber")
   public DNCertificateClient(
       SecurityConfig securityConfig,
       SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient,
       DatanodeDetails datanodeDetails,
       String certSerialId,
       Consumer<String> saveCertId,
-      Runnable shutdown
+      Runnable shutdown, SSLIdentityStorage sslIdentityStorage, TrustedCertStorage trustedCertStorage
   ) {
     super(securityConfig, scmSecurityClient, LOG, certSerialId, COMPONENT_NAME,
-        datanodeDetails.threadNamePrefix(), saveCertId, shutdown);
+        datanodeDetails.threadNamePrefix(), saveCertId, shutdown, sslIdentityStorage, trustedCertStorage);
     this.dn = datanodeDetails;
   }
 

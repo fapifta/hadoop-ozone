@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.CertInfo;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
@@ -112,8 +113,11 @@ public class TestRootCARotationManager {
     ozoneConfig.setBoolean(HDDS_X509_CA_ROTATION_ENABLED, true);
     scm = mock(StorageContainerManager.class);
     securityConfig = new SecurityConfig(ozoneConfig);
+    certStorage = new TrustedCertStorage(securityConfig, SCMCertificateClient.COMPONENT_NAME);
+    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig,
+        SCMCertificateClient.COMPONENT_NAME, certID.toString());
     scmCertClient = new SCMCertificateClient(securityConfig, null, scmID, cID,
-        certID.toString(), "localhost");
+        certID.toString(), "localhost", sslIdentityStorage, certStorage);
     scmServiceManager = new SCMServiceManager();
     scmContext = mock(SCMContext.class);
     scmhaManager = mock(SCMHAManager.class);
@@ -124,7 +128,6 @@ public class TestRootCARotationManager {
     scmSecurityProtocolServer = mock(SCMSecurityProtocolServer.class);
     handler = mock(RootCARotationHandlerImpl.class);
     statefulServiceStateManager = mock(StatefulServiceStateManager.class);
-    certStorage = new TrustedCertStorage(securityConfig, scmCertClient.getComponentName());
     when(scmContext.isLeader()).thenReturn(true);
     when(scm.getConfiguration()).thenReturn(ozoneConfig);
     when(scm.getScmCertificateClient()).thenReturn(scmCertClient);

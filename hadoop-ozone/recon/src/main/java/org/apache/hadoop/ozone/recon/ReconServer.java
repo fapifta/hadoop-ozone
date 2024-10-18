@@ -29,6 +29,8 @@ import org.apache.hadoop.hdds.recon.ReconConfig;
 import org.apache.hadoop.hdds.scm.server.OzoneStorageContainerManager;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.ozone.recon.api.types.FeatureProvider;
 import org.apache.hadoop.ozone.recon.scm.ReconStorageContainerManagerFacade;
 import org.apache.hadoop.ozone.recon.security.ReconCertificateClient;
@@ -85,13 +87,15 @@ public class ReconServer extends GenericCli {
   private OzoneConfiguration configuration;
   private ReconStorageConfig reconStorage;
   private CertificateClient certClient;
+  private SSLIdentityStorage sslIdentityStorage;
+  private TrustedCertStorage trustedCertStorage;
   private ReconTaskStatusMetrics reconTaskStatusMetrics;
 
   private volatile boolean isStarted = false;
 
   public static void main(String[] args) {
     OzoneNetUtils.disableJvmNetworkAddressCacheIfRequired(
-            new OzoneConfiguration());
+        new OzoneConfiguration());
     new ReconServer().run(args);
   }
 
@@ -191,7 +195,7 @@ public class ReconServer extends GenericCli {
         getScmSecurityClientWithMaxRetry(configuration, getCurrentUser());
     SecurityConfig secConf = new SecurityConfig(configuration);
     certClient = new ReconCertificateClient(secConf, scmSecurityClient,
-        reconStorage, this::saveNewCertId, this::terminateRecon);
+        reconStorage, this::saveNewCertId, this::terminateRecon, sslIdentityStorage, trustedCertStorage);
     certClient.initWithRecovery();
   }
 

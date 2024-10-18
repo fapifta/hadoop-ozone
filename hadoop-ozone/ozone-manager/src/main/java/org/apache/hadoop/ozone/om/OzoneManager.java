@@ -89,6 +89,7 @@ import org.apache.hadoop.hdds.scm.ha.SCMHAUtils;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.server.OzoneAdmins;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.hdds.utils.db.Table.KeyValue;
@@ -374,6 +375,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private OzoneBlockTokenSecretManager blockTokenMgr;
   private CertificateClient certClient;
   private SSLIdentityStorage sslIdentityStorage;
+  private TrustedCertStorage trustedCertStorage;
   private SecretKeySignerClient secretKeyClient;
   private ScmTopologyClient scmTopologyClient;
   private final Text omRpcAddressTxt;
@@ -667,13 +669,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
       SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
           getScmSecurityClientWithMaxRetry(configuration, getCurrentUser());
+      sslIdentityStorage = new SSLIdentityStorage(secConfig, OMCertificateClient.COMPONENT_NAME,
+          omStorage.getOmCertSerialId());
+      trustedCertStorage = new TrustedCertStorage(secConfig, OMCertificateClient.COMPONENT_NAME);
       certClient = new OMCertificateClient(secConfig, scmSecurityClient,
           omStorage, omInfo, "",
           scmInfo == null ? null : scmInfo.getScmId(),
-          this::saveNewCertId, this::terminateOM);
+          this::saveNewCertId, this::terminateOM, sslIdentityStorage, trustedCertStorage);
 
-      sslIdentityStorage = new SSLIdentityStorage(certClient.getSecurityConfig(), certClient.getComponentName(),
-          certClient.getCertSerialId());
       SecretKeyProtocol secretKeyProtocol =
           HddsServerUtil.getSecretKeyClientForOm(conf);
       secretKeyClient = new DefaultSecretKeySignerClient(secretKeyProtocol,
@@ -1462,9 +1465,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
         getScmSecurityClientWithMaxRetry(conf, getCurrentUser());
 
+    SecurityConfig config = new SecurityConfig(conf);
+    SSLIdentityStorage identityStorage = new SSLIdentityStorage(config, OMCertificateClient.COMPONENT_NAME,
+        omStore.getOmCertSerialId());
+    TrustedCertStorage trustedStorage = new TrustedCertStorage(config, OMCertificateClient.COMPONENT_NAME);
     OMCertificateClient certClient =
         new OMCertificateClient(
-            new SecurityConfig(conf), scmSecurityClient, omStore, omInfo,
+            config, scmSecurityClient, omStore, omInfo,
             "", scmId,
             certId -> {
               try {
@@ -1473,7 +1480,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
                 LOG.error("Failed to set new certificate ID", e);
                 throw new RuntimeException("Failed to set new certificate ID");
               }
-            }, null);
+            }, null, identityStorage, trustedStorage);
     certClient.initWithRecovery();
   }
 

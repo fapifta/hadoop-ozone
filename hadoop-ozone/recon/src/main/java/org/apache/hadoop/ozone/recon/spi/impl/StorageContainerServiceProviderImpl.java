@@ -53,6 +53,8 @@ import org.apache.hadoop.hdds.scm.ha.SCMSnapshotDownloader;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.security.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.server.http.HttpConfig;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.hdds.utils.db.RocksDBCheckpoint;
@@ -203,9 +205,14 @@ public class StorageContainerServiceProviderImpl
               SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
                   getScmSecurityClientWithMaxRetry(
                       configuration, getCurrentUser());
+              SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(secConf,
+                  ReconCertificateClient.COMPONENT_NAME, reconStorage.getReconCertSerialId());
+              TrustedCertStorage trustedCertStorage = new TrustedCertStorage(secConf,
+                  ReconCertificateClient.COMPONENT_NAME);
               try (ReconCertificateClient certClient =
                        new ReconCertificateClient(
-                           secConf, scmSecurityClient, reconStorage, null, null);
+                           secConf, scmSecurityClient, reconStorage, null, null, sslIdentityStorage,
+                           trustedCertStorage);
                    SCMSnapshotDownloader downloadClient = new InterSCMGrpcClient(
                        hostAddress, grpcPort, configuration, certClient)) {
                 downloadClient.download(targetFile.toPath()).get();

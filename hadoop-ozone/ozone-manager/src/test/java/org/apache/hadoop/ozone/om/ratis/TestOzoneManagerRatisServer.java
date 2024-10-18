@@ -29,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.ozone.om.OMStorage;
@@ -125,11 +127,14 @@ public class TestOzoneManagerRatisServer {
     secConfig = new SecurityConfig(conf);
     HddsProtos.OzoneManagerDetailsProto omInfo =
         OzoneManager.getOmDetailsProto(conf, omID);
+    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(secConfig, OMCertificateClient.COMPONENT_NAME,
+        omStorage.getOmCertSerialId());
+    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(secConfig, OMCertificateClient.COMPONENT_NAME);
     certClient =
         new OMCertificateClient(
-            secConfig, null, omStorage, omInfo, "", null, null, null);
+            secConfig, null, omStorage, omInfo, "", null, null, null, sslIdentityStorage, trustedCertStorage);
     omRatisServer = OzoneManagerRatisServer.newOMRatisServer(conf, ozoneManager,
-      omNodeDetails, Collections.emptyMap(), secConfig, certClient, false);
+        omNodeDetails, Collections.emptyMap(), secConfig, certClient, false);
     omRatisServer.start();
   }
 

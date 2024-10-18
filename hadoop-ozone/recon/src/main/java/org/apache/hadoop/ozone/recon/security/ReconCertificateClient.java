@@ -24,6 +24,8 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DefaultCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.ozone.recon.scm.ReconStorageConfig;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -53,9 +55,9 @@ public class ReconCertificateClient  extends DefaultCertificateClient {
       SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient,
       ReconStorageConfig storage,
       Consumer<String> saveCertIdCallback,
-      Runnable shutdownCallback) {
+      Runnable shutdownCallback, SSLIdentityStorage sslIdentityStorage, TrustedCertStorage trustedCertStorage) {
     super(config, scmSecurityClient, LOG, storage.getReconCertSerialId(),
-        COMPONENT_NAME, "", saveCertIdCallback, shutdownCallback);
+        COMPONENT_NAME, "", saveCertIdCallback, shutdownCallback, sslIdentityStorage, trustedCertStorage);
     this.clusterID = storage.getClusterID();
     this.reconID = storage.getReconId();
   }

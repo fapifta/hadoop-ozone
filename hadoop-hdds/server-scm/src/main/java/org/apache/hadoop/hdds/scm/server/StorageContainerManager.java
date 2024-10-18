@@ -595,14 +595,17 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
           getScmSecurityClientWithMaxRetry(configuration, getCurrentUser());
       String scmCertSerialId = scmStorageConfig.getScmCertSerialId();
+      sslIdentityStorage = new SSLIdentityStorage(securityConfig,
+          SCMCertificateClient.COMPONENT_NAME, scmCertSerialId);
+      trustedCertStorage = new TrustedCertStorage(securityConfig, SCMCertificateClient.COMPONENT_NAME);
       scmCertificateClient = new SCMCertificateClient(
           securityConfig, scmSecurityClient, scmStorageConfig.getScmId(),
           scmStorageConfig.getClusterID(),
           scmCertSerialId,
-          getScmAddress(scmHANodeDetails, configuration).getHostName());
-      sslIdentityStorage = new SSLIdentityStorage(securityConfig,
-          scmCertificateClient.getComponentName(), scmCertSerialId);
-      trustedCertStorage = new TrustedCertStorage(securityConfig, scmCertificateClient.getComponentName());
+          getScmAddress(scmHANodeDetails, configuration).getHostName(),
+          sslIdentityStorage,
+          trustedCertStorage
+      );
     }
   }
 
@@ -1034,7 +1037,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
           getScmSecurityClientWithMaxRetry(configuration, getCurrentUser());
       scmCertificateClient = new SCMCertificateClient(securityConfig,
           scmSecurityClient, certSerialNumber, getScmId(),
-          SCM_ROOT_CA_COMPONENT_NAME);
+          SCM_ROOT_CA_COMPONENT_NAME, sslIdentityStorage, trustedCertStorage);
     }
     return new ContainerTokenSecretManager(expiryTime,
         secretKeyManagerService.getSecretKeyManager());

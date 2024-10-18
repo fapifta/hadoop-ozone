@@ -28,6 +28,8 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DefaultCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.ozone.om.OMStorage;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -62,11 +64,12 @@ public class OMCertificateClient extends DefaultCertificateClient {
       String serviceId,
       String scmID,
       Consumer<String> saveCertIdCallback,
-      Runnable shutdownCallback
+      Runnable shutdownCallback,
+      SSLIdentityStorage sslIdentityStorage, TrustedCertStorage trustedCertStorage
   ) {
     super(secConfig, scmSecurityClient, LOG, omStorage.getOmCertSerialId(),
         COMPONENT_NAME, HddsUtils.threadNamePrefix(omStorage.getOmNodeId()),
-        saveCertIdCallback, shutdownCallback);
+        saveCertIdCallback, shutdownCallback, sslIdentityStorage, trustedCertStorage);
     this.serviceId = serviceId;
     this.scmID = scmID;
     this.clusterID = omStorage.getClusterID();

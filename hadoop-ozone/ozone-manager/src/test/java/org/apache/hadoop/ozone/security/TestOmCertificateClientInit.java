@@ -23,6 +23,8 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
@@ -98,9 +100,12 @@ public class TestOmCertificateClientInit {
     when(storage.getOmId()).thenReturn(UUID.randomUUID().toString());
     HddsProtos.OzoneManagerDetailsProto omInfo =
         OzoneManager.getOmDetailsProto(config, storage.getOmId());
+    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, OMCertificateClient.COMPONENT_NAME,
+        storage.getOmCertSerialId());
+    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, OMCertificateClient.COMPONENT_NAME);
     omCertificateClient =
         new OMCertificateClient(
-            securityConfig, null, storage, omInfo, "", null, null, null);
+            securityConfig, null, storage, omInfo, "", null, null, null, sslIdentityStorage, trustedCertStorage);
     omKeyCodec = new KeyCodec(securityConfig, OM_COMPONENT);
 
     Files.createDirectories(securityConfig.getKeyLocation(OM_COMPONENT));

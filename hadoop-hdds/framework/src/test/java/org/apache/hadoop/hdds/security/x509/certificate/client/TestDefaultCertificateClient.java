@@ -25,6 +25,8 @@ import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslator
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -115,10 +117,11 @@ public class TestDefaultCertificateClient {
     if (dnCertClient != null) {
       dnCertClient.close();
     }
-
+    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(dnSecurityConfig, DN_COMPONENT, certSerialId);
+    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(dnSecurityConfig, DN_COMPONENT);
     dnCertClient = new DNCertificateClient(dnSecurityConfig, scmSecurityClient,
         MockDatanodeDetails.randomDatanodeDetails(), certSerialId, null,
-        () -> System.exit(1));
+        () -> System.exit(1), sslIdentityStorage, trustedCertStorage);
   }
 
   @AfterEach
@@ -550,8 +553,10 @@ public class TestDefaultCertificateClient {
 
     Logger logger = mock(Logger.class);
     String certId = cert.getSerialNumber().toString();
+    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(conf, compName, certId);
+    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(conf, compName);
     DefaultCertificateClient client = new DefaultCertificateClient(
-        conf, null, logger, certId, compName, "", null, null
+        conf, null, logger, certId, compName, "", null, null, sslIdentityStorage, trustedCertStorage
     ) {
 
       @Override

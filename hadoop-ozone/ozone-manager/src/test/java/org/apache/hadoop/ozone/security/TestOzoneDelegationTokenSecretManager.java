@@ -41,6 +41,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -166,8 +167,11 @@ public class TestOzoneDelegationTokenSecretManager {
     when(omStorage.getOmCertSerialId()).thenReturn(singleCert.getSerialNumber().toString());
     when(omStorage.getClusterID()).thenReturn("test");
     when(omStorage.getOmId()).thenReturn(UUID.randomUUID().toString());
+    SSLIdentityStorage identityStorage = new SSLIdentityStorage(securityConfig, OMCertificateClient.COMPONENT_NAME,
+        omStorage.getOmCertSerialId());
+    TrustedCertStorage trustedStorage = new TrustedCertStorage(securityConfig, OMCertificateClient.COMPONENT_NAME);
     OMCertificateClient omCertificateClient = new OMCertificateClient(
-        securityConfig, null, omStorage, null, "", null, null, null) {
+        securityConfig, null, omStorage, null, "", null, null, null, identityStorage, trustedStorage) {
 
       @Override
       public X509Certificate getCertificate() {

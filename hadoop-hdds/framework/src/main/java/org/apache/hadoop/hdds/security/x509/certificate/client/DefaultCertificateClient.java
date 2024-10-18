@@ -134,7 +134,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       String component,
       String threadNamePrefix,
       Consumer<String> saveCertId,
-      Runnable shutdown) {
+      Runnable shutdown, SSLIdentityStorage sslIdentityStorage, TrustedCertStorage trustedCertStorage) {
     Objects.requireNonNull(securityConfig);
     this.securityConfig = securityConfig;
     this.scmSecurityClient = scmSecurityClient;
@@ -145,6 +145,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     this.certIdSaveCallback = saveCertId;
     this.shutdownCallback = shutdown;
     this.notificationReceivers = new HashSet<>();
+    this.sslIdentityStorage = sslIdentityStorage;
+    this.trustedCertStorage = trustedCertStorage;
 
     updateCertSerialId(certSerialId);
   }
@@ -157,9 +159,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     if (!path.toFile().exists() || certSerialId == null) {
       return;
     }
-    sslIdentityStorage = new SSLIdentityStorage(securityConfig, component, certSerialId);
-    trustedCertStorage = new TrustedCertStorage(securityConfig, component);
-
+    sslIdentityStorage.setCertId(certSerialId);
     if (shouldStartCertificateRenewerService()) {
       if (securityConfig.isAutoCARotationEnabled()) {
         startRootCaRotationPoller();
@@ -1061,6 +1061,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private synchronized String updateCertSerialId(String newCertSerialId) {
     certSerialId = newCertSerialId;
     getLogger().info("Certificate serial ID set to {}", certSerialId);
+    sslIdentityStorage.setCertId(certSerialId);
     loadAllCertificates();
     return certSerialId;
   }

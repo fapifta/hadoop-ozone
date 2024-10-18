@@ -40,6 +40,7 @@ import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslator
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
@@ -154,11 +155,15 @@ public class TestHddsSecureDatanodeInit {
         securityConfig.getKeyLocation(DN_COMPONENT).toString(),
         securityConfig.getPublicKeyFileName()).toFile());
     FileUtils.deleteQuietly(Paths.get(securityConfig
-        .getCertificateLocation(DN_COMPONENT).toString(),
+            .getCertificateLocation(DN_COMPONENT).toString(),
         securityConfig.getCertificateFileName()).toFile());
     dnLogs.clearOutput();
+    String certSerialId = cert.getSerialNumber().toString();
+    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, DN_COMPONENT, certSerialId);
+    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, DN_COMPONENT);
     client = new DNCertificateClient(securityConfig, scmClient, datanodeDetails,
-        cert.getSerialNumber().toString(), id -> { }, null);
+        certSerialId, id -> {
+    }, null, sslIdentityStorage, trustedCertStorage);
   }
 
   @AfterEach

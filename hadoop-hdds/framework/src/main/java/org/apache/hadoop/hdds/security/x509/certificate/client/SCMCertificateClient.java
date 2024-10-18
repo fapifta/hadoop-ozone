@@ -28,6 +28,8 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.slf4j.Logger;
@@ -62,19 +64,22 @@ public class SCMCertificateClient extends DefaultCertificateClient {
   private String scmHostname;
   private ExecutorService executorService;
 
+  @SuppressWarnings("checkstyle:ParameterNumber")
   public SCMCertificateClient(SecurityConfig securityConfig,
       SCMSecurityProtocolClientSideTranslatorPB scmClient,
-      String scmId, String clusterId, String scmCertId, String hostname) {
+      String scmId, String clusterId, String scmCertId, String hostname, SSLIdentityStorage sslIdentityStorage,
+      TrustedCertStorage trustedCertStorage) {
     this(securityConfig, scmClient, scmId, clusterId, scmCertId, hostname,
-        COMPONENT_NAME);
+        COMPONENT_NAME, sslIdentityStorage, trustedCertStorage);
   }
 
+  @SuppressWarnings("checkstyle:ParameterNumber")
   private SCMCertificateClient(SecurityConfig securityConfig,
       SCMSecurityProtocolClientSideTranslatorPB scmClient,
       String scmId, String clusterId, String scmCertId, String hostname,
-      String component) {
+      String component, SSLIdentityStorage sslIdentityStorage, TrustedCertStorage trustedCertStorage) {
     super(securityConfig, scmClient, LOG, scmCertId, component,
-        HddsUtils.threadNamePrefix(scmId), null, null);
+        HddsUtils.threadNamePrefix(scmId), null, null, sslIdentityStorage, trustedCertStorage);
     this.scmId = scmId;
     this.cId = clusterId;
     this.scmHostname = hostname;
@@ -85,9 +90,8 @@ public class SCMCertificateClient extends DefaultCertificateClient {
       SCMSecurityProtocolClientSideTranslatorPB scmClient,
       String certSerialId,
       String scmId,
-      String component) {
-    this(securityConfig, scmClient, scmId, null, certSerialId, null,
-        component);
+      String component, SSLIdentityStorage sslIdentityStorage, TrustedCertStorage trustedCertStorage) {
+    this(securityConfig, scmClient, scmId, null, certSerialId, null, component, sslIdentityStorage, trustedCertStorage);
   }
 
   /**

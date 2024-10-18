@@ -45,6 +45,8 @@ import org.apache.hadoop.hdds.security.symmetric.DefaultSecretKeyClient;
 import org.apache.hadoop.hdds.security.symmetric.SecretKeyClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.server.http.HttpConfig;
 import org.apache.hadoop.hdds.server.OzoneAdmins;
 import org.apache.hadoop.hdds.server.http.RatisDropwizardExports;
@@ -107,6 +109,8 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
   private DatanodeStateMachine datanodeStateMachine;
   private List<ServicePlugin> plugins;
   private CertificateClient dnCertClient;
+  private SSLIdentityStorage sslIdentityStorage;
+  private TrustedCertStorage trustedCertStorage;
   private SecretKeyClient secretKeyClient;
   private String component;
   private HddsDatanodeHttpServer httpServer;
@@ -268,6 +272,9 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
       }
 
       if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+        sslIdentityStorage = new SSLIdentityStorage(secConf, DNCertificateClient.COMPONENT_NAME,
+            datanodeDetails.getCertSerialId());
+        trustedCertStorage = new TrustedCertStorage(secConf, DNCertificateClient.COMPONENT_NAME);
         dnCertClient = initializeCertificateClient(dnCertClient);
 
         if (secConf.isTokenEnabled()) {
@@ -378,13 +385,19 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
   public CertificateClient initializeCertificateClient(
       CertificateClient certClient) throws IOException {
     LOG.info("Initializing secure Datanode.");
-
+    if (sslIdentityStorage == null) {
+      sslIdentityStorage = new SSLIdentityStorage(secConf, DNCertificateClient.COMPONENT_NAME,
+          datanodeDetails.getCertSerialId());
+    }
+    if (trustedCertStorage == null) {
+      trustedCertStorage = new TrustedCertStorage(secConf, DNCertificateClient.COMPONENT_NAME);
+    }
     if (certClient == null) {
       dnCertClient = new DNCertificateClient(secConf,
           createScmSecurityClient(),
           datanodeDetails,
           datanodeDetails.getCertSerialId(), this::saveNewCertId,
-          this::terminateDatanode);
+          this::terminateDatanode, sslIdentityStorage, trustedCertStorage);
       certClient = dnCertClient;
     }
     certClient.initWithRecovery();

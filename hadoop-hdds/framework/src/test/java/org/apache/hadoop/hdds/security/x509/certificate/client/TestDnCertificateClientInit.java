@@ -24,6 +24,8 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.MockDatanodeDetails;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
@@ -91,9 +93,11 @@ public class TestDnCertificateClientInit {
     x509Certificate = getX509Certificate();
     certSerialId = x509Certificate.getSerialNumber().toString();
     DatanodeDetails dn = MockDatanodeDetails.randomDatanodeDetails();
+    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, DN_COMPONENT, certSerialId);
+    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, DN_COMPONENT);
     dnCertificateClient =
         new DNCertificateClient(
-            securityConfig, null, dn, certSerialId, null, null);
+            securityConfig, null, dn, certSerialId, null, null, sslIdentityStorage, trustedCertStorage);
     dnKeyCodec = new KeyCodec(securityConfig, DN_COMPONENT);
 
     Files.createDirectories(securityConfig.getKeyLocation(DN_COMPONENT));

@@ -51,6 +51,7 @@ import org.apache.hadoop.hdds.security.token.ContainerTokenSecretManager;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -86,6 +87,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -121,6 +123,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.mockito.Mockito.when;
 
 /**
  * This class tests container commands on EC containers.
@@ -997,9 +1000,13 @@ public class TestContainerCommandsEC {
     OzoneManager.setTestSecureOmFlag(true);
     certClient = new CertificateClientTestImpl(conf);
     secretKeyClient = new SecretKeyTestClient();
-
+    SSLIdentityStorage sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
+    when(sslIdentityStorage.getPublicKey()).thenReturn(certClient.getPublicKey());
+    when(sslIdentityStorage.getPrivateKey()).thenReturn(certClient.getPrivateKey());
+    when(sslIdentityStorage.getLeafCertificate()).thenReturn(certClient.getCertificate());
     cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(NUM_DN)
         .setCertificateClient(certClient)
+        .setSSLIdentityStorage(sslIdentityStorage)
         .setSecretKeyClient(secretKeyClient)
         .build();
     cluster.waitForClusterToBeReady();

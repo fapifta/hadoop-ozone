@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.OzoneClientConfig;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -59,6 +60,7 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTER
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.when;
 
 import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
 import org.apache.ratis.statemachine.impl.StatemachineImplTestUtil;
@@ -66,6 +68,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.mockito.Mockito;
 
 /**
  * Tests the containerStateMachine failure handling.
@@ -114,9 +117,15 @@ public class TestContainerStateMachine {
     conf.setFromObject(clientConfig);
 
     //  conf.set(HADOOP_SECURITY_AUTHENTICATION, KERBEROS.toString());
+    CertificateClientTestImpl certificateClient = new CertificateClientTestImpl(conf);
+    SSLIdentityStorage sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
+    when(sslIdentityStorage.getPublicKey()).thenReturn(certificateClient.getPublicKey());
+    when(sslIdentityStorage.getPrivateKey()).thenReturn(certificateClient.getPrivateKey());
+    when(sslIdentityStorage.getLeafCertificate()).thenReturn(certificateClient.getCertificate());
     cluster =
         MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1)
-            .setCertificateClient(new CertificateClientTestImpl(conf))
+            .setCertificateClient(certificateClient)
+            .setSSLIdentityStorage(sslIdentityStorage)
             .setSecretKeyClient(new SecretKeyTestClient())
             .build();
     cluster.setWaitForClusterToBeReadyTimeout(300000);

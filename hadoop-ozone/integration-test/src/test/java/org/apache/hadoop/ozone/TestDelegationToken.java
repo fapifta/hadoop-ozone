@@ -39,6 +39,7 @@ import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.io.Text;
@@ -93,6 +94,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.INFO;
 
 import org.junit.jupiter.api.AfterEach;
@@ -102,6 +104,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.api.Timeout;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -312,7 +315,13 @@ public final class TestDelegationToken {
 
     try {
       // Start OM
-      om.setCertClient(new CertificateClientTestImpl(conf));
+      CertificateClientTestImpl certificateClient = new CertificateClientTestImpl(conf);
+      SSLIdentityStorage sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
+      when(sslIdentityStorage.getPublicKey()).thenReturn(certificateClient.getPublicKey());
+      when(sslIdentityStorage.getPrivateKey()).thenReturn(certificateClient.getPrivateKey());
+      when(sslIdentityStorage.getLeafCertificate()).thenReturn(certificateClient.getCertificate());
+      om.setCertClient(certificateClient);
+      om.setSslIdentityStorage(sslIdentityStorage);
       AllCertStorage allCertStorage = new AllCertStorage(new SecurityConfig(om.getConfiguration()), "om");
       allCertStorage.storeCertificate(om.getCertificateClient().getCertificate());
       om.setScmTopologyClient(new ScmTopologyClient(

@@ -66,6 +66,7 @@ import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.symmetric.SecretKeyClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.server.http.HttpConfig;
 import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.hdds.utils.db.CodecBuffer;
@@ -143,6 +144,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   // Timeout for the cluster to be ready
   private int waitForClusterToBeReadyTimeout = 120000; // 2 min
   private CertificateClient caClient;
+  private SSLIdentityStorage sslIdentityStorage;
   private final Set<AutoCloseable> clients = ConcurrentHashMap.newKeySet();
   private SecretKeyClient secretKeyClient;
   private static MockedStatic mockDNStatic = Mockito.mockStatic(HddsDatanodeService.class);
@@ -567,6 +569,14 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     this.caClient = client;
   }
 
+  private SSLIdentityStorage getSslIdentityStorage() {
+    return this.sslIdentityStorage;
+  }
+
+  private void setSslIdentityStorage(SSLIdentityStorage storage) {
+    this.sslIdentityStorage = storage;
+  }
+
   private void setSecretKeyClient(SecretKeyClient client) {
     this.secretKeyClient = client;
   }
@@ -662,6 +672,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
             hddsDatanodes, reconServer, s3g);
 
         cluster.setCAClient(certClient);
+        cluster.setSslIdentityStorage(sslIdentityStorage);
         cluster.setSecretKeyClient(secretKeyClient);
         if (startDataNodes) {
           cluster.startHddsDatanodes();
@@ -699,6 +710,9 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       }
       if (secretKeyClient != null) {
         om.setSecretKeyClient(secretKeyClient);
+      }
+      if (sslIdentityStorage != null) {
+        om.setSslIdentityStorage(sslIdentityStorage);
       }
     }
 

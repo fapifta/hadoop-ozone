@@ -32,6 +32,7 @@ import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.symmetric.SecretKeyClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.recon.ReconServer;
@@ -311,6 +312,7 @@ public interface MiniOzoneCluster extends AutoCloseable {
     protected int numOfDatanodes = 3;
     protected boolean  startDataNodes = true;
     protected CertificateClient certClient;
+    protected SSLIdentityStorage sslIdentityStorage;
     protected SecretKeyClient secretKeyClient;
     protected DatanodeFactory dnFactory = UniformDatanodesFactory.newBuilder().build();
 
@@ -366,12 +368,16 @@ public interface MiniOzoneCluster extends AutoCloseable {
       return this;
     }
 
+    public Builder setSSLIdentityStorage(SSLIdentityStorage identityStorage) {
+      this.sslIdentityStorage = identityStorage;
+      return this;
+    }
+
     /**
      * Sets the number of HddsDatanodes to be started as part of
      * MiniOzoneCluster.
      *
      * @param val number of datanodes
-     *
      * @return MiniOzoneCluster.Builder
      */
     public Builder setNumDatanodes(int val) {

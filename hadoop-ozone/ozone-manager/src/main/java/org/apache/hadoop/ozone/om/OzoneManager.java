@@ -672,7 +672,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
           scmInfo == null ? null : scmInfo.getScmId(),
           this::saveNewCertId, this::terminateOM);
 
-      sslIdentityStorage = new SSLIdentityStorage(secConfig, "om", omStorage.getOmCertSerialId());
+      sslIdentityStorage = new SSLIdentityStorage(certClient.getSecurityConfig(), certClient.getComponentName(),
+          certClient.getCertSerialId());
       SecretKeyProtocol secretKeyProtocol =
           HddsServerUtil.getSecretKeyClientForOm(conf);
       secretKeyClient = new DefaultSecretKeySignerClient(secretKeyProtocol,

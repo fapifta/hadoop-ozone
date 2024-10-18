@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.ozone.ClientConfigForTesting;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -44,6 +45,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,6 +63,7 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests the containerStateMachine failure handling by set flush delay.
@@ -120,9 +123,15 @@ public class TestContainerStateMachineFlushDelay {
         .setStreamBufferMaxSize(maxFlushSize)
         .applyTo(conf);
 
+    CertificateClientTestImpl certificateClient = new CertificateClientTestImpl(conf);
+    SSLIdentityStorage sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
+    when(sslIdentityStorage.getPublicKey()).thenReturn(certificateClient.getPublicKey());
+    when(sslIdentityStorage.getPrivateKey()).thenReturn(certificateClient.getPrivateKey());
+    when(sslIdentityStorage.getLeafCertificate()).thenReturn(certificateClient.getCertificate());
     cluster =
         MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1)
-            .setCertificateClient(new CertificateClientTestImpl(conf))
+            .setCertificateClient(certificateClient)
+            .setSSLIdentityStorage(sslIdentityStorage)
             .setSecretKeyClient(new SecretKeyTestClient())
             .build();
     cluster.waitForClusterToBeReady();

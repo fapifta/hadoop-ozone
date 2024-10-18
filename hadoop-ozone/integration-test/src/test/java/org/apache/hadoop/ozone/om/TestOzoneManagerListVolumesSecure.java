@@ -29,6 +29,7 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_VOLUME_LISTALL_AL
 import static org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType.OZONE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 import com.google.common.base.Strings;
 import java.io.File;
@@ -48,6 +49,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.client.ScmTopologyClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -62,6 +64,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -200,7 +203,13 @@ public class TestOzoneManagerListVolumesSecure {
     om = OzoneManager.createOm(conf);
     om.setScmTopologyClient(new ScmTopologyClient(
         new ScmBlockLocationTestingClient(null, null, 0)));
-    om.setCertClient(new CertificateClientTestImpl(conf));
+    CertificateClientTestImpl certificateClient = new CertificateClientTestImpl(conf);
+    SSLIdentityStorage sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
+    when(sslIdentityStorage.getPublicKey()).thenReturn(certificateClient.getPublicKey());
+    when(sslIdentityStorage.getPrivateKey()).thenReturn(certificateClient.getPrivateKey());
+    when(sslIdentityStorage.getLeafCertificate()).thenReturn(certificateClient.getCertificate());
+    om.setCertClient(certificateClient);
+    om.setSslIdentityStorage(sslIdentityStorage);
     om.start();
 
     // Get OM client

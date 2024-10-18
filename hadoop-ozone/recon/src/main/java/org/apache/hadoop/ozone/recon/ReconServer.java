@@ -194,6 +194,9 @@ public class ReconServer extends GenericCli {
     SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
         getScmSecurityClientWithMaxRetry(configuration, getCurrentUser());
     SecurityConfig secConf = new SecurityConfig(configuration);
+    sslIdentityStorage = new SSLIdentityStorage(secConf, ReconCertificateClient.COMPONENT_NAME,
+        reconStorage.getReconCertSerialId());
+    trustedCertStorage = new TrustedCertStorage(secConf, ReconCertificateClient.COMPONENT_NAME);
     certClient = new ReconCertificateClient(secConf, scmSecurityClient,
         reconStorage, this::saveNewCertId, this::terminateRecon, sslIdentityStorage, trustedCertStorage);
     certClient.initWithRecovery();

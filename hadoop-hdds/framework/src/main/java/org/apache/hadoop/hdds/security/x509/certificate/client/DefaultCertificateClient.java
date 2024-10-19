@@ -265,10 +265,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   private synchronized CertPath getCertPath() {
-    if (sslIdentityStorage == null) {
-      getLogger().info("SSLIdentityStorage not yet initialized, reiniting with certId: {}", certSerialId);
-      sslIdentityStorage = new SSLIdentityStorage(securityConfig, component, certSerialId);
-    }
     if (sslIdentityStorage.getCertPaths().isEmpty()) {
       getLogger().info("No certificates found for certificate client with certificate id: {}", certSerialId);
       return null;

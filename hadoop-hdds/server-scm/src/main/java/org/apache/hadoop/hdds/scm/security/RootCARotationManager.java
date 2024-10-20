@@ -49,7 +49,6 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.KeyPair;
-import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
@@ -557,11 +556,9 @@ public class RootCARotationManager extends StatefulService {
             CertificateSignRequest.Builder csrBuilder =
                 scmCertClient.configureCSRBuilder();
             csrBuilder.setKey(newKeyPair);
-            CertPath certPath = scmCertClient.signCertificate(csrBuilder.build());
+            String encodedCertPath = scmCertClient.signCertificate(csrBuilder.build());
             String rootCACertificate = scmCertClient.getScmSecureClient().getRootCACertificate();
-            rotationHandlerStorage.storeNewCerts(certPath,
-                CertificateCodec.getCertPathFromPemEncodedString(rootCACertificate));
-            newCertSerialId = ((X509Certificate) certPath.getCertificates().get(0)).getSerialNumber().toString();
+            newCertSerialId = rotationHandlerStorage.storeNewCerts(encodedCertPath, rootCACertificate);
             LOG.info("SubCARotationPrepareTask[rootCertId = {}] - " +
                 "scm certificate {} signed.", rootCACertId, newCertSerialId);
           } catch (Exception e) {

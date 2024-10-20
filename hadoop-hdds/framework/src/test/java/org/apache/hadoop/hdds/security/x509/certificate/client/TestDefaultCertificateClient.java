@@ -41,7 +41,6 @@ import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
-import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Arrays;
@@ -565,7 +564,7 @@ public class TestDefaultCertificateClient {
       }
 
       @Override
-      public CertPath signCertificate(CertificateSignRequest request) {
+      public String signCertificate(CertificateSignRequest request) {
         return null;
       }
     };

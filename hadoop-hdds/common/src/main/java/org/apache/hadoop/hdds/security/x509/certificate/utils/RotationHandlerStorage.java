@@ -118,13 +118,14 @@ public class RotationHandlerStorage extends CertificateStorage {
     return newKeyPair;
   }
 
-  public void storeNewCerts(CertPath newCert, CertPath newRootCaCert) throws IOException {
+  public String storeNewCerts(String encodedNewCertPath, String encodedNewRootCaCert) throws IOException {
     Path newSubCaProgressPathX509 = Paths.get(newProgressDir.toString(), HDDS_X509_DIR_NAME_DEFAULT);
-    storeCertificate(newCert, CAType.NONE, newSubCaProgressPathX509);
-    storeCertificate(newRootCaCert, CAType.SUBORDINATE, newSubCaProgressPathX509);
+    String newCertId = storeCertificate(encodedNewCertPath, CAType.NONE, newSubCaProgressPathX509);
+    storeCertificate(encodedNewRootCaCert, CAType.SUBORDINATE, newSubCaProgressPathX509);
     CertificateCodec certCodec = new CertificateCodec(getSecurityConfig(), newSubCaProgressPathX509);
     certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
-        getSecurityConfig().getCertificateFileName(), CertificateCodec.getPEMEncodedString(newCert));
+        getSecurityConfig().getCertificateFileName(), encodedNewCertPath);
+    return newCertId;
   }
 
   public void moveFromProgressToNext() {

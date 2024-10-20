@@ -179,8 +179,9 @@ public class SCMCertificateClient extends DefaultCertificateClient {
         for (X509Certificate cert : rootCAsFromLeaderSCM) {
           LOG.info("Fetched new root CA certificate {} from leader SCM",
               cert.getSerialNumber().toString());
-          storeCertificate(
-              CertificateCodec.getPEMEncodedString(cert), CAType.SUBORDINATE);
+          getTrustedCertStorage().storeCertificate(
+              CertificateCodec.getPEMEncodedString(cert), CAType.SUBORDINATE,
+              getSecurityConfig().getCertificateLocation(getComponentName()));
         }
         String scmCertId = getCertSerialId();
         notifyNotificationReceivers(scmCertId, scmCertId);

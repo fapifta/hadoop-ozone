@@ -1128,7 +1128,7 @@ final class TestSecureOzoneCluster {
       assertThrows(CertificateExpiredException.class,
           () -> client.getCertificate().checkValidity());
       assertThat(omLogs.getOutput())
-          .contains("Error while signing and storing SCM signed certificate.");
+          .contains("Error while signing SCM signed certificate.");
 
       // provide a new valid SCMGetCertResponseProto
       newCertHolder = generateSelfSignedX509Cert(securityConfig, null, null,

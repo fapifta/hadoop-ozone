@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.security.KeyPair;
-import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Set;
@@ -127,31 +126,13 @@ public class SCMCertificateClient extends DefaultCertificateClient {
   }
 
   @Override
-  protected SCMGetCertResponseProto sign(CertificateSignRequest request) {
-    throw new UnsupportedOperationException("Invalid call to SCMCertificateClient#sign(CertificateSignRequest. " +
-        "SCM certificate client uses a different mechanism to sign the SCMs' certificate.");
-  }
-
-  @Override
-  public CertPath signCertificate(CertificateSignRequest csr) {
-    try {
-      HddsProtos.ScmNodeDetailsProto scmNodeDetailsProto =
-          HddsProtos.ScmNodeDetailsProto.newBuilder()
-              .setClusterId(cId)
-              .setHostName(scmHostname)
-              .setScmNodeId(scmId).build();
-
-      // Get SCM sub CA cert.
-      SCMGetCertResponseProto response =
-          getScmSecureClient().getSCMCertChain(scmNodeDetailsProto, csr.toEncodedFormat(), true);
-
-      String pemEncodedCert = response.getX509Certificate();
-      // return new scm cert serial ID.
-      return CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
-    } catch (Throwable e) {
-      LOG.error("Error while fetching/storing SCM signed certificate.", e);
-      throw new RuntimeException(e);
-    }
+  protected SCMGetCertResponseProto sign(CertificateSignRequest csr) throws IOException {
+    HddsProtos.ScmNodeDetailsProto scmNodeDetailsProto =
+        HddsProtos.ScmNodeDetailsProto.newBuilder()
+            .setClusterId(cId)
+            .setHostName(scmHostname)
+            .setScmNodeId(scmId).build();
+    return getScmSecureClient().getSCMCertChain(scmNodeDetailsProto, csr.toEncodedFormat(), true);
   }
 
   public void refreshCACertificates() throws IOException {

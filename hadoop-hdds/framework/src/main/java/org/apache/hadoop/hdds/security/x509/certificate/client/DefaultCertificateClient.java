@@ -1054,7 +1054,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   protected abstract SCMGetCertResponseProto sign(CertificateSignRequest request) throws IOException;
 
-  protected CertPath signCertificate(CertificateSignRequest csr)
+  public CertPath signCertificate(CertificateSignRequest csr)
       throws CertificateException {
     try {
       SCMGetCertResponseProto response = sign(csr);

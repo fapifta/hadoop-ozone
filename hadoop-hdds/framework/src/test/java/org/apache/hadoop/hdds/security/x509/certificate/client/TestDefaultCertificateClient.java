@@ -565,7 +565,7 @@ public class TestDefaultCertificateClient {
       }
 
       @Override
-      protected CertPath signCertificate(CertificateSignRequest request) {
+      public CertPath signCertificate(CertificateSignRequest request) {
         return null;
       }
     };

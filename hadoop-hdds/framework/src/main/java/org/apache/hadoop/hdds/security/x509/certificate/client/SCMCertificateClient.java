@@ -185,7 +185,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
         List<String> rootCAPems = scmSecureClient.getAllRootCaCertificates();
 
         // SCM certificate client currently sets root CA as CA cert
-        Set<X509Certificate> certList = getAllRootCaCerts();
+        Set<X509Certificate> certList = getTrustedCertStorage().getLeafCertificates();
         List<X509Certificate> rootCAsFromLeaderSCM =
             OzoneSecurityUtil.convertToX509(rootCAPems);
         rootCAsFromLeaderSCM.removeAll(certList);

@@ -46,7 +46,6 @@ import java.security.spec.RSAPublicKeySpec;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -753,15 +752,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   @Override
-  public synchronized Set<X509Certificate> getAllRootCaCerts() {
-    Set<X509Certificate> certs =
-        Collections.unmodifiableSet(trustedCertStorage.getLeafCertificates());
-    getLogger().info("{} has {} Root CA certificates", this.component,
-        certs.size());
-    return certs;
-  }
-
-  @Override
   public synchronized ReloadingX509TrustManager getTrustManager() throws CertificateException {
     try {
       if (trustManager == null) {
@@ -1093,6 +1083,10 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   public String getCertSerialId() {
     return certSerialId;
+  }
+
+  protected TrustedCertStorage getTrustedCertStorage() {
+    return trustedCertStorage;
   }
 
 

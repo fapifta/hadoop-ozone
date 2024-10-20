@@ -49,7 +49,6 @@ import org.apache.hadoop.hdds.security.symmetric.SecretKeyClient;
 import org.apache.hadoop.hdds.security.token.ContainerTokenIdentifier;
 import org.apache.hadoop.hdds.security.token.ContainerTokenSecretManager;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenSecretManager;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
@@ -165,7 +164,7 @@ public class TestContainerCommandsEC {
   private static SecretKeyClient secretKeyClient;
   private List<XceiverClientSpi> clients = null;
   private static OzoneConfiguration config;
-  private static CertificateClient certClient;
+  private static CertificateClientTestImpl certClient;
   private static TrustedCertStorage trustedCertStorage;
 
   private static OzoneBucket classBucket;

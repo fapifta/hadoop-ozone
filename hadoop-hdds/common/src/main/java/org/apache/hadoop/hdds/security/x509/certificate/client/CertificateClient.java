@@ -34,7 +34,6 @@ import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -80,13 +79,6 @@ public interface CertificateClient extends Closeable {
   X509Certificate getCertificate();
 
   String getCertSerialId();
-
-  /**
-   * Return the root ca certs saved in this client's file system.
-   *
-   * @return all the Root CA certificates known to the client
-   */
-  Set<X509Certificate> getAllRootCaCerts();
 
   /**
    * Verifies a digital Signature, given the signature and the certificate of

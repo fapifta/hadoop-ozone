@@ -22,6 +22,7 @@ package org.apache.hadoop.ozone.om;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfoEx;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,7 +76,7 @@ public class TestServiceInfoProvider {
     @BeforeEach
     public void setup() throws Exception {
       conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, false);
-      provider = new ServiceInfoProvider(new SecurityConfig(conf), om, null);
+      provider = new ServiceInfoProvider(new SecurityConfig(conf), om, null, null);
     }
 
     @Test
@@ -109,10 +110,10 @@ public class TestServiceInfoProvider {
       pem1 = getPEMEncodedString(cert1);
       cert2 = createSelfSignedCert(aKeyPair(conf), "2nd", Duration.ofDays(2));
       pem2 = getPEMEncodedString(cert2);
-      when(certClient.getAllRootCaCerts())
-          .thenReturn(new HashSet<>(Arrays.asList(cert1, cert2)));
+      TrustedCertStorage trustedCertStorage = mock(TrustedCertStorage.class);
+      when(trustedCertStorage.getLeafCertificates()).thenReturn(new HashSet<>(Arrays.asList(cert1, cert2)));
       provider =
-          new ServiceInfoProvider(new SecurityConfig(conf), om, certClient);
+          new ServiceInfoProvider(new SecurityConfig(conf), om, certClient, trustedCertStorage);
     }
 
     @Test

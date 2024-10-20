@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfoEx;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.slf4j.Logger;
@@ -69,8 +70,8 @@ final class ServiceInfoProvider {
    * @param certClient the CertificateClient provides certificate information
    */
   ServiceInfoProvider(SecurityConfig config, OzoneManagerProtocol om,
-      CertificateClient certClient) {
-    this(config, om, certClient, false);
+      CertificateClient certClient, TrustedCertStorage trustedCertStorage) {
+    this(config, om, certClient, trustedCertStorage, false);
   }
 
   /**
@@ -93,11 +94,11 @@ final class ServiceInfoProvider {
    *                                     might need to be true
    */
   ServiceInfoProvider(SecurityConfig config, OzoneManagerProtocol om,
-      CertificateClient certClient, boolean skipInitializationForTesting) {
+      CertificateClient certClient, TrustedCertStorage trustedCertStorage, boolean skipInitializationForTesting) {
     this.om = om;
     if (config.isSecurityEnabled() && !skipInitializationForTesting) {
       this.certClient = certClient;
-      Set<X509Certificate> certs = getCACertificates();
+      Set<X509Certificate> certs = trustedCertStorage.getLeafCertificates();
       caCertPEM = toPEMEncodedString(newestOf(certs));
       caCertPEMList = toPEMEncodedStrings(certs);
       this.certClient.registerRootCARotationListener(onRootCAChange());
@@ -135,10 +136,6 @@ final class ServiceInfoProvider {
     }
     return new ServiceInfoEx(
         om.getServiceList(), returnedCaCertPEM, returnedCaCertPEMList);
-  }
-
-  private Set<X509Certificate> getCACertificates() {
-    return certClient.getAllRootCaCerts();
   }
 
   private X509Certificate newestOf(Collection<X509Certificate> certs) {

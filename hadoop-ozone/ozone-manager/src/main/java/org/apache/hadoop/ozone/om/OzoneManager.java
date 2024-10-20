@@ -682,8 +682,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       secretKeyClient = new DefaultSecretKeySignerClient(secretKeyProtocol,
           omNodeDetails.threadNamePrefix());
     }
-    serviceInfo = new ServiceInfoProvider(secConfig, this, certClient,
-        testSecureOmFlag);
+    serviceInfo = new ServiceInfoProvider(secConfig, this, certClient, trustedCertStorage, testSecureOmFlag);
 
     if (secConfig.isBlockTokenEnabled()) {
       blockTokenMgr = createBlockTokenSecretManager();
@@ -1172,7 +1171,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       certClient.close();
     }
     certClient = newClient;
-    serviceInfo = new ServiceInfoProvider(secConfig, this, certClient);
+    if (trustedCertStorage == null) {
+      trustedCertStorage = new TrustedCertStorage(certClient.getSecurityConfig(), certClient.getComponentName());
+    }
+    serviceInfo = new ServiceInfoProvider(secConfig, this, certClient, trustedCertStorage);
   }
 
   @VisibleForTesting

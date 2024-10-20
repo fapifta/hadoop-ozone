@@ -296,7 +296,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
                   this::reconfigReplicationStreamsLimit);
 
       datanodeStateMachine = new DatanodeStateMachine(this, datanodeDetails, conf,
-          dnCertClient, secretKeyClient, this::terminateDatanode,
+          dnCertClient, trustedCertStorage, secretKeyClient, this::terminateDatanode,
           reconfigurationHandler);
       try {
         httpServer = new HddsDatanodeHttpServer(conf);

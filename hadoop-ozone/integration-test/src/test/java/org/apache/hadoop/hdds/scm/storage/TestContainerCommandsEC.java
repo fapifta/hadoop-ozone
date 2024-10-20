@@ -52,6 +52,7 @@ import org.apache.hadoop.hdds.security.token.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -165,6 +166,7 @@ public class TestContainerCommandsEC {
   private List<XceiverClientSpi> clients = null;
   private static OzoneConfiguration config;
   private static CertificateClient certClient;
+  private static TrustedCertStorage trustedCertStorage;
 
   private static OzoneBucket classBucket;
   private static OzoneVolume classVolume;
@@ -370,7 +372,7 @@ public class TestContainerCommandsEC {
     }
 
     try (ECReconstructionCoordinator coordinator =
-             new ECReconstructionCoordinator(config, certClient,
+             new ECReconstructionCoordinator(config, trustedCertStorage,
                  secretKeyClient, null,
                  ECReconstructionMetrics.create(), "")) {
 
@@ -683,7 +685,7 @@ public class TestContainerCommandsEC {
         XceiverClientManager xceiverClientManager =
             new XceiverClientManager(config);
         ECReconstructionCoordinator coordinator =
-            new ECReconstructionCoordinator(config, certClient, secretKeyClient,
+            new ECReconstructionCoordinator(config, trustedCertStorage, secretKeyClient,
                 null, ECReconstructionMetrics.create(), "2")) {
 
       ECReconstructionMetrics metrics =
@@ -733,14 +735,14 @@ public class TestContainerCommandsEC {
       List<org.apache.hadoop.ozone.container.common.helpers.BlockData[]>
           blockDataArrList = new ArrayList<>();
       try (ECContainerOperationClient ecContainerOperationClient =
-               new ECContainerOperationClient(config, certClient)) {
+               new ECContainerOperationClient(config, trustedCertStorage)) {
         for (int j = 0; j < containerToDeletePipeline.size(); j++) {
           Pipeline p = containerToDeletePipeline.get(j);
           org.apache.hadoop.ozone.container.common.helpers.BlockData[]
               blockData = ecContainerOperationClient.listBlock(
-                  conID, p.getFirstNode(),
-                  (ECReplicationConfig) p.getReplicationConfig(),
-                  cToken);
+              conID, p.getFirstNode(),
+              (ECReplicationConfig) p.getReplicationConfig(),
+              cToken);
           blockDataArrList.add(blockData);
           // Delete the first index container
           XceiverClientSpi client = xceiverClientManager.acquireClient(
@@ -916,7 +918,7 @@ public class TestContainerCommandsEC {
 
     assertThrows(IOException.class, () -> {
       try (ECReconstructionCoordinator coordinator =
-               new ECReconstructionCoordinator(config, certClient,
+               new ECReconstructionCoordinator(config, trustedCertStorage,
                    secretKeyClient,
                    null, ECReconstructionMetrics.create(), "")) {
         coordinator.reconstructECContainerGroup(conID,
@@ -928,7 +930,7 @@ public class TestContainerCommandsEC {
     StorageContainerException ex =
         assertThrows(StorageContainerException.class, () -> {
           try (ECContainerOperationClient client =
-              new ECContainerOperationClient(config, certClient)) {
+                   new ECContainerOperationClient(config, trustedCertStorage)) {
             client.listBlock(conID, targetDNToCheckContainerCLeaned,
                 new ECReplicationConfig(3, 2), cToken);
           }
@@ -1004,6 +1006,8 @@ public class TestContainerCommandsEC {
     when(sslIdentityStorage.getPublicKey()).thenReturn(certClient.getPublicKey());
     when(sslIdentityStorage.getPrivateKey()).thenReturn(certClient.getPrivateKey());
     when(sslIdentityStorage.getLeafCertificate()).thenReturn(certClient.getCertificate());
+    trustedCertStorage = Mockito.mock(TrustedCertStorage.class);
+    when(trustedCertStorage.getLeafCertificates()).thenReturn(certClient.getAllRootCaCerts());
     cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(NUM_DN)
         .setCertificateClient(certClient)
         .setSSLIdentityStorage(sslIdentityStorage)

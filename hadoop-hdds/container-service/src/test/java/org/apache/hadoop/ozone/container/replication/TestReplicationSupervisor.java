@@ -48,7 +48,7 @@ import org.apache.hadoop.hdds.protocol.MockDatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ReplicationCommandPriority;
 import org.apache.hadoop.hdds.security.symmetric.SecretKeySignerClient;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.ozone.container.common.impl.ContainerLayoutVersion;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
@@ -746,11 +746,11 @@ public class TestReplicationSupervisor {
     private final ReplicationSupervisor supervisor;
 
     FakeECReconstructionCoordinator(ConfigurationSource conf,
-        CertificateClient certificateClient, SecretKeySignerClient secretKeyClient,
+        TrustedCertStorage trustedCertStorage, SecretKeySignerClient secretKeyClient,
         StateContext context, ECReconstructionMetrics metrics, String threadNamePrefix,
         ReplicationSupervisor supervisor)
             throws IOException {
-      super(conf, certificateClient, secretKeyClient, context, metrics, threadNamePrefix);
+      super(conf, trustedCertStorage, secretKeyClient, context, metrics, threadNamePrefix);
       this.supervisor = supervisor;
     }
 

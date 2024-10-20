@@ -32,7 +32,7 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CACertificateProvider;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.security.token.Token;
@@ -63,16 +63,16 @@ public class ECContainerOperationClient implements Closeable {
   }
 
   public ECContainerOperationClient(ConfigurationSource conf,
-      CertificateClient certificateClient) throws IOException {
-    this(createClientManager(conf, certificateClient));
+      TrustedCertStorage trustedCertStorage) throws IOException {
+    this(createClientManager(conf, trustedCertStorage));
   }
 
   @Nonnull
-  private static XceiverClientManager createClientManager(ConfigurationSource conf, CertificateClient certificateClient)
-      throws IOException {
+  private static XceiverClientManager createClientManager(ConfigurationSource conf,
+      TrustedCertStorage trustedCertStorage) throws IOException {
     ClientTrustManager trustManager = null;
     if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
-      trustManager = createClientTrustManager(certificateClient);
+      trustManager = createClientTrustManager(trustedCertStorage);
     }
     XceiverClientManager.ScmClientConfig scmClientConfig = new XceiverClientManager.XceiverClientManagerConfigBuilder()
         .setMaxCacheSize(256)
@@ -104,8 +104,9 @@ public class ECContainerOperationClient implements Closeable {
     }
   }
 
-  public static ClientTrustManager createClientTrustManager(final CertificateClient client) throws IOException {
-    CACertificateProvider caCertificateProvider = () -> new ArrayList<>(client.getAllRootCaCerts());
+  public static ClientTrustManager createClientTrustManager(final TrustedCertStorage trustedCertStorage)
+      throws IOException {
+    CACertificateProvider caCertificateProvider = () -> new ArrayList<>(trustedCertStorage.getLeafCertificates());
     return new ClientTrustManager(caCertificateProvider, caCertificateProvider);
   }
 

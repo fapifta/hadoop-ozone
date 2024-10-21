@@ -86,7 +86,6 @@ import static org.apache.hadoop.hdds.security.x509.certificate.client.Certificat
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.GETCERT;
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.SUCCESS;
 import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.BOOTSTRAP_ERROR;
-import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CERTIFICATE_ERROR;
 import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CRYPTO_SIGNATURE_VERIFICATION_ERROR;
 import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CRYPTO_SIGN_ERROR;
 import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.RENEW_ERROR;
@@ -358,37 +357,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         .addInetAddresses()
         .setDigitalEncryption(true)
         .setDigitalSignature(true);
-  }
-
-  /**
-   * Stores the Certificate  for this client. Don't use this api to add trusted
-   * certificates of others.
-   *
-   * @param pemEncodedCert - pem encoded X509 Certificate
-   * @param caType         - Is CA certificate.
-   * @throws CertificateException - on Error.
-   */
-  public void storeCertificate(String pemEncodedCert,
-      CAType caType) throws CertificateException {
-    CertificateCodec certificateCodec = new CertificateCodec(securityConfig, component);
-    storeCertificate(pemEncodedCert, caType, certificateCodec);
-  }
-
-  public synchronized void storeCertificate(String pemEncodedCert,
-      CAType caType, CertificateCodec codec) throws CertificateException {
-    try {
-      CertPath certificatePath =
-          CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
-      X509Certificate cert = firstCertificateFrom(certificatePath);
-
-      String certName = String.format(CERT_FILE_NAME_FORMAT,
-          caType.getFileNamePrefix() + cert.getSerialNumber().toString());
-
-      codec.writeCertificate(certName, pemEncodedCert);
-    } catch (IOException | java.security.cert.CertificateException e) {
-      throw new CertificateException("Error while storing certificate.", e,
-          CERTIFICATE_ERROR);
-    }
   }
 
   /**

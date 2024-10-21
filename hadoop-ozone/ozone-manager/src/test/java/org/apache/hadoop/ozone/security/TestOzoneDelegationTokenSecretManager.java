@@ -189,7 +189,7 @@ public class TestOzoneDelegationTokenSecretManager {
       }
     };
 
-    omCertificateClient.storeCertificate(CertificateCodec.getPEMEncodedString(certPath), CAType.ROOT);
+    trustedStorage.storeCertificate(CertificateCodec.getPEMEncodedString(certPath), CAType.ROOT);
     return omCertificateClient;
   }
 

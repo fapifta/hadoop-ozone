@@ -173,13 +173,17 @@ public class TestDefaultCertificateClient {
    */
   @Test
   public void testCertificateOps() throws Exception {
-    dnCertClient.storeCertificate(getPEMEncodedString(x509Certificate), CAType.NONE);
+    storeCertificate(x509Certificate, CAType.NONE);
     X509Certificate cert = dnCertClient.getCertificate();
     assertNotNull(cert);
     assertThat(cert.getEncoded().length).isGreaterThan(0);
     assertEquals(x509Certificate, cert);
 
     // TODO: test verifyCertificate once implemented.
+  }
+
+  private void storeCertificate(X509Certificate cert, CAType caType) throws IOException {
+    dnCertClient.getTrustedCertStorage().storeCertificate(getPEMEncodedString(cert), caType);
   }
 
   private X509Certificate generateX509Cert(KeyPair keyPair) throws Exception {
@@ -444,16 +448,14 @@ public class TestDefaultCertificateClient {
     X509Certificate cert = KeyStoreTestUtil.generateCertificate("CN=Test",
         keyPair, (int) (gracePeriod.toDays()),
         dnSecurityConfig.getSignatureAlgo());
-    dnCertClient.storeCertificate(
-        getPEMEncodedString(cert), CAType.SUBORDINATE);
+    storeCertificate(cert, CAType.SUBORDINATE);
     Duration duration = dnCertClient.timeBeforeExpiryGracePeriod(cert);
     assertTrue(duration.isZero());
 
     cert = KeyStoreTestUtil.generateCertificate("CN=Test",
         keyPair, (int) (gracePeriod.toDays() + 1),
         dnSecurityConfig.getSignatureAlgo());
-    dnCertClient.storeCertificate(
-        getPEMEncodedString(cert), CAType.SUBORDINATE);
+    storeCertificate(cert, CAType.SUBORDINATE);
     duration = dnCertClient.timeBeforeExpiryGracePeriod(cert);
     assertThat(duration.toMillis()).isLessThan(Duration.ofDays(1).toMillis())
         .isGreaterThan(Duration.ofHours(23).plusMinutes(59).toMillis());
@@ -517,9 +519,7 @@ public class TestDefaultCertificateClient {
 
     X509Certificate cert = KeyStoreTestUtil.generateCertificate(
         "CN=OzoneMaster", keyPair, 30, "SHA256withRSA");
-    certCodec = new CertificateCodec(dnSecurityConfig,
-        newCertDir.toPath());
-    dnCertClient.storeCertificate(getPEMEncodedString(cert), CAType.NONE, certCodec);
+    dnCertClient.getTrustedCertStorage().storeCertificate(getPEMEncodedString(cert), CAType.NONE, newCertDir.toPath());
     // a success renew after auto cleanup new key and cert dir
     dnCertClient.renewAndStoreKeyAndCertificate(true);
   }

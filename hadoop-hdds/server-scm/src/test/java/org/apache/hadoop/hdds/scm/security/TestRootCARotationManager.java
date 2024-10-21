@@ -199,7 +199,7 @@ public class TestRootCARotationManager {
 
     X509Certificate cert = generateX509Cert(ozoneConfig,
         LocalDateTime.now(), Duration.ofSeconds(35));
-    scmCertClient.storeCertificate(CertificateCodec.getPEMEncodedString(cert), CAType.SUBORDINATE);
+    certStorage.storeCertificate(CertificateCodec.getPEMEncodedString(cert), CAType.SUBORDINATE);
 
     rootCARotationManager = new RootCARotationManager(scm);
     rootCARotationManager.setRootCARotationHandler(handler);
@@ -232,7 +232,7 @@ public class TestRootCARotationManager {
 
     X509Certificate cert = generateX509Cert(ozoneConfig,
         LocalDateTime.now(), Duration.ofSeconds(35));
-    scmCertClient.storeCertificate(CertificateCodec.getPEMEncodedString(cert), CAType.SUBORDINATE);
+    certStorage.storeCertificate(CertificateCodec.getPEMEncodedString(cert), CAType.SUBORDINATE);
 
     rootCARotationManager = new RootCARotationManager(scm);
     rootCARotationManager.setRootCARotationHandler(handler);
@@ -264,7 +264,7 @@ public class TestRootCARotationManager {
 
     X509Certificate cert = generateX509Cert(ozoneConfig,
         LocalDateTime.now(), Duration.ofSeconds(90));
-    scmCertClient.storeCertificate(CertificateCodec.getPEMEncodedString(cert), CAType.SUBORDINATE);
+    certStorage.storeCertificate(CertificateCodec.getPEMEncodedString(cert), CAType.SUBORDINATE);
     CertificateCodec certCodec = new CertificateCodec(securityConfig,
         "scm/sub-ca");
     certCodec.writeCertificate(cert);

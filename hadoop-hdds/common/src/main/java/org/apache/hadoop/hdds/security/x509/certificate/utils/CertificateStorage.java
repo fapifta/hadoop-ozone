@@ -162,6 +162,10 @@ public abstract class CertificateStorage {
     }
   }
 
+  public String storeCertificate(String pemEncodedCert, CAType caType) throws IOException {
+    return storeCertificate(pemEncodedCert, caType, securityConfig.getCertificateLocation(getComponentName()));
+  }
+
   public String storeCertificate(String pemEncodedCert, CAType caType, Path path) throws IOException {
     try {
       CertificateCodec codec = new CertificateCodec(getSecurityConfig(), path);

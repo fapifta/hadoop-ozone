@@ -147,21 +147,6 @@ public abstract class CertificateStorage {
     codec.writeCertificate(certificate);
   }
 
-  public void storeCertificate(CertPath certificatePath, CAType caType, Path path) throws IOException {
-    try {
-      CertificateCodec codec = new CertificateCodec(getSecurityConfig(), path);
-      X509Certificate cert = firstCertificateFrom(certificatePath);
-
-      String certName = String.format(CERT_FILE_NAME_FORMAT,
-          caType.getFileNamePrefix() + cert.getSerialNumber().toString());
-
-      codec.writeCertificate(certName, CertificateCodec.getPEMEncodedString(certificatePath));
-    } catch (IOException e) {
-      throw new org.apache.hadoop.hdds.security.x509.exception.CertificateException(
-          "Error while storing certificate.", e, CERTIFICATE_ERROR);
-    }
-  }
-
   public String storeCertificate(String pemEncodedCert, CAType caType) throws IOException {
     return storeCertificate(pemEncodedCert, caType, securityConfig.getCertificateLocation(getComponentName()));
   }

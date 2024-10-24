@@ -509,9 +509,9 @@ public class OzoneDelegationTokenSecretManager
         certId);
     try {
       String pemEncodedCert = scmClient.getCertificate(certId);
-      CertPath certPath = CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
-      storage.storeCertificate(certPath, CAType.NONE, certificateClient.getSecurityConfig()
+      storage.storeCertificate(pemEncodedCert, CAType.NONE, certificateClient.getSecurityConfig()
           .getCertificateLocation(certificateClient.getComponentName()));
+      CertPath certPath = CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
       return (X509Certificate) certPath.getCertificates().get(0);
     } catch (Exception e) {
       LOG.error("Error while getting Certificate with " +

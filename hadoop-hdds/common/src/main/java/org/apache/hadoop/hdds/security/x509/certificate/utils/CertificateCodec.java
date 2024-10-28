@@ -265,7 +265,7 @@ public class CertificateCodec {
         new ByteArrayInputStream(pemString.getBytes(DEFAULT_CHARSET)));
   }
 
-  private CertPath getCertPath(Path path, String fileName) throws IOException,
+  public CertPath getCertPath(Path path, String fileName) throws IOException,
       CertificateException {
     checkBasePathDirectory(path.toAbsolutePath());
     File certFile =

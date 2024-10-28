@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.slf4j.Logger;
@@ -372,14 +373,9 @@ public abstract class DefaultCAServer implements CertificateServer {
   public synchronized void storeCertificate(String pemEncodedCert,
       CAType caType) throws org.apache.hadoop.hdds.security.x509.exception.CertificateException {
     try {
-      CertificateCodec codec = new CertificateCodec(getSecurityConfig(), getComponentName());
-      CertPath certificatePath =
-          CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
-      X509Certificate cert = (X509Certificate) certificatePath.getCertificates().get(0);
-      String certName = String.format(CERT_FILE_NAME_FORMAT,
-          caType.getFileNamePrefix() + cert.getSerialNumber().toString());
-      codec.writeCertificate(certName, pemEncodedCert);
-    } catch (IOException | java.security.cert.CertificateException e) {
+      TrustedCertStorage trustedCertStorage = new TrustedCertStorage(getSecurityConfig(), getComponentName());
+      trustedCertStorage.storeCertificate(pemEncodedCert, caType);
+    } catch (IOException e) {
       throw new org.apache.hadoop.hdds.security.x509.exception.CertificateException("Error while storing certificate.",
           e,
           CERTIFICATE_ERROR);

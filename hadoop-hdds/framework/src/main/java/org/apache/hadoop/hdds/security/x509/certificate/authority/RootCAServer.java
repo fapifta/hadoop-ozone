@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
@@ -108,7 +110,7 @@ public class RootCAServer extends DefaultCAServer {
         throw new IOException("External cert path is not correct: " +
             extCertPath);
       }
-      X509Certificate certificate = certificateCodec.getTargetCert(extCertParent, extCertName.toString());
+      CertPath certPath = certificateCodec.getCertPath(extCertParent, extCertName.toString());
       Path extPrivateKeyParent = extPrivateKeyPath.getParent();
       Path extPrivateKeyFileName = extPrivateKeyPath.getFileName();
       if (extPrivateKeyParent == null || extPrivateKeyFileName == null) {
@@ -119,9 +121,11 @@ public class RootCAServer extends DefaultCAServer {
           extPrivateKeyFileName.toString());
       PublicKey publicKey;
       publicKey = readPublicKeyWithExternalData(
-          externalPublicKeyLocation, keyCodec, certificate);
+          externalPublicKeyLocation, keyCodec, certPath);
       keyCodec.writeKey(new KeyPair(publicKey, privateKey));
-      certificateCodec.writeCertificate(certificate);
+      TrustedCertStorage trustedCertStorage = new TrustedCertStorage(getSecurityConfig(), getComponentName());
+      trustedCertStorage.storeDefaultCertificate(CertificateCodec.getPEMEncodedString(certPath));
+      X509Certificate certificate = (X509Certificate) (certPath.getCertificates().get(0));
       getSaveCertId().accept(certificate.getSerialNumber().toString());
     } catch (IOException | CertificateException | NoSuchAlgorithmException |
              InvalidKeySpecException e) {
@@ -130,11 +134,11 @@ public class RootCAServer extends DefaultCAServer {
   }
 
   private PublicKey readPublicKeyWithExternalData(
-      String externalPublicKeyLocation, KeyCodec keyCodec, X509Certificate certificate
+      String externalPublicKeyLocation, KeyCodec keyCodec, CertPath certPath
   ) throws CertificateException, NoSuchAlgorithmException, InvalidKeySpecException, IOException {
     PublicKey publicKey;
     if (externalPublicKeyLocation.isEmpty()) {
-      publicKey = certificate.getPublicKey();
+      publicKey = certPath.getCertificates().get(0).getPublicKey();
     } else {
       Path publicKeyPath = Paths.get(externalPublicKeyLocation);
       Path publicKeyPathFileName = publicKeyPath.getFileName();
@@ -189,10 +193,10 @@ public class RootCAServer extends DefaultCAServer {
         .setKey(key);
 
     builder.addInetAddresses();
-    X509Certificate selfSignedCertificate = builder.build();
+    String selfSignedCertificate = builder.buildAndEncodeCertPath();
 
-    CertificateCodec certCodec =
-        new CertificateCodec(getSecurityConfig(), getComponentName());
-    certCodec.writeCertificate(selfSignedCertificate);
+    TrustedCertStorage trustedCertStorage =
+        new TrustedCertStorage(getSecurityConfig(), getComponentName());
+    trustedCertStorage.storeDefaultCertificate(selfSignedCertificate);
   }
 }

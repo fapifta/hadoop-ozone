@@ -162,6 +162,11 @@ public abstract class CertificateStorage {
     return storeCertificate(pemEncodedCert, caType, securityConfig.getCertificateLocation(getComponentName()));
   }
 
+  public void storeDefaultCertificate(String pemEncodedCert) throws IOException {
+    writeCertificate(getSecurityConfig().getCertificateLocation(getComponentName()),
+        getSecurityConfig().getCertificateFileName(), pemEncodedCert);
+  }
+
   public String storeCertificate(String pemEncodedCert, CAType caType, Path path) throws IOException {
     try {
       CertPath certificatePath = CertificateCodec.getCertPathFromPemEncodedString(pemEncodedCert);
@@ -188,7 +193,9 @@ public abstract class CertificateStorage {
    * @param pemEncodedCertificate - pemEncoded Certificate file.
    * @throws IOException - on Error.
    */
-  private synchronized void writeCertificate(Path basePath, String fileName,
+  //This is only protected for special use in RotationHandlerStorage, please use various storeCertificate methods
+  // instead
+  protected synchronized void writeCertificate(Path basePath, String fileName,
       String pemEncodedCertificate)
       throws IOException {
     checkBasePathDirectory(basePath);

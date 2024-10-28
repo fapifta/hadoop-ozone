@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -141,9 +142,8 @@ public class SubCAServer extends DefaultCAServer {
 
   private void persistSubCACertificate(
       String certificateHolder) throws IOException {
-    CertificateCodec certCodec =
-        new CertificateCodec(getSecurityConfig(), getComponentName());
-    certCodec.writeCertificate(getSecurityConfig().getCertificateFileName(), certificateHolder);
+    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(getSecurityConfig(), getComponentName());
+    trustedCertStorage.storeDefaultCertificate(certificateHolder);
   }
 
   private void getPrimarySCMSelfSignedCert(KeyPair keyPair) {

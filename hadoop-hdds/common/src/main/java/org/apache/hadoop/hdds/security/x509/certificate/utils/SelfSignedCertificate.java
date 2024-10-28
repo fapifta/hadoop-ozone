@@ -23,11 +23,13 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.security.KeyPair;
+import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -329,6 +331,15 @@ public final class SelfSignedCertificate {
       } catch (OperatorCreationException | CertIOException e) {
         throw new CertificateException("Unable to create root certificate.",
             e.getCause());
+      }
+    }
+
+    public String buildAndEncodeCertPath() throws IOException {
+      try {
+        CertPath certPath = CertificateCodec.getCertFactory().generateCertPath(Collections.singletonList(build()));
+        return CertificateCodec.getPEMEncodedString(certPath);
+      } catch (java.security.cert.CertificateException e) {
+        throw new IOException(e);
       }
     }
   }

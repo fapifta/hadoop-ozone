@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.utils.db.DBColumnFamilyDefinition;
 import org.apache.hadoop.hdds.utils.db.DBDefinition;
 import org.apache.hadoop.hdds.utils.db.managed.ManagedRocksDB;
@@ -55,7 +56,6 @@ import java.util.Arrays;
 import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.hdds.scm.metadata.SCMDBDefinition.VALID_SCM_CERTS;
-import static org.apache.hadoop.hdds.security.x509.certificate.client.DefaultCertificateClient.CERT_FILE_NAME_FORMAT;
 import static org.apache.hadoop.ozone.om.helpers.OzoneFSUtils.removeTrailingSlashIfNeeded;
 
 /**
@@ -219,23 +219,20 @@ public class RecoverSCMCertificate implements Callable<Void>, SubcommandWithPare
 
     CertPath certPath = addRootCertInPath(scmCertificate, rootCertificate);
     CertPath rootCertPath = getRootCertPath(rootCertificate);
+    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, SCMCertificateClient.COMPONENT_NAME);
     String encodedCert = CertificateCodec.getPEMEncodedString(certPath);
-    String certName = String.format(CERT_FILE_NAME_FORMAT,
-        CAType.NONE.getFileNamePrefix() + scmCertificate.getSerialNumber().toString());
-    certCodec.writeCertificate(certName, encodedCert);
-
-    String rootCertName = String.format(CERT_FILE_NAME_FORMAT,
-        CAType.SUBORDINATE.getFileNamePrefix() + rootCertificate.getSerialNumber().toString());
+    trustedCertStorage.storeCertificate(encodedCert, CAType.NONE);
     String encodedRootCert = CertificateCodec.getPEMEncodedString(rootCertPath);
-    certCodec.writeCertificate(rootCertName, encodedRootCert);
+    trustedCertStorage.storeCertificate(encodedRootCert, CAType.SUBORDINATE);
 
-    certCodec.writeCertificate(securityConfig.getCertificateFileName(), encodedCert);
+    trustedCertStorage.storeDefaultCertificate(encodedCert);
 
     if (isRootCA) {
-      CertificateCodec rootCertCodec =
-          new CertificateCodec(securityConfig, OzoneConsts.SCM_ROOT_CA_COMPONENT_NAME);
-      out().println("Writing root certs to path : " + rootCertCodec.getLocation().toString());
-      rootCertCodec.writeCertificate(securityConfig.getCertificateFileName(), encodedRootCert);
+      TrustedCertStorage rootStorage =
+          new TrustedCertStorage(securityConfig, OzoneConsts.SCM_ROOT_CA_COMPONENT_NAME);
+      out().println("Writing root certs to path : " +
+          securityConfig.getCertificateLocation(SCMCertificateClient.COMPONENT_NAME).toString());
+      rootStorage.storeDefaultCertificate(encodedRootCert);
     }
   }
 

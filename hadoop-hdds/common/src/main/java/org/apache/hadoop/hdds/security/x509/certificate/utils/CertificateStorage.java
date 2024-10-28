@@ -161,7 +161,7 @@ public abstract class CertificateStorage {
       String certName = String.format(CERT_FILE_NAME_FORMAT,
           caType.getFileNamePrefix() + certId);
 
-      codec.writeCertificate(certName, CertificateCodec.getPEMEncodedString(certificatePath));
+      codec.writeCertificate(certName, pemEncodedCert);
       return certId;
     } catch (IOException | CertificateException e) {
       throw new org.apache.hadoop.hdds.security.x509.exception.CertificateException(

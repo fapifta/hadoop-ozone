@@ -229,15 +229,13 @@ public class RecoverSCMCertificate implements Callable<Void>, SubcommandWithPare
     String encodedRootCert = CertificateCodec.getPEMEncodedString(rootCertPath);
     certCodec.writeCertificate(rootCertName, encodedRootCert);
 
-    certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
-        securityConfig.getCertificateFileName(), encodedCert);
+    certCodec.writeCertificate(securityConfig.getCertificateFileName(), encodedCert);
 
     if (isRootCA) {
       CertificateCodec rootCertCodec =
           new CertificateCodec(securityConfig, OzoneConsts.SCM_ROOT_CA_COMPONENT_NAME);
       out().println("Writing root certs to path : " + rootCertCodec.getLocation().toString());
-      rootCertCodec.writeCertificate(rootCertCodec.getLocation().toAbsolutePath(),
-          securityConfig.getCertificateFileName(), encodedRootCert);
+      rootCertCodec.writeCertificate(securityConfig.getCertificateFileName(), encodedRootCert);
     }
   }
 

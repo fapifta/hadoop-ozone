@@ -143,8 +143,7 @@ public class SubCAServer extends DefaultCAServer {
       String certificateHolder) throws IOException {
     CertificateCodec certCodec =
         new CertificateCodec(getSecurityConfig(), getComponentName());
-    certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
-        getSecurityConfig().getCertificateFileName(), certificateHolder);
+    certCodec.writeCertificate(getSecurityConfig().getCertificateFileName(), certificateHolder);
   }
 
   private void getPrimarySCMSelfSignedCert(KeyPair keyPair) {

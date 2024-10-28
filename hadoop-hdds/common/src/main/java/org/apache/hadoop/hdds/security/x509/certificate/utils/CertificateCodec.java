@@ -327,7 +327,7 @@ public class CertificateCodec {
         location, securityConfig.getCertificateFileName());
   }
 
-  private static CertPath generateCertPathFromInputStream(InputStream inputStream) throws CertificateException {
+  public static CertPath generateCertPathFromInputStream(InputStream inputStream) throws CertificateException {
     return getCertFactory().generateCertPath(inputStream, "PEM");
   }
 

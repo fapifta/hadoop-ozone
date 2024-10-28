@@ -123,8 +123,7 @@ public class RotationHandlerStorage extends CertificateStorage {
     String newCertId = storeCertificate(encodedNewCertPath, CAType.NONE, newSubCaProgressPathX509);
     storeCertificate(encodedNewRootCaCert, CAType.SUBORDINATE, newSubCaProgressPathX509);
     CertificateCodec certCodec = new CertificateCodec(getSecurityConfig(), newSubCaProgressPathX509);
-    certCodec.writeCertificate(certCodec.getLocation().toAbsolutePath(),
-        getSecurityConfig().getCertificateFileName(), encodedNewCertPath);
+    certCodec.writeCertificate(getSecurityConfig().getCertificateFileName(), encodedNewCertPath);
     return newCertId;
   }
 

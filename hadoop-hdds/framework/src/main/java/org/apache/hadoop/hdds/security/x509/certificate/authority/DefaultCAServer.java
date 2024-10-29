@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
@@ -155,8 +156,8 @@ public abstract class DefaultCAServer implements CertificateServer {
   @Override
   public CertPath getCaCertPath()
       throws CertificateException, IOException {
-    CertificateCodec codec = new CertificateCodec(config, componentName);
-    return codec.getCertPath();
+    ConfiguredCertStorage certStorage = new ConfiguredCertStorage(config, componentName);
+    return certStorage.getCertPaths().get(0);
   }
 
   /**

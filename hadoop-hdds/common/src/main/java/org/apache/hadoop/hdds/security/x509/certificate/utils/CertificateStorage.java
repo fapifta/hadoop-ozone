@@ -82,6 +82,7 @@ public abstract class CertificateStorage {
     try (Stream<Path> certFiles = Files.list(certificateLocation)) {
       return certFiles
           .filter(Files::isRegularFile)
+          .filter(getFileFilter())
           .map(this::readCertFile)
           .filter(getCertificateFilter())
           .collect(Collectors.toList());
@@ -112,6 +113,10 @@ public abstract class CertificateStorage {
   }
 
   abstract Predicate<CertPath> getCertificateFilter();
+
+  public Predicate<Path> getFileFilter() {
+    return path -> true;
+  }
 
   public SecurityConfig getSecurityConfig() {
     return securityConfig;

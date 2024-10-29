@@ -456,7 +456,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
     if (rootCertificateServer != null) {
       try {
         return CertificateCodec.getPEMEncodedString(
-            rootCertificateServer.getCACertificate());
+            (X509Certificate) rootCertificateServer.getCaCertPath().getCertificates().get(0));
       } catch (CertificateException e) {
         LOGGER.error("Failed to get root CA certificate", e);
         throw new IOException("Failed to get root CA certificate", e);

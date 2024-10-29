@@ -101,7 +101,7 @@ public class TestRootCAServer {
     //When initializing a CA server with external cert
     testCA.init(securityConfig);
     //Then the external cert is set as CA cert for the server.
-    assertEquals(externalCert, testCA.getCACertificate());
+    assertEquals(externalCert, testCA.getCaCertPath().getCertificates().get(0));
   }
 
   @Test
@@ -152,7 +152,7 @@ public class TestRootCAServer {
     //When initializing a CA server with external cert
     testCA.init(securityConfig);
     //Then the external cert is set as CA cert for the server.
-    assertEquals(signedCert, testCA.getCACertificate());
+    assertEquals(signedCert, testCA.getCaCertPath().getCertificates().get(0));
   }
 
 

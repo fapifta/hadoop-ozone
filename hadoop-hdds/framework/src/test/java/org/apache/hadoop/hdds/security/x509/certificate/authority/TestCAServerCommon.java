@@ -99,11 +99,11 @@ public class TestCAServerCommon {
   public void testInitParameterized(CertificateServer certificateServer) throws Exception {
     this.certServer = certificateServer;
     certServer.init(securityConfig);
-    X509Certificate first = certServer.getCACertificate();
+    X509Certificate first = (X509Certificate) certServer.getCaCertPath().getCertificates().get(0);
     assertNotNull(first);
     //Init is idempotent.
     certServer.init(securityConfig);
-    X509Certificate second = certServer.getCACertificate();
+    X509Certificate second = (X509Certificate) certServer.getCaCertPath().getCertificates().get(0);
     assertEquals(first.getSerialNumber(), second.getSerialNumber());
   }
 
@@ -209,7 +209,7 @@ public class TestCAServerCommon {
     // place
     List<? extends Certificate> certBundle = holder.get().getCertificates();
     X509Certificate caInReturnedBundle = (X509Certificate) certBundle.get(1);
-    assertEquals(caInReturnedBundle, certificateServer.getCACertificate());
+    assertEquals(caInReturnedBundle, certificateServer.getCaCertPath().getCertificates().get(0));
     X509Certificate signedCert =
         CertificateCodec.firstCertificateFrom(holder.get());
     //Test that the ca has signed of the returned certificate

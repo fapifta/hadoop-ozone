@@ -153,16 +153,6 @@ public abstract class DefaultCAServer implements CertificateServer {
   }
 
   @Override
-  public X509Certificate getCACertificate() throws IOException {
-    CertificateCodec certificateCodec = new CertificateCodec(config, componentName);
-    try {
-      return certificateCodec.getTargetCert();
-    } catch (CertificateException e) {
-      throw new IOException(e);
-    }
-  }
-
-  @Override
   public CertPath getCaCertPath()
       throws CertificateException, IOException {
     CertificateCodec codec = new CertificateCodec(config, componentName);
@@ -249,7 +239,7 @@ public abstract class DefaultCAServer implements CertificateServer {
       Preconditions.checkState(!Strings.isNullOrEmpty(certSerialId));
       xcert = approver.sign(config,
           getCAKeys().getPrivate(),
-          getCACertificate(),
+          (X509Certificate) getCaCertPath().getCertificates().get(0),
           Date.from(beginDate.atZone(ZoneId.systemDefault()).toInstant()),
           Date.from(endDate.atZone(ZoneId.systemDefault()).toInstant()),
           csr, scmID, clusterID, certSerialId);

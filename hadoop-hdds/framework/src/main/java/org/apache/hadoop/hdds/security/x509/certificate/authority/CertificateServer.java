@@ -46,16 +46,6 @@ public interface CertificateServer {
       throws IOException;
 
   /**
-   * Returns the CA Certificate for this CA.
-   *
-   * @return X509Certificate - Certificate for this CA.
-   * @throws CertificateException - usually thrown if this CA is not
-   *                              initialized.
-   * @throws IOException          - on Error.
-   */
-  X509Certificate getCACertificate() throws CertificateException, IOException;
-
-  /**
    * Gets the certificate bundle for the CA certificate of this server.
    * The first element of the list is the CA certificate. The issuer of an
    * element of this list is always the next element of the list. The root CA

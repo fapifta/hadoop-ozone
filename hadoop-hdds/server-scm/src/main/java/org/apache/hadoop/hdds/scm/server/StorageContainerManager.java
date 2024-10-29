@@ -1024,7 +1024,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
       String certSerialNumber;
       try {
-        certSerialNumber = getScmCertificateServer().getCACertificate()
+        certSerialNumber = ((X509Certificate) getScmCertificateServer().getCaCertPath().getCertificates().get(0))
             .getSerialNumber().toString();
       } catch (CertificateException ex) {
         LOG.error("Get CA Certificate failed", ex);

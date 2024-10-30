@@ -28,6 +28,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.Defaul
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
@@ -86,10 +87,10 @@ public class TestRootCAServer {
     keyPEMWriter.writeKey(tempDir, keyPair, true);
     X509Certificate externalCert = generateExternalCert(keyPair);
 
-    CertificateCodec certificateCodec = new CertificateCodec(securityConfig,
+    ConfiguredCertStorage certStorage = new ConfiguredCertStorage(securityConfig,
         componentName);
 
-    certificateCodec.writeCertificate(tempDir, externalCaCertFileName,
+    certStorage.writeCertificate(tempDir, externalCaCertFileName,
         CertificateCodec.getPEMEncodedString(externalCert));
 
     CertificateServer testCA = new RootCAServer("testCA",
@@ -137,11 +138,10 @@ public class TestRootCAServer {
         java.sql.Date.valueOf(beginDate), java.sql.Date.valueOf(endDate), csr.toEncodedFormat(),
         scmId, clusterId, String.valueOf(System.nanoTime()));
     CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
-    CertificateCodec certificateCodec = new CertificateCodec(securityConfig, componentName);
+    ConfiguredCertStorage certStorage = new ConfiguredCertStorage(securityConfig, componentName);
 
     CertPath certPath = certFactory.generateCertPath(ImmutableList.of(signedCert, externalCert));
-    certificateCodec.writeCertificate(testDir, externalCaCertFileName,
-        CertificateCodec.getPEMEncodedString(certPath));
+    certStorage.writeCertificate(testDir, externalCaCertFileName, CertificateCodec.getPEMEncodedString(certPath));
 
     CertificateServer testCA = new RootCAServer("testCA",
         RandomStringUtils.randomAlphabetic(4),

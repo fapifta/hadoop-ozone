@@ -212,10 +212,8 @@ public class RecoverSCMCertificate implements Callable<Void>, SubcommandWithPare
   private void storeCerts(X509Certificate scmCertificate,
       X509Certificate rootCertificate, boolean isRootCA, SecurityConfig securityConfig)
       throws CertificateException, IOException {
-    CertificateCodec certCodec =
-        new CertificateCodec(securityConfig, SCMCertificateClient.COMPONENT_NAME);
 
-    out().println("Writing certs to path : " + certCodec.getLocation().toString());
+    out().println("Writing certs to path : " + SCMCertificateClient.COMPONENT_NAME);
 
     CertPath certPath = addRootCertInPath(scmCertificate, rootCertificate);
     CertPath rootCertPath = getRootCertPath(rootCertificate);

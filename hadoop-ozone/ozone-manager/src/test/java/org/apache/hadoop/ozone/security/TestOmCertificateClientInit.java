@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
@@ -140,9 +141,9 @@ public class TestOmCertificateClientInit {
     }
 
     if (certPresent) {
-      CertificateCodec codec = new CertificateCodec(securityConfig,
+      ConfiguredCertStorage certStorage = new ConfiguredCertStorage(securityConfig,
           OM_COMPONENT);
-      codec.writeCertificate(x509Certificate);
+      certStorage.storeDefaultCertificate(CertificateCodec.getPEMEncodedString(x509Certificate));
     } else {
       FileUtils.deleteQuietly(Paths.get(
           securityConfig.getKeyLocation(OM_COMPONENT).toString(),

@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslator
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
@@ -84,6 +85,7 @@ public class TestDefaultCertificateClient {
 
   private String certSerialId;
   private X509Certificate x509Certificate;
+  private String encodedCert;
   private DNCertificateClient dnCertClient;
   private HDDSKeyGenerator keyGenerator;
   @TempDir
@@ -108,6 +110,7 @@ public class TestDefaultCertificateClient {
     Files.createDirectories(dnSecurityConfig.getKeyLocation(DN_COMPONENT));
     x509Certificate = generateX509Cert(null);
     certSerialId = x509Certificate.getSerialNumber().toString();
+    encodedCert = CertificateCodec.getPEMEncodedString(x509Certificate);
     scmSecurityClient = mock(SCMSecurityProtocolClientSideTranslatorPB.class);
     getCertClient();
   }
@@ -406,8 +409,8 @@ public class TestDefaultCertificateClient {
         dnSecurityConfig.getKeyLocation(DN_COMPONENT).toString(),
         dnSecurityConfig.getCertificateFileName()).toFile());
 
-    CertificateCodec dnCertCodec = new CertificateCodec(dnSecurityConfig, DN_COMPONENT);
-    dnCertCodec.writeCertificate(x509Certificate);
+    ConfiguredCertStorage configuredCertStorage = new ConfiguredCertStorage(dnSecurityConfig, DN_COMPONENT);
+    configuredCertStorage.storeDefaultCertificate(encodedCert);
     // Check for DN.
     assertEquals(FAILURE, dnCertClient.init());
     assertThat(dnClientLog.getOutput()).contains("Keypair validation failed");
@@ -464,9 +467,8 @@ public class TestDefaultCertificateClient {
   @Test
   public void testRenewAndStoreKeyAndCertificate() throws Exception {
     // save the certificate on dn
-    CertificateCodec certCodec = new CertificateCodec(dnSecurityConfig,
-        dnSecurityConfig.getCertificateLocation(DN_COMPONENT));
-    certCodec.writeCertificate(x509Certificate);
+    ConfiguredCertStorage configuredCertStorage = new ConfiguredCertStorage(dnSecurityConfig, DN_COMPONENT);
+    configuredCertStorage.storeDefaultCertificate(encodedCert);
 
     X509Certificate newCert = generateX509Cert(null);
     String pemCert = CertificateCodec.getPEMEncodedString(newCert);
@@ -546,9 +548,9 @@ public class TestDefaultCertificateClient {
     SecurityConfig conf = new SecurityConfig(ozoneConf);
     String compName = "test";
 
-    CertificateCodec certCodec = new CertificateCodec(conf, compName);
+    ConfiguredCertStorage certStorage = new ConfiguredCertStorage(conf, compName);
     X509Certificate cert = generateX509Cert(null);
-    certCodec.writeCertificate(cert);
+    certStorage.storeDefaultCertificate(CertificateCodec.getPEMEncodedString(cert));
 
     Logger logger = mock(Logger.class);
     String certId = cert.getSerialNumber().toString();

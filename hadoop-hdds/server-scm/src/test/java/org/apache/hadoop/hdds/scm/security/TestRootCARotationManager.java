@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.CertInfo;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
@@ -264,10 +265,10 @@ public class TestRootCARotationManager {
 
     X509Certificate cert = generateX509Cert(ozoneConfig,
         LocalDateTime.now(), Duration.ofSeconds(90));
-    certStorage.storeCertificate(CertificateCodec.getPEMEncodedString(cert), CAType.SUBORDINATE);
-    CertificateCodec certCodec = new CertificateCodec(securityConfig,
-        "scm/sub-ca");
-    certCodec.writeCertificate(cert);
+    String encodedCert = CertificateCodec.getPEMEncodedString(cert);
+    certStorage.storeCertificate(encodedCert, CAType.SUBORDINATE);
+    ConfiguredCertStorage configuredCertStorage = new ConfiguredCertStorage(securityConfig, "scm/sub-ca");
+    configuredCertStorage.storeDefaultCertificate(encodedCert);
     rootCARotationManager = new RootCARotationManager(scm);
     rootCARotationManager.setRootCARotationHandler(handler);
     GenericTestUtils.LogCapturer logs =

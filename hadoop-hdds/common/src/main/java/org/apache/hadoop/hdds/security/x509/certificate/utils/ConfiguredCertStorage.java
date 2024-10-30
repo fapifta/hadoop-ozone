@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hdds.security.x509.certificate.utils;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.slf4j.Logger;
@@ -60,11 +61,6 @@ public class ConfiguredCertStorage extends CertificateStorage {
   @Override
   public Logger getLogger() {
     return LOG;
-  }
-
-  public void storeDefaultCertificate(String pemEncodedCert) throws IOException {
-    writeCertificate(getSecurityConfig().getCertificateLocation(getComponentName()),
-        getSecurityConfig().getCertificateFileName(), pemEncodedCert);
   }
 
   public String initWithExternalRootCA(SecurityConfig conf) {
@@ -122,5 +118,10 @@ public class ConfiguredCertStorage extends CertificateStorage {
     return publicKey;
   }
 
-
+  @Override
+  @VisibleForTesting
+  public void writeCertificate(Path basePath, String fileName, String pemEncodedCertificate)
+      throws IOException {
+    super.writeCertificate(basePath, fileName, pemEncodedCertificate);
+  }
 }

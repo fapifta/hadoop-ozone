@@ -40,6 +40,7 @@ import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslator
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
@@ -88,8 +89,9 @@ public class TestHddsSecureDatanodeInit {
   private static GenericTestUtils.LogCapturer dnLogs;
   private static SecurityConfig securityConfig;
   private static KeyCodec keyCodec;
-  private static CertificateCodec certCodec;
+  private static ConfiguredCertStorage certStorage;
   private static X509Certificate cert;
+  private static String encodedCert;
   private static final String DN_COMPONENT = DNCertificateClient.COMPONENT_NAME;
   private static final int CERT_LIFETIME = 15; // seconds
 
@@ -131,8 +133,8 @@ public class TestHddsSecureDatanodeInit {
       return null;
     });
     dnLogs = GenericTestUtils.LogCapturer.captureLogs(
-        ((DNCertificateClient)service.getCertificateClient()).getLogger());
-    certCodec = new CertificateCodec(securityConfig, DN_COMPONENT);
+        ((DNCertificateClient) service.getCertificateClient()).getLogger());
+    certStorage = new ConfiguredCertStorage(securityConfig, DN_COMPONENT);
     keyCodec = new KeyCodec(securityConfig, DN_COMPONENT);
     dnLogs.clearOutput();
     privateKey = service.getCertificateClient().getPrivateKey();
@@ -140,6 +142,7 @@ public class TestHddsSecureDatanodeInit {
 
     cert = generateX509Cert(new KeyPair(publicKey, privateKey),
         null, Duration.ofSeconds(CERT_LIFETIME));
+    encodedCert = CertificateCodec.getPEMEncodedString(cert);
     datanodeDetails = MockDatanodeDetails.randomDatanodeDetails();
 
     scmClient = mock(SCMSecurityProtocolClientSideTranslatorPB.class);
@@ -188,7 +191,7 @@ public class TestHddsSecureDatanodeInit {
   @Test
   public void testSecureDnStartupCase1() throws Exception {
     // Case 1: When only certificate is present.
-    certCodec.writeCertificate(cert);
+    certStorage.storeDefaultCertificate(encodedCert);
     RuntimeException rteException = assertThrows(
         RuntimeException.class,
         () -> service.initializeCertificateClient(client));
@@ -221,7 +224,7 @@ public class TestHddsSecureDatanodeInit {
   public void testSecureDnStartupCase3() throws Exception {
     // Case 3: When only public key and certificate is present.
     keyCodec.writePublicKey(publicKey);
-    certCodec.writeCertificate(cert);
+    certStorage.storeDefaultCertificate(encodedCert);
     RuntimeException rteException = assertThrows(
         RuntimeException.class,
         () -> service.initializeCertificateClient(client));
@@ -267,7 +270,7 @@ public class TestHddsSecureDatanodeInit {
   @Test
   public void testSecureDnStartupCase5() throws Exception {
     // Case 5: If private key and certificate is present.
-    certCodec.writeCertificate(cert);
+    certStorage.storeDefaultCertificate(encodedCert);
     keyCodec.writePrivateKey(privateKey);
     service.initializeCertificateClient(client);
     assertNotNull(client.getPrivateKey());
@@ -296,7 +299,7 @@ public class TestHddsSecureDatanodeInit {
     // Case 7 When keypair and certificate is present.
     keyCodec.writePublicKey(publicKey);
     keyCodec.writePrivateKey(privateKey);
-    certCodec.writeCertificate(cert);
+    certStorage.storeDefaultCertificate(encodedCert);
 
     service.initializeCertificateClient(client);
     assertNotNull(client.getPrivateKey());
@@ -323,7 +326,7 @@ public class TestHddsSecureDatanodeInit {
   @Test
   public void testCertificateRotation() throws Exception {
     // save the certificate on dn
-    certCodec.writeCertificate(cert);
+    certStorage.storeDefaultCertificate(encodedCert);
 
     Duration gracePeriod = securityConfig.getRenewalGracePeriod();
     X509Certificate newCert =
@@ -394,7 +397,7 @@ public class TestHddsSecureDatanodeInit {
   @Flaky("HDDS-8873")
   public void testCertificateRotationRecoverableFailure() throws Exception {
     // save the certificate on dn
-    certCodec.writeCertificate(cert);
+    certStorage.storeDefaultCertificate(encodedCert);
 
     Duration gracePeriod = securityConfig.getRenewalGracePeriod();
     X509Certificate newCert =

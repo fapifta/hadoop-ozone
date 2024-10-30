@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
@@ -152,12 +153,12 @@ class TestSecureOzoneManager {
     // Case 5: When only certificate is present.
     FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
-    CertificateCodec certCodec =
-        new CertificateCodec(securityConfig, COMPONENT);
+    ConfiguredCertStorage certStorage =
+        new ConfiguredCertStorage(securityConfig, COMPONENT);
     X509Certificate x509Certificate = KeyStoreTestUtil.generateCertificate(
         "CN=Test", new KeyPair(publicKey, privateKey), 365,
         securityConfig.getSignatureAlgo());
-    certCodec.writeCertificate(x509Certificate);
+    certStorage.storeDefaultCertificate(CertificateCodec.getPEMEncodedString(x509Certificate));
     omStorage.setOmCertSerialId(x509Certificate.getSerialNumber().toString());
     client =
         new OMCertificateClient(

@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.MockDatanodeDetails;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
@@ -133,8 +134,8 @@ public class TestDnCertificateClientInit {
     }
 
     if (certPresent) {
-      CertificateCodec codec = new CertificateCodec(securityConfig, DN_COMPONENT);
-      codec.writeCertificate(x509Certificate);
+      ConfiguredCertStorage certStorage = new ConfiguredCertStorage(securityConfig, DN_COMPONENT);
+      certStorage.storeDefaultCertificate(CertificateCodec.getPEMEncodedString(x509Certificate));
     } else {
       FileUtils.deleteQuietly(Paths.get(
           securityConfig.getKeyLocation(DN_COMPONENT).toString(),

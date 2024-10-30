@@ -30,22 +30,19 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
 import java.security.cert.CertPath;
-import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests the Certificate codecs.
  */
 public class TestCertificateCodec {
-  private static final String COMPONENT = "test";
   private SecurityConfig securityConfig;
 
   @BeforeEach
@@ -96,93 +93,15 @@ public class TestCertificateCodec {
    */
   @Test
   public void testPrependCertificateToCertPath() throws Exception {
-    CertificateCodec codec = new CertificateCodec(securityConfig, COMPONENT);
     X509Certificate initialCert = generateTestCert();
     X509Certificate prependedCert = generateTestCert();
-    codec.writeCertificate(initialCert);
-    CertPath initialPath = codec.getCertPath();
+    CertificateCodec.getCertFactory().generateCertPath(Collections.singletonList(initialCert));
+    CertPath initialPath = CertificateCodec.getCertFactory().generateCertPath(Collections.singletonList(initialCert));
     CertPath pathWithPrependedCert =
-        codec.prependCertToCertPath(prependedCert, initialPath);
+        CertificateCodec.prependCertToCertPath(prependedCert, initialPath);
 
     assertEquals(prependedCert, pathWithPrependedCert.getCertificates().get(0));
     assertEquals(initialCert, pathWithPrependedCert.getCertificates().get(1));
-  }
-
-  /**
-   * tests writing and reading certificates in PEM encoded form.
-   */
-  @Test
-  public void testWriteCertificate(@TempDir Path basePath) throws Exception {
-    X509Certificate cert = generateTestCert();
-    CertificateCodec codec = new CertificateCodec(securityConfig, COMPONENT);
-    String pemString = CertificateCodec.getPEMEncodedString(cert);
-    codec.writeCertificate(basePath, "pemcertificate.crt", pemString);
-
-    X509Certificate loadedCertificate = codec.getTargetCert(basePath, "pemcertificate.crt");
-
-    assertNotNull(loadedCertificate);
-    assertEquals(cert.getSerialNumber(), loadedCertificate.getSerialNumber());
-  }
-
-  /**
-   * Tests reading and writing certificates in DER form.
-   */
-  @Test
-  public void testWriteCertificateDefault() throws Exception {
-    X509Certificate cert = generateTestCert();
-    CertificateCodec codec = new CertificateCodec(securityConfig, COMPONENT);
-    codec.writeCertificate(cert);
-
-    X509Certificate loadedCertificate = codec.getTargetCert();
-
-    assertNotNull(loadedCertificate);
-    assertEquals(cert.getSerialNumber(), loadedCertificate.getSerialNumber());
-  }
-
-  /**
-   * Tests writing to non-default certificate file name.
-   */
-  @Test
-  public void writeCertificate2() throws Exception {
-    X509Certificate cert = generateTestCert();
-    CertificateCodec codec = new CertificateCodec(securityConfig, "ca");
-    codec.writeCertificate(cert, "newcert.crt");
-    // Rewrite with force support
-    codec.writeCertificate(cert, "newcert.crt");
-
-    X509Certificate loadedCertificate = codec.getTargetCert(codec.getLocation(), "newcert.crt");
-
-    assertNotNull(loadedCertificate);
-  }
-
-  /**
-   * Tests writing a certificate path to file and reading back the certificates.
-   */
-  @Test
-  public void testMultipleCertReadWrite() throws Exception {
-    //Given a certificate path of one certificate and another certificate
-    X509Certificate certToPrepend = generateTestCert();
-    X509Certificate initialCert = generateTestCert();
-    assertNotEquals(certToPrepend, initialCert);
-
-    CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
-    CertPath certPath = certificateFactory.generateCertPath(ImmutableList.of(initialCert));
-
-    //When prepending the second one before the first one and reading them back
-    CertificateCodec codec = new CertificateCodec(securityConfig, "ca");
-    CertPath updatedCertPath = codec.prependCertToCertPath(certToPrepend, certPath);
-
-    String certFileName = "newcert.crt";
-    String pemEncodedStrings = CertificateCodec.getPEMEncodedString(updatedCertPath);
-    codec.writeCertificate(certFileName, pemEncodedStrings);
-
-    CertPath rereadCertPath = codec.getCertPath(certFileName);
-
-    //Then the two certificates are the same as before
-    Certificate rereadPrependedCert = rereadCertPath.getCertificates().get(0);
-    Certificate rereadSecondCert = rereadCertPath.getCertificates().get(1);
-    assertEquals(rereadPrependedCert, certToPrepend);
-    assertEquals(rereadSecondCert, initialCert);
   }
 
   private X509Certificate generateTestCert() throws Exception {

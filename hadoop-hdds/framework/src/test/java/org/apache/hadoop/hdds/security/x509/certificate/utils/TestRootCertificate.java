@@ -144,17 +144,6 @@ public class TestRootCertificate {
     // Since this code assigns ONE for the root certificate, we check if the
     // serial number is the expected number.
     assertEquals(BigInteger.ONE, certificate.getSerialNumber());
-
-    CertificateCodec codec = new CertificateCodec(securityConfig, "scm");
-    String pemString = CertificateCodec.getPEMEncodedString(certificate);
-
-    codec.writeCertificate(basePath, "pemcertificate.crt",
-        pemString);
-
-    X509Certificate loadedCert = codec.getTargetCert(basePath, "pemcertificate.crt");
-    assertNotNull(loadedCert);
-    assertEquals(certificate.getSerialNumber(),
-        loadedCert.getSerialNumber());
   }
 
   @Test

@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -224,14 +223,6 @@ public class CertificateCodec {
   }
 
   /**
-   * Write the pem encoded string to the specified file.
-   */
-  public void writeCertificate(String fileName, String pemEncodedCert)
-      throws IOException {
-    writeCertificate(location.toAbsolutePath(), fileName, pemEncodedCert);
-  }
-
-  /**
    * Helper function that writes data to the file.
    *
    * @param basePath              - Base Path where the file needs to written
@@ -265,35 +256,6 @@ public class CertificateCodec {
         new ByteArrayInputStream(pemString.getBytes(DEFAULT_CHARSET)));
   }
 
-  public CertPath getCertPath(Path path, String fileName) throws IOException,
-      CertificateException {
-    checkBasePathDirectory(path.toAbsolutePath());
-    File certFile =
-        Paths.get(path.toAbsolutePath().toString(), fileName).toFile();
-    if (!certFile.exists()) {
-      throw new IOException("Unable to find the requested certificate file. " +
-          "Path: " + certFile);
-    }
-    try (FileInputStream is = new FileInputStream(certFile)) {
-      return generateCertPathFromInputStream(is);
-    }
-  }
-
-  /**
-   * Get the certificate path stored under the specified filename.
-   */
-  public CertPath getCertPath(String fileName)
-      throws IOException, CertificateException {
-    return getCertPath(location, fileName);
-  }
-
-  /**
-   * Get the default certificate path for this cert codec.
-   */
-  public CertPath getCertPath() throws CertificateException, IOException {
-    return getCertPath(this.securityConfig.getCertificateFileName());
-  }
-
   /**
    * Helper method that takes in a certificate path and a certificate and
    * generates a new certificate path starting with the new certificate
@@ -307,24 +269,6 @@ public class CertificateCodec {
       updatedList.add((X509Certificate) cert);
     }
     return getCertFactory().generateCertPath(updatedList);
-  }
-
-  /**
-   * Helper method that gets one certificate from the specified location.
-   * The remaining certificates are ignored.
-   */
-  public X509Certificate getTargetCert(Path path, String fileName) throws CertificateException, IOException {
-    CertPath certPath = getCertPath(path, fileName);
-    return firstCertificateFrom(certPath);
-  }
-
-  /**
-   * Helper method that gets one certificate from the default location.
-   * The remaining certificates are ignored.
-   */
-  public X509Certificate getTargetCert() throws CertificateException, IOException {
-    return getTargetCert(
-        location, securityConfig.getCertificateFileName());
   }
 
   public static CertPath generateCertPathFromInputStream(InputStream inputStream) throws CertificateException {

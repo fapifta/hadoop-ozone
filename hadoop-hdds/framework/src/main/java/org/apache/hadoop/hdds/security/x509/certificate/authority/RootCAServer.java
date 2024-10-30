@@ -23,26 +23,18 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
-import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.cert.CertPath;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.security.spec.InvalidKeySpecException;
 import java.time.LocalDateTime;
 import java.util.function.Consumer;
 
@@ -95,61 +87,11 @@ public class RootCAServer extends DefaultCAServer {
   }
 
   private void initWithExternalRootCa(SecurityConfig conf) {
-    String externalRootCaLocation = conf.getExternalRootCaCert();
-    Path extCertPath = Paths.get(externalRootCaLocation);
-    Path extPrivateKeyPath = Paths.get(conf.getExternalRootCaPrivateKeyPath());
-    String externalPublicKeyLocation = conf.getExternalRootCaPublicKeyPath();
-
-    KeyCodec keyCodec = new KeyCodec(getSecurityConfig(), getComponentName());
-    CertificateCodec certificateCodec =
-        new CertificateCodec(getSecurityConfig(), getComponentName());
-    try {
-      Path extCertParent = extCertPath.getParent();
-      Path extCertName = extCertPath.getFileName();
-      if (extCertParent == null || extCertName == null) {
-        throw new IOException("External cert path is not correct: " +
-            extCertPath);
-      }
-      CertPath certPath = certificateCodec.getCertPath(extCertParent, extCertName.toString());
-      Path extPrivateKeyParent = extPrivateKeyPath.getParent();
-      Path extPrivateKeyFileName = extPrivateKeyPath.getFileName();
-      if (extPrivateKeyParent == null || extPrivateKeyFileName == null) {
-        throw new IOException("External private key path is not correct: " +
-            extPrivateKeyPath);
-      }
-      PrivateKey privateKey = keyCodec.readPrivateKey(extPrivateKeyParent,
-          extPrivateKeyFileName.toString());
-      PublicKey publicKey;
-      publicKey = readPublicKeyWithExternalData(
-          externalPublicKeyLocation, keyCodec, certPath);
-      keyCodec.writeKey(new KeyPair(publicKey, privateKey));
-      TrustedCertStorage trustedCertStorage = new TrustedCertStorage(getSecurityConfig(), getComponentName());
-      trustedCertStorage.storeDefaultCertificate(CertificateCodec.getPEMEncodedString(certPath));
-      X509Certificate certificate = (X509Certificate) (certPath.getCertificates().get(0));
-      getSaveCertId().accept(certificate.getSerialNumber().toString());
-    } catch (IOException | CertificateException | NoSuchAlgorithmException |
-             InvalidKeySpecException e) {
-      LOG.error("External root CA certificate initialization failed", e);
+    ConfiguredCertStorage certStorage = new ConfiguredCertStorage(getSecurityConfig(), getComponentName());
+    String externalCaCertificateId = certStorage.initWithExternalRootCA(conf);
+    if (externalCaCertificateId != null) {
+      getSaveCertId().accept(externalCaCertificateId);
     }
-  }
-
-  private PublicKey readPublicKeyWithExternalData(
-      String externalPublicKeyLocation, KeyCodec keyCodec, CertPath certPath
-  ) throws CertificateException, NoSuchAlgorithmException, InvalidKeySpecException, IOException {
-    PublicKey publicKey;
-    if (externalPublicKeyLocation.isEmpty()) {
-      publicKey = certPath.getCertificates().get(0).getPublicKey();
-    } else {
-      Path publicKeyPath = Paths.get(externalPublicKeyLocation);
-      Path publicKeyPathFileName = publicKeyPath.getFileName();
-      Path publicKeyParent = publicKeyPath.getParent();
-      if (publicKeyPathFileName == null || publicKeyParent == null) {
-        throw new IOException("Public key path incorrect: " + publicKeyParent);
-      }
-      publicKey = keyCodec.readPublicKey(
-          publicKeyParent, publicKeyPathFileName.toString());
-    }
-    return publicKey;
   }
 
   /**

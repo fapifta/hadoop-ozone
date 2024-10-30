@@ -299,7 +299,7 @@ public class CertificateCodec {
    * generates a new certificate path starting with the new certificate
    * followed by all certificates in the specified path.
    */
-  public CertPath prependCertToCertPath(X509Certificate certificate, CertPath path) throws CertificateException {
+  public static CertPath prependCertToCertPath(X509Certificate certificate, CertPath path) throws CertificateException {
     List<? extends Certificate> certificates = path.getCertificates();
     ArrayList<X509Certificate> updatedList = new ArrayList<>();
     updatedList.add(certificate);

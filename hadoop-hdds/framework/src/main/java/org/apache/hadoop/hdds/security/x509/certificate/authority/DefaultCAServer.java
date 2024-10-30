@@ -207,9 +207,9 @@ public abstract class DefaultCAServer implements CertificateServer {
       case KERBEROS_TRUSTED:
       case TESTING_AUTOMATIC:
         X509Certificate signedCertificate = signAndStoreCertificate(beginDate, endDate, csr, role, certSerialId);
-        CertificateCodec codec = new CertificateCodec(config, componentName);
-        CertPath certPath = codec.getCertPath();
-        CertPath updatedCertPath = codec.prependCertToCertPath(signedCertificate, certPath);
+        ConfiguredCertStorage certStorage = new ConfiguredCertStorage(config, componentName);
+        CertPath certPath = certStorage.getCertPaths().get(0);
+        CertPath updatedCertPath = CertificateCodec.prependCertToCertPath(signedCertificate, certPath);
         certPathPromise.complete(updatedCertPath);
         break;
       default:

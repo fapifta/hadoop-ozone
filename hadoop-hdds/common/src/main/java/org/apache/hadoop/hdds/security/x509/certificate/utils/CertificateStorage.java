@@ -215,7 +215,7 @@ public abstract class CertificateStorage {
     Files.setPosixFilePermissions(certificateFile.toPath(), permissionSet);
   }
 
-  private CertPath getCertPath(Path path, String fileName) throws IOException,
+  protected CertPath getCertPath(Path path, String fileName) throws IOException,
       CertificateException {
     checkBasePathDirectory(path.toAbsolutePath());
     File certFile =

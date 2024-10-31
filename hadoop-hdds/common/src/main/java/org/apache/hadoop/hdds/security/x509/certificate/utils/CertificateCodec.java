@@ -137,21 +137,6 @@ public final class CertificateCodec {
     return generateCertPathFromInputStream(new ByteArrayInputStream(pemString.getBytes(DEFAULT_CHARSET)));
   }
 
-  /**
-   * Helper method that takes in a certificate path and a certificate and
-   * generates a new certificate path starting with the new certificate
-   * followed by all certificates in the specified path.
-   */
-  public static CertPath prependCertToCertPath(X509Certificate certificate, CertPath path) throws CertificateException {
-    List<? extends Certificate> certificates = path.getCertificates();
-    ArrayList<X509Certificate> updatedList = new ArrayList<>();
-    updatedList.add(certificate);
-    for (Certificate cert : certificates) {
-      updatedList.add((X509Certificate) cert);
-    }
-    return getCertFactory().generateCertPath(updatedList);
-  }
-
   public static CertPath generateCertPathFromInputStream(InputStream inputStream) throws IOException {
     try {
       return getCertFactory().generateCertPath(inputStream, "PEM");

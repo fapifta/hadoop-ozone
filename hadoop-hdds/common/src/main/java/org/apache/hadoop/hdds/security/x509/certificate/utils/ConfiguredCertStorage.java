@@ -32,9 +32,12 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.CertPath;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Predicate;
 
 /**
@@ -123,5 +126,21 @@ public class ConfiguredCertStorage extends CertificateStorage {
   public void writeCertificate(Path basePath, String fileName, String pemEncodedCertificate)
       throws IOException {
     super.writeCertificate(basePath, fileName, pemEncodedCertificate);
+  }
+
+
+  /**
+   * Helper method that takes in a certificate path and a certificate and
+   * generates a new certificate path starting with the new certificate
+   * followed by all certificates in the specified path.
+   */
+  public static CertPath prependCertToCertPath(X509Certificate certificate, CertPath path) throws CertificateException {
+    List<? extends Certificate> certificates = path.getCertificates();
+    ArrayList<X509Certificate> updatedList = new ArrayList<>();
+    updatedList.add(certificate);
+    for (Certificate cert : certificates) {
+      updatedList.add((X509Certificate) cert);
+    }
+    return CertificateCodec.getCertFactory().generateCertPath(updatedList);
   }
 }

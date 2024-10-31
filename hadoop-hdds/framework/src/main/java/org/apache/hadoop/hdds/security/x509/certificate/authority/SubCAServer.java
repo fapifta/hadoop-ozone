@@ -127,13 +127,10 @@ public class SubCAServer extends DefaultCAServer {
       // Store SCM sub CA and root CA certificate.
       String pemEncodedRootCert = response.getX509CACertificate();
       storeCertificate(pemEncodedRootCert, CAType.SUBORDINATE);
-      storeCertificate(pemEncodedCert, CAType.NONE);
+      String certId = storeCertificate(pemEncodedCert, CAType.NONE);
       persistSubCACertificate(pemEncodedCert);
-
-      X509Certificate certificate =
-          (X509Certificate) CertificateCodec.getCertPathFrom(pemEncodedCert).getCertificates().get(0);
       // Persist scm cert serial ID.
-      getSaveCertId().accept(certificate.getSerialNumber().toString());
+      getSaveCertId().accept(certId);
     } catch (IOException e) {
       LOG.error("Error while fetching/storing SCM signed certificate.", e);
       throw new RuntimeException(e);

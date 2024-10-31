@@ -98,7 +98,7 @@ public class TestCertificateCodec {
     CertificateCodec.getCertFactory().generateCertPath(Collections.singletonList(initialCert));
     CertPath initialPath = CertificateCodec.getCertFactory().generateCertPath(Collections.singletonList(initialCert));
     CertPath pathWithPrependedCert =
-        CertificateCodec.prependCertToCertPath(prependedCert, initialPath);
+        ConfiguredCertStorage.prependCertToCertPath(prependedCert, initialPath);
 
     assertEquals(prependedCert, pathWithPrependedCert.getCertificates().get(0));
     assertEquals(initialCert, pathWithPrependedCert.getCertificates().get(1));

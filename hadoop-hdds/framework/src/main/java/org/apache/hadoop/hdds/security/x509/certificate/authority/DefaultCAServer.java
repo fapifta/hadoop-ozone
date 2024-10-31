@@ -26,7 +26,6 @@ import org.apache.hadoop.hdds.scm.metadata.SCMMetadataStore;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
@@ -209,7 +208,7 @@ public abstract class DefaultCAServer implements CertificateServer {
         X509Certificate signedCertificate = signAndStoreCertificate(beginDate, endDate, csr, role, certSerialId);
         ConfiguredCertStorage certStorage = new ConfiguredCertStorage(config, componentName);
         CertPath certPath = certStorage.getCertPaths().get(0);
-        CertPath updatedCertPath = CertificateCodec.prependCertToCertPath(signedCertificate, certPath);
+        CertPath updatedCertPath = ConfiguredCertStorage.prependCertToCertPath(signedCertificate, certPath);
         certPathPromise.complete(updatedCertPath);
         break;
       default:
@@ -361,11 +360,11 @@ public abstract class DefaultCAServer implements CertificateServer {
     return keys;
   }
 
-  public synchronized void storeCertificate(String pemEncodedCert,
+  public synchronized String storeCertificate(String pemEncodedCert,
       CAType caType) throws org.apache.hadoop.hdds.security.x509.exception.CertificateException {
     try {
       TrustedCertStorage trustedCertStorage = new TrustedCertStorage(getSecurityConfig(), getComponentName());
-      trustedCertStorage.storeCertificate(pemEncodedCert, caType);
+      return trustedCertStorage.storeCertificate(pemEncodedCert, caType);
     } catch (IOException e) {
       throw new org.apache.hadoop.hdds.security.x509.exception.CertificateException("Error while storing certificate.",
           e,

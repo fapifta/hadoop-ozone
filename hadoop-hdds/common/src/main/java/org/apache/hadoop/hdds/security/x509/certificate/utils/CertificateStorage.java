@@ -41,6 +41,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -84,6 +85,7 @@ public abstract class CertificateStorage {
           .filter(Files::isRegularFile)
           .filter(getFileFilter())
           .map(this::readCertFile)
+          .filter(Objects::nonNull)
           .filter(getCertificateFilter())
           .collect(Collectors.toList());
     } catch (IOException e) {
@@ -129,23 +131,21 @@ public abstract class CertificateStorage {
   public abstract Logger getLogger();
 
   private CertPath readCertFile(Path filePath) {
+    if (filePath == null) {
+      getLogger().error("Trying to read null as a certificate file.");
+      return null;
+    }
+    Path fileName = filePath.getFileName();
+    if (fileName == null) {
+      getLogger().error("Error the fileName is null for {}", filePath);
+      return null;
+    }
     try {
-      Path fileName;
-      //do this to avoid the findbugs error about possible null pointer dereference
-      if (filePath != null) {
-        fileName = filePath.getFileName();
-        if (fileName != null) {
-          return getCertPath(getSecurityConfig().getCertificateLocation(componentName), fileName.toString());
-        } else {
-          throw new NullPointerException("CertificateFilename is null");
-        }
-      } else {
-        throw new NullPointerException("Certificate filename is null");
-      }
+      return getCertPath(getSecurityConfig().getCertificateLocation(componentName), fileName.toString());
     } catch (IOException | CertificateException e) {
       getLogger().error("Error reading certificate from file: {}.", filePath, e);
+      return null;
     }
-    throw new RuntimeException();
   }
 
   public Set<X509Certificate> getLeafCertificates() {

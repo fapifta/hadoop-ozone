@@ -118,20 +118,6 @@ public final class CertificateCodec {
     }
   }
 
-  /**
-   * Get the leading X.509 Certificate from PEM encoded String possibly
-   * containing multiple certificates. To get all certificates, use
-   * {@link #getCertPathFromPemEncodedString(String)}.
-   *
-   * @param pemEncodedString - PEM encoded String.
-   * @return X509Certificate  - Certificate.
-   * @throws CertificateException - Thrown on Failure.
-   */
-  public static X509Certificate getX509Certificate(String pemEncodedString)
-      throws CertificateException {
-    return getX509Certificate(pemEncodedString, Function.identity());
-  }
-
   public static <E extends Exception> X509Certificate getX509Certificate(
       String pemEncoded, Function<CertificateException, E> convertor)
       throws E {
@@ -175,7 +161,7 @@ public final class CertificateCodec {
   /**
    * Gets a certificate path from the specified pem encoded String.
    */
-  public static CertPath getCertPathFromPemEncodedString(
+  public static CertPath getCertPathFrom(
       String pemString) throws CertificateException {
     // ByteArrayInputStream.close(), which is a noop, can be safely ignored.
     return generateCertPathFromInputStream(

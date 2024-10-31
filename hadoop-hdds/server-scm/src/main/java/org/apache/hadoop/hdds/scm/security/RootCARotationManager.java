@@ -744,7 +744,7 @@ public class RootCARotationManager extends StatefulService {
     }
 
     X509Certificate cert =
-        CertificateCodec.getX509Certificate(proto.getX509Certificate());
+        (X509Certificate) CertificateCodec.getCertPathFrom(proto.getX509Certificate()).getCertificates().get(0);
 
     X509Certificate rootCert = trustedCertStorage.getLatestRootCaCert();
     int result = rootCert.getSerialNumber().compareTo(cert.getSerialNumber());

@@ -49,7 +49,7 @@ public class X509CertificateCodec implements Codec {
       throws InvalidProtocolBufferException {
     try {
       String pemEncodedCert = new String(value.toByteArray(), UTF_8);
-      return CertificateCodec.getX509Certificate(pemEncodedCert);
+      return CertificateCodec.getCertPathFrom(pemEncodedCert).getCertificates().get(0);
     } catch (Exception ex) {
       throw new InvalidProtocolBufferException(
           "X509Certificate cannot be decoded: " + ex.getMessage());

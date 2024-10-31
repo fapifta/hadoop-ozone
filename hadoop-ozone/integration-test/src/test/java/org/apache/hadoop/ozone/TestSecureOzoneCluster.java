@@ -960,7 +960,7 @@ final class TestSecureOzoneCluster {
       String pemEncodedCACert =
           scm.getSecurityProtocolServer().getRootCACertificate();
       X509Certificate caCert =
-          CertificateCodec.getX509Certificate(pemEncodedCACert);
+          (X509Certificate) CertificateCodec.getCertPathFrom(pemEncodedCACert).getCertificates().get(0);
       TrustedCertStorage trustedCertStorage = new TrustedCertStorage(new SecurityConfig(om.getConfiguration()), "om");
       X509Certificate caCertStored = trustedCertStorage.getLatestRootCaCert();
       assertEquals(caCert, caCertStored);

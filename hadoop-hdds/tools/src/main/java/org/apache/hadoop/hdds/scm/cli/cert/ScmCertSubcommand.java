@@ -47,7 +47,7 @@ public abstract class ScmCertSubcommand implements Callable<Void> {
         "Expiry", "Subject", "Issuer");
     for (String certPemStr : pemEncodedCerts) {
       try {
-        X509Certificate cert = CertificateCodec.getX509Certificate(certPemStr);
+        X509Certificate cert = (X509Certificate) CertificateCodec.getCertPathFrom(certPemStr).getCertificates().get(0);
         printCert(cert);
       } catch (CertificateException e) {
         System.err.println("Failed to parse certificate: " + e.getMessage());

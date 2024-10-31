@@ -65,7 +65,7 @@ public final class OldX509CertificateCodecForTesting
       throws IOException {
     try {
       String s = new String(rawData, StandardCharsets.UTF_8);
-      return CertificateCodec.getX509Certificate(s);
+      return (X509Certificate) CertificateCodec.getCertPathFrom(s).getCertificates().get(0);
     } catch (CertificateException exp) {
       throw new IOException(exp);
     }

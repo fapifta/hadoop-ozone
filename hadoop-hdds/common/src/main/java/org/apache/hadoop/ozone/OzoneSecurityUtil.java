@@ -128,17 +128,15 @@ public final class OzoneSecurityUtil {
 
   /**
    * Convert list of string encoded certificates to list of X509Certificate.
+   *
    * @param pemEncodedCerts
    * @return list of X509Certificate.
    * @throws IOException
    */
-  public static List<X509Certificate> convertToX509(
-      List<String> pemEncodedCerts) throws IOException {
-    List<X509Certificate> x509Certificates =
-        new ArrayList<>(pemEncodedCerts.size());
+  public static List<X509Certificate> convertToX509(List<String> pemEncodedCerts) throws IOException {
+    List<X509Certificate> x509Certificates = new ArrayList<>(pemEncodedCerts.size());
     for (String cert : pemEncodedCerts) {
-      x509Certificates.add(CertificateCodec.getX509Certificate(
-          cert, CertificateCodec::toIOException));
+      x509Certificates.add((X509Certificate) CertificateCodec.getCertPathFrom(cert).getCertificates().get(0));
     }
     return x509Certificates;
   }

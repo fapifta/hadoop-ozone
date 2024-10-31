@@ -134,7 +134,7 @@ public class SubCAServer extends DefaultCAServer {
           (X509Certificate) CertificateCodec.getCertPathFrom(pemEncodedCert).getCertificates().get(0);
       // Persist scm cert serial ID.
       getSaveCertId().accept(certificate.getSerialNumber().toString());
-    } catch (IOException | java.security.cert.CertificateException e) {
+    } catch (IOException e) {
       LOG.error("Error while fetching/storing SCM signed certificate.", e);
       throw new RuntimeException(e);
     }

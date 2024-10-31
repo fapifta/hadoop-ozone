@@ -1636,8 +1636,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
           getScmSecurityClientWithMaxRetry(configuration, getCurrentUser()).listCACertificate();
       // Write the primary SCM CA and Root CA during startup.
       for (String cert : pemEncodedCerts) {
-        X509Certificate x509Certificate = CertificateCodec.getX509Certificate(
-            cert, CertificateCodec::toIOException);
+        X509Certificate x509Certificate =
+            (X509Certificate) CertificateCodec.getCertPathFrom(cert).getCertificates().get(0);
         if (certificateStore.getCertificateByID(x509Certificate.getSerialNumber()) == null) {
           LOG.info("Persist certificate serialId {} on Scm Bootstrap Node " +
                   "{}", x509Certificate.getSerialNumber(),

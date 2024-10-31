@@ -23,7 +23,6 @@ import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import picocli.CommandLine;
 
 import java.io.IOException;
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -49,7 +48,7 @@ public abstract class ScmCertSubcommand implements Callable<Void> {
       try {
         X509Certificate cert = (X509Certificate) CertificateCodec.getCertPathFrom(certPemStr).getCertificates().get(0);
         printCert(cert);
-      } catch (CertificateException e) {
+      } catch (IOException e) {
         System.err.println("Failed to parse certificate: " + e.getMessage());
       }
     }

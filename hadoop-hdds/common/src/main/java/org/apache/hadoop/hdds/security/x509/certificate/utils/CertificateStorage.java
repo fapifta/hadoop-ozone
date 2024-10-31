@@ -54,7 +54,6 @@ import static java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE;
 import static java.nio.file.attribute.PosixFilePermission.OWNER_READ;
 import static java.nio.file.attribute.PosixFilePermission.OWNER_WRITE;
 import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec.firstCertificateFrom;
-import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CERTIFICATE_ERROR;
 
 /**
  * Abstract base class for performing certificate related IO operations with the filesystem.
@@ -177,20 +176,12 @@ public abstract class CertificateStorage {
   }
 
   public String storeCertificate(String pemEncodedCert, CAType caType, Path path) throws IOException {
-    try {
-      CertPath certificatePath = CertificateCodec.getCertPathFrom(pemEncodedCert);
-      X509Certificate cert = firstCertificateFrom(certificatePath);
-
-      String certId = cert.getSerialNumber().toString();
-      String certName = String.format(CERT_FILE_NAME_FORMAT,
-          caType.getFileNamePrefix() + certId);
-
-      writeCertificate(path, certName, pemEncodedCert);
-      return certId;
-    } catch (IOException | CertificateException e) {
-      throw new org.apache.hadoop.hdds.security.x509.exception.CertificateException(
-          "Error while storing certificate.", e, CERTIFICATE_ERROR);
-    }
+    CertPath certificatePath = CertificateCodec.getCertPathFrom(pemEncodedCert);
+    X509Certificate cert = firstCertificateFrom(certificatePath);
+    String certId = cert.getSerialNumber().toString();
+    String certName = String.format(CERT_FILE_NAME_FORMAT, caType.getFileNamePrefix() + certId);
+    writeCertificate(path, certName, pemEncodedCert);
+    return certId;
   }
 
   /**

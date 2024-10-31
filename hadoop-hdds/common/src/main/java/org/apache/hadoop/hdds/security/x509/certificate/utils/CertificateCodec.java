@@ -42,7 +42,6 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 import static org.apache.hadoop.hdds.security.exception.SCMSecurityException.ErrorCode.PEM_ENCODE_FAILED;
 
 /**
@@ -118,34 +117,6 @@ public final class CertificateCodec {
     }
   }
 
-  public static <E extends Exception> X509Certificate getX509Certificate(
-      String pemEncoded, Function<CertificateException, E> convertor)
-      throws E {
-    // ByteArrayInputStream.close(), which is a noop, can be safely ignored.
-    final ByteArrayInputStream input = new ByteArrayInputStream(
-        pemEncoded.getBytes(DEFAULT_CHARSET));
-    return readX509Certificate(input, convertor);
-  }
-
-  private static <E extends Exception> X509Certificate readX509Certificate(
-      InputStream input, Function<CertificateException, E> convertor)
-      throws E {
-    try {
-      return (X509Certificate) getCertFactory().generateCertificate(input);
-    } catch (CertificateException e) {
-      throw convertor.apply(e);
-    }
-  }
-
-  public static X509Certificate readX509Certificate(InputStream input)
-      throws IOException {
-    return readX509Certificate(input, CertificateCodec::toIOException);
-  }
-
-  public static IOException toIOException(CertificateException e) {
-    return new IOException("Failed to engineGenerateCertificate", e);
-  }
-
   public static X509Certificate firstCertificateFrom(CertPath certificatePath) {
     return (X509Certificate) certificatePath.getCertificates().get(0);
   }
@@ -161,11 +132,9 @@ public final class CertificateCodec {
   /**
    * Gets a certificate path from the specified pem encoded String.
    */
-  public static CertPath getCertPathFrom(
-      String pemString) throws CertificateException {
+  public static CertPath getCertPathFrom(String pemString) throws IOException {
     // ByteArrayInputStream.close(), which is a noop, can be safely ignored.
-    return generateCertPathFromInputStream(
-        new ByteArrayInputStream(pemString.getBytes(DEFAULT_CHARSET)));
+    return generateCertPathFromInputStream(new ByteArrayInputStream(pemString.getBytes(DEFAULT_CHARSET)));
   }
 
   /**
@@ -183,7 +152,11 @@ public final class CertificateCodec {
     return getCertFactory().generateCertPath(updatedList);
   }
 
-  public static CertPath generateCertPathFromInputStream(InputStream inputStream) throws CertificateException {
-    return getCertFactory().generateCertPath(inputStream, "PEM");
+  public static CertPath generateCertPathFromInputStream(InputStream inputStream) throws IOException {
+    try {
+      return getCertFactory().generateCertPath(inputStream, "PEM");
+    } catch (CertificateException e) {
+      throw new IOException(e);
+    }
   }
 }

@@ -49,7 +49,6 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.KeyPair;
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -204,7 +203,7 @@ public class RootCARotationManager extends StatefulService {
       // enable post rotation task if needed.
       try {
         checkAndHandlePostProcessing();
-      } catch (IOException | CertificateException e) {
+      } catch (IOException e) {
         throw new RuntimeException(
             "Error while checking post-processing state.", e);
       }
@@ -734,8 +733,7 @@ public class RootCARotationManager extends StatefulService {
     return false;
   }
 
-  private void checkAndHandlePostProcessing() throws IOException,
-      CertificateException {
+  private void checkAndHandlePostProcessing() throws IOException {
     CertInfoProto proto = readConfiguration(CertInfoProto.class);
     if (proto == null) {
       LOG.info("No {} configuration found in stateful storage",

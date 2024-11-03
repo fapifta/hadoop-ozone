@@ -145,7 +145,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     this.notificationReceivers = new HashSet<>();
     this.sslIdentityStorage = sslIdentityStorage;
     this.trustedCertStorage = trustedCertStorage;
-
+    notificationReceivers.add(sslIdentityStorage);
+    notificationReceivers.add(trustedCertStorage);
     updateCertSerialId(certSerialId);
   }
 
@@ -762,8 +763,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   protected void notifyNotificationReceivers(String oldCaCertId,
       String newCaCertId) {
     synchronized (notificationReceivers) {
-      notificationReceivers.forEach(r -> r.notifyCertificateRenewed(
-          this, oldCaCertId, newCaCertId));
+      notificationReceivers.forEach(r -> r.notifyCertificateRenewed(oldCaCertId, newCaCertId));
     }
   }
 

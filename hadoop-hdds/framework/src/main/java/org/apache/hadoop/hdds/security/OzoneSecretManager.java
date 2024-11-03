@@ -185,8 +185,7 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
     return newKey;
   }
 
-  public void notifyCertificateRenewed(CertificateClient client,
-      String oldCertId, String newCertId) {
+  public void notifyCertificateRenewed(String oldCertId, String newCertId) {
     logger.info("Certificate is changed from {} to {}", oldCertId, newCertId);
     sslIdentityStorage.setCertId(newCertId);
     updateCurrentKey(new KeyPair(sslIdentityStorage.getPublicKey(), sslIdentityStorage.getPrivateKey()),

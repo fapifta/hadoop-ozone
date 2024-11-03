@@ -332,7 +332,7 @@ public class CertificateClientTestImpl implements CertificateClient {
     }
     Mockito.when(certificateStorage.getKeyStore()).thenReturn(getKeyStoreForTrustedCertificates(getAllRootCaCerts()));
     // notify notification receivers
-    notificationReceivers.forEach(r -> r.notifyCertificateRenewed(this,
+    notificationReceivers.forEach(r -> r.notifyCertificateRenewed(
         oldCert.getSerialNumber().toString(),
         x509Certificate.getSerialNumber().toString()));
   }

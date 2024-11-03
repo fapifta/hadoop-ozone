@@ -20,9 +20,14 @@
 package org.apache.hadoop.hdds.security.x509.certificate.utils;
 
 import org.apache.hadoop.hdds.security.SecurityConfig;
+import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
 import java.util.Comparator;
@@ -32,10 +37,11 @@ import java.util.function.Predicate;
 /**
  * Certificate storage for reading in trusted certificates.
  */
-public class TrustedCertStorage extends CertificateStorage {
+public class TrustedCertStorage extends CertificateStorage implements CertificateNotification {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TrustedCertStorage.class);
+  private ReloadingX509TrustManager trustManager;
 
   public TrustedCertStorage(SecurityConfig securityConfig, String componentName) {
     super(securityConfig, componentName);
@@ -69,5 +75,23 @@ public class TrustedCertStorage extends CertificateStorage {
 
   private static boolean isSelfSignedCertificate(X509Certificate cert) {
     return cert.getIssuerX500Principal().equals(cert.getSubjectX500Principal());
+  }
+
+  @Override
+  public void notifyCertificateRenewed(String oldCertId, String newCertId) {
+    trustManager.notifyCertificateRenewed(oldCertId, newCertId);
+  }
+
+  public synchronized ReloadingX509TrustManager getTrustManager() throws
+      org.apache.hadoop.hdds.security.x509.exception.CertificateException {
+    try {
+      if (trustManager == null) {
+        trustManager = new ReloadingX509TrustManager(KeyStore.getDefaultType(), this);
+      }
+      return trustManager;
+    } catch (IOException | GeneralSecurityException e) {
+      throw new org.apache.hadoop.hdds.security.x509.exception.CertificateException("Failed to init trustManager", e,
+          org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.KEYSTORE_ERROR);
+    }
   }
 }

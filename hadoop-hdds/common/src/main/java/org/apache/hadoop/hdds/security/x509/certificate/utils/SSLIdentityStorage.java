@@ -18,6 +18,9 @@
 package org.apache.hadoop.hdds.security.x509.certificate.utils;
 
 import org.apache.hadoop.hdds.security.SecurityConfig;
+import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateNotification;
+import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.slf4j.Logger;
@@ -25,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -40,12 +44,13 @@ import java.util.function.Predicate;
 /**
  * Certificate storage implementation responsible for reading the certificate client's own certificate and keys.
  */
-public class SSLIdentityStorage extends CertificateStorage {
+public class SSLIdentityStorage extends CertificateStorage implements CertificateNotification {
 
   private static final Logger LOG = LoggerFactory.getLogger(SSLIdentityStorage.class);
 
   private String certId;
   private final KeyCodec keyCodec;
+  private ReloadingX509KeyManager keyManager;
 
   public SSLIdentityStorage(SecurityConfig config, String componentName, String certId) {
     super(config, componentName);
@@ -123,5 +128,21 @@ public class SSLIdentityStorage extends CertificateStorage {
 
   public void storeKeyPair(KeyPair keyPair) throws IOException {
     keyCodec.writeKey(keyPair);
+  }
+
+  public synchronized ReloadingX509KeyManager getKeyManager() throws CertificateException {
+    try {
+      if (keyManager == null) {
+        keyManager = new ReloadingX509KeyManager(this);
+      }
+      return keyManager;
+    } catch (IOException | GeneralSecurityException e) {
+      throw new CertificateException("Failed to init keyManager", e, CertificateException.ErrorCode.KEYSTORE_ERROR);
+    }
+  }
+
+  @Override
+  public void notifyCertificateRenewed(String oldCertId, String newCertId) {
+    keyManager.notifyCertificateRenewed(oldCertId, newCertId);
   }
 }

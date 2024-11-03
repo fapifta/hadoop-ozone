@@ -19,7 +19,6 @@ package org.apache.hadoop.hdds.security.ssl;
 
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.annotation.InterfaceStability;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateNotification;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.slf4j.Logger;
@@ -153,9 +152,8 @@ public final class ReloadingX509TrustManager implements X509TrustManager, Certif
   }
 
   @Override
-  public synchronized void notifyCertificateRenewed(
-      CertificateClient certClient, String oldCertId, String newCertId) {
-    LOG.info("{} notify certificate renewed", certClient.getComponentName());
+  public synchronized void notifyCertificateRenewed(String oldCertId, String newCertId) {
+    LOG.info("Notify certificate renewed old cert id: {}, new cert id: {}", oldCertId, newCertId);
     try {
       X509TrustManager manager = init(trustedCertStorage.getKeyStore());
       if (manager != null) {

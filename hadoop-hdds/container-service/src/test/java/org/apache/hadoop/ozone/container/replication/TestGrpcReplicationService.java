@@ -164,7 +164,7 @@ class TestGrpcReplicationService {
 
     replicationServer =
         new ReplicationServer(containerController, replicationConfig, secConf,
-            null, importer, datanode.threadNamePrefix());
+            null, null, importer, datanode.threadNamePrefix());
     replicationServer.start();
   }
 

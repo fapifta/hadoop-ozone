@@ -349,6 +349,6 @@ public final class ContainerTestUtils {
 
     return XceiverServerRatis.newXceiverServerRatis(null, dn, conf,
         getNoopContainerDispatcher(), getEmptyContainerController(),
-        null, null);
+        null, null, null);
   }
 }

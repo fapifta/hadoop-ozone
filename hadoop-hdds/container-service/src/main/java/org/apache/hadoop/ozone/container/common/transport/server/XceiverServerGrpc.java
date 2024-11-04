@@ -38,7 +38,7 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.tracing.GrpcServerInterceptor;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdds.utils.HddsServerUtil;
@@ -77,7 +77,6 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_EC_GRPC_ZERO_COPY_EN
 public final class XceiverServerGrpc implements XceiverServerSpi {
   private static final Logger
       LOG = LoggerFactory.getLogger(XceiverServerGrpc.class);
-  private static final String COMPONENT = "dn";
   private int port;
   private UUID id;
   private Server server;
@@ -95,7 +94,7 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
    */
   public XceiverServerGrpc(DatanodeDetails datanodeDetails,
       ConfigurationSource conf,
-      ContainerDispatcher dispatcher, CertificateClient caClient) {
+      ContainerDispatcher dispatcher, SSLIdentityStorage sslIdentityStorage) {
     Preconditions.checkNotNull(conf);
 
     this.id = datanodeDetails.getUuid();
@@ -155,8 +154,7 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
     SecurityConfig secConf = new SecurityConfig(conf);
     if (secConf.isSecurityEnabled() && secConf.isGrpcTlsEnabled()) {
       try {
-        SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(
-            caClient.getKeyManager());
+        SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(sslIdentityStorage.getKeyManager());
         SslContextBuilder sslContextBuilder = GrpcSslContexts.configure(
             sslClientContextBuilder, secConf.getGrpcSslProvider());
         nettyServerBuilder.sslContext(sslContextBuilder.build());

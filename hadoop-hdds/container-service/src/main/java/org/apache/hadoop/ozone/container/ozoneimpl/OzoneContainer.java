@@ -32,7 +32,8 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.symmetric.SecretKeyVerifierClient;
 import org.apache.hadoop.hdds.security.token.TokenVerifier;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.utils.HddsServerUtil;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
@@ -126,6 +127,8 @@ public class OzoneContainer {
   private DatanodeDetails datanodeDetails;
   private StateContext context;
   private ScheduledExecutorService dbCompactionExecutorService;
+  private SSLIdentityStorage sslIdentityStorage;
+  private TrustedCertStorage trustedCertStorage;
 
   private final ContainerMetrics metrics;
 
@@ -138,20 +141,20 @@ public class OzoneContainer {
    *
    * @param datanodeDetails
    * @param conf
-   * @param certClient
    * @throws DiskOutOfSpaceException
    * @throws IOException
    */
   public OzoneContainer(HddsDatanodeService hddsDatanodeService,
       DatanodeDetails datanodeDetails, ConfigurationSource conf,
-      StateContext context, CertificateClient certClient,
+      StateContext context, SSLIdentityStorage sslStorage, TrustedCertStorage trustedStorage,
       SecretKeyVerifierClient secretKeyClient) throws IOException {
     config = conf;
     this.datanodeDetails = datanodeDetails;
     this.context = context;
     this.volumeChecker = new StorageVolumeChecker(conf, new Timer(),
         datanodeDetails.threadNamePrefix());
-
+    this.trustedCertStorage = trustedStorage;
+    this.sslIdentityStorage = sslStorage;
     volumeSet = new MutableVolumeSet(datanodeDetails.getUuidString(), conf,
         context, VolumeType.DATA_VOLUME, volumeChecker);
     volumeSet.setFailedVolumeListener(this::handleVolumeFailures);
@@ -223,20 +226,20 @@ public class OzoneContainer {
     controller = new ContainerController(containerSet, handlers);
 
     writeChannel = XceiverServerRatis.newXceiverServerRatis(hddsDatanodeService,
-        datanodeDetails, config, hddsDispatcher, controller, certClient,
+        datanodeDetails, config, hddsDispatcher, controller, sslIdentityStorage, trustedCertStorage,
         context);
 
     replicationServer = new ReplicationServer(
         controller,
         conf.getObject(ReplicationConfig.class),
         secConf,
-        certClient,
-        new ContainerImporter(conf, containerSet, controller,
-            volumeSet),
+        sslIdentityStorage,
+        trustedCertStorage,
+        new ContainerImporter(conf, containerSet, controller, volumeSet),
         datanodeDetails.threadNamePrefix());
 
     readChannel = new XceiverServerGrpc(
-        datanodeDetails, config, hddsDispatcher, certClient);
+        datanodeDetails, config, hddsDispatcher, sslIdentityStorage);
     Duration blockDeletingSvcInterval = dnConf.getBlockDeletionInterval();
 
     long blockDeletingServiceTimeout = config
@@ -274,10 +277,10 @@ public class OzoneContainer {
             recoveringContainerScrubbingServiceTimeout,
             containerSet);
 
-    if (certClient != null && secConf.isGrpcTlsEnabled()) {
+    if (sslIdentityStorage != null && trustedCertStorage != null && secConf.isGrpcTlsEnabled()) {
       tlsClientConfig = new GrpcTlsConfig(
-          certClient.getKeyManager(),
-          certClient.getTrustManager(), true);
+          sslIdentityStorage.getKeyManager(),
+          trustedCertStorage.getTrustManager(), true);
     } else {
       tlsClientConfig = null;
     }
@@ -293,7 +296,7 @@ public class OzoneContainer {
   public OzoneContainer(
       DatanodeDetails datanodeDetails, ConfigurationSource conf,
       StateContext context) throws IOException {
-    this(null, datanodeDetails, conf, context, null, null);
+    this(null, datanodeDetails, conf, context, null, null, null);
   }
 
   public GrpcTlsConfig getTlsClientConfig() {

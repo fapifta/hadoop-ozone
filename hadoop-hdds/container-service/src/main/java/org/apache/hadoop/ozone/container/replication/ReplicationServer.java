@@ -30,7 +30,8 @@ import org.apache.hadoop.hdds.conf.ConfigGroup;
 import org.apache.hadoop.hdds.conf.ConfigType;
 import org.apache.hadoop.hdds.conf.PostConstruct;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.tracing.GrpcServerInterceptor;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
@@ -60,9 +61,10 @@ public class ReplicationServer {
 
   private SecurityConfig secConf;
 
-  private CertificateClient caClient;
-
   private ContainerController controller;
+
+  private SSLIdentityStorage sslIdentityStorage;
+  private TrustedCertStorage trustedCertStorage;
 
   private int port;
   private final ContainerImporter importer;
@@ -71,10 +73,11 @@ public class ReplicationServer {
 
   public ReplicationServer(ContainerController controller,
       ReplicationConfig replicationConfig, SecurityConfig secConf,
-      CertificateClient caClient, ContainerImporter importer,
+      SSLIdentityStorage sslIdentityStorage, TrustedCertStorage trustedCertStorage, ContainerImporter importer,
       String threadNamePrefix) {
     this.secConf = secConf;
-    this.caClient = caClient;
+    this.sslIdentityStorage = sslIdentityStorage;
+    this.trustedCertStorage = trustedCertStorage;
     this.controller = controller;
     this.importer = importer;
     this.port = replicationConfig.getPort();
@@ -115,13 +118,13 @@ public class ReplicationServer {
 
     if (secConf.isSecurityEnabled() && secConf.isGrpcTlsEnabled()) {
       try {
-        SslContextBuilder sslContextBuilder = SslContextBuilder.forServer(caClient.getKeyManager());
+        SslContextBuilder sslContextBuilder = SslContextBuilder.forServer(sslIdentityStorage.getKeyManager());
 
         sslContextBuilder = GrpcSslContexts.configure(
             sslContextBuilder, secConf.getGrpcSslProvider());
 
         sslContextBuilder.clientAuth(ClientAuth.REQUIRE);
-        sslContextBuilder.trustManager(caClient.getTrustManager());
+        sslContextBuilder.trustManager(trustedCertStorage.getTrustManager());
 
         nettyServerBuilder.sslContext(sslContextBuilder.build());
       } catch (IOException ex) {

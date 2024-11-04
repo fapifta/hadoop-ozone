@@ -255,6 +255,6 @@ public class TestContainerMetrics {
         volumeSet);
     return XceiverServerRatis.newXceiverServerRatis(null, dn, CONF, dispatcher,
         new ContainerController(new ContainerSet(1000), Maps.newHashMap()),
-        null, null);
+        null, null, null);
   }
 }

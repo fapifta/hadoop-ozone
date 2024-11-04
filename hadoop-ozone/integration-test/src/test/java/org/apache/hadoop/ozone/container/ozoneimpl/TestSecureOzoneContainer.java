@@ -33,7 +33,6 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.symmetric.SecretKeyClient;
 import org.apache.hadoop.hdds.security.token.ContainerTokenIdentifier;
 import org.apache.hadoop.hdds.security.token.ContainerTokenSecretManager;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.SecretKeyTestClient;
@@ -84,7 +83,6 @@ class TestSecureOzoneContainer {
   private Path tempFolder;
 
   private OzoneConfiguration conf;
-  private CertificateClientTestImpl caClient;
   private SecretKeyClient secretKeyClient;
   private ContainerTokenSecretManager secretManager;
 
@@ -110,7 +108,6 @@ class TestSecureOzoneContainer {
     String ozoneMetaPath =
         GenericTestUtils.getTempPath("ozoneMeta");
     conf.set(OZONE_METADATA_DIRS, ozoneMetaPath);
-    caClient = new CertificateClientTestImpl(conf);
     secretKeyClient = new SecretKeyTestClient();
     secretManager = new ContainerTokenSecretManager(
         TimeUnit.DAYS.toMillis(1), secretKeyClient);
@@ -138,7 +135,7 @@ class TestSecureOzoneContainer {
 
       DatanodeDetails dn = MockDatanodeDetails.randomDatanodeDetails();
       container = new OzoneContainer(null, dn, conf, ContainerTestUtils
-          .getMockContext(dn, conf), caClient, secretKeyClient);
+          .getMockContext(dn, conf), null, null, secretKeyClient);
       MutableVolumeSet volumeSet = container.getVolumeSet();
       StorageVolumeUtil.getHddsVolumesList(volumeSet.getVolumesList())
           .forEach(hddsVolume -> hddsVolume.setDbParentDir(tempFolder.toFile()));

@@ -41,8 +41,6 @@ import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.pipeline.MockPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
-import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -71,7 +69,6 @@ import com.google.common.collect.Maps;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.util.function.CheckedBiConsumer;
 import org.apache.ratis.util.function.CheckedBiFunction;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -89,7 +86,9 @@ public class TestContainerServer {
   static final String TEST_DIR = GenericTestUtils.getTestDir("dfs")
       .getAbsolutePath() + File.separator;
   private static final OzoneConfiguration CONF = new OzoneConfiguration();
-  private static CertificateClient caClient;
+  private static SSLIdentityStorage sslIdentityStorage;
+  private static TrustedCertStorage trustedCertStorage;
+
   @TempDir
   private Path tempDir;
 
@@ -100,16 +99,9 @@ public class TestContainerServer {
     CONF.setBoolean(OzoneConfigKeys.HDDS_CONTAINER_RATIS_DATASTREAM_ENABLED, false);
     DatanodeDetails dn = MockDatanodeDetails.randomDatanodeDetails();
     SecurityConfig securityConfig = new SecurityConfig(CONF);
-    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, OMCertificateClient.COMPONENT_NAME,
+    sslIdentityStorage = new SSLIdentityStorage(securityConfig, OMCertificateClient.COMPONENT_NAME,
         dn.getCertSerialId());
-    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, OMCertificateClient.COMPONENT_NAME);
-    caClient = new DNCertificateClient(securityConfig, null,
-        dn, null, null, null, sslIdentityStorage, trustedCertStorage);
-  }
-
-  @AfterAll
-  public static void tearDown() throws Exception {
-    caClient.close();
+    trustedCertStorage = new TrustedCertStorage(securityConfig, OMCertificateClient.COMPONENT_NAME);
   }
 
   @Test
@@ -121,7 +113,7 @@ public class TestContainerServer {
                     .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue()),
         XceiverClientGrpc::new,
         (dn, conf) -> new XceiverServerGrpc(datanodeDetails, conf,
-            new TestContainerDispatcher(), caClient), (dn, p) -> {
+            new TestContainerDispatcher(), sslIdentityStorage), (dn, p) -> {
         });
   }
 
@@ -141,7 +133,7 @@ public class TestContainerServer {
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
     return XceiverServerRatis.newXceiverServerRatis(null, dn, conf, dispatcher,
         new ContainerController(new ContainerSet(1000), Maps.newHashMap()),
-        caClient, null);
+        sslIdentityStorage, trustedCertStorage, null);
   }
 
   static void runTestClientServerRatis(RpcType rpc, int numNodes)
@@ -235,7 +227,7 @@ public class TestContainerServer {
                     .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue()),
         XceiverClientGrpc::new,
         (dn, conf) -> new XceiverServerGrpc(dd, conf,
-            hddsDispatcher, caClient), (dn, p) -> {
+            hddsDispatcher, sslIdentityStorage), (dn, p) -> {
         });
   }
 

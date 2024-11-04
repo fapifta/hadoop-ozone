@@ -51,7 +51,6 @@ import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.hdds.security.token.ContainerTokenSecretManager;
 import org.apache.hadoop.hdds.security.token.TokenVerifier;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.RatisTestHelper;
@@ -123,7 +122,6 @@ public class TestSecureContainerServer {
   private static final String TEST_DIR
       = GenericTestUtils.getTestDir("dfs").getAbsolutePath() + File.separator;
   private static final OzoneConfiguration CONF = new OzoneConfiguration();
-  private static CertificateClientTestImpl caClient;
   private static SecretKeyClient secretKeyClient;
   private static OzoneBlockTokenSecretManager blockTokenSecretManager;
   private static ContainerTokenSecretManager containerTokenSecretManager;
@@ -135,7 +133,6 @@ public class TestSecureContainerServer {
     CONF.set(HddsConfigKeys.HDDS_METADATA_DIR_NAME, TEST_DIR);
     CONF.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
     CONF.setBoolean(HDDS_BLOCK_TOKEN_ENABLED, true);
-    caClient = new CertificateClientTestImpl(CONF);
     secretKeyClient = new SecretKeyTestClient();
 
     long tokenLifetime = TimeUnit.HOURS.toMillis(1);
@@ -168,7 +165,9 @@ public class TestSecureContainerServer {
                     .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue()),
         XceiverClientGrpc::new,
         (dn, conf) -> new XceiverServerGrpc(dd, conf,
-            hddsDispatcher, caClient), (dn, p) -> {  }, (p) -> { });
+            hddsDispatcher, null), (dn, p) -> {
+        }, (p) -> {
+        });
   }
 
   private HddsDispatcher createDispatcher(DatanodeDetails dd, UUID scmId,
@@ -219,8 +218,7 @@ public class TestSecureContainerServer {
     final ContainerDispatcher dispatcher = createDispatcher(dn,
         UUID.randomUUID(), conf);
     return XceiverServerRatis.newXceiverServerRatis(null, dn, conf, dispatcher,
-        new ContainerController(new ContainerSet(1000), Maps.newHashMap()),
-        caClient, null);
+        new ContainerController(new ContainerSet(1000), Maps.newHashMap()), null, null, null);
   }
 
   private void runTestClientServerRatis(RpcType rpc, int numNodes)

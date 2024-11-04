@@ -378,7 +378,7 @@ public class CertificateClientTestImpl implements CertificateClient {
     }
   }
 
-  private KeyStore getKeyStoreForTrustedCertificates(Set<X509Certificate> newRootCaCerts)
+  public KeyStore getKeyStoreForTrustedCertificates(Set<X509Certificate> newRootCaCerts)
       throws java.security.cert.CertificateException, KeyStoreException, IOException, NoSuchAlgorithmException {
     KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     keyStore.load(null, null);
@@ -393,7 +393,7 @@ public class CertificateClientTestImpl implements CertificateClient {
     return keyStore;
   }
 
-  private KeyStore getKeyStoreForSSLIdentity(PrivateKey privateKey, CertPath trustChain)
+  public KeyStore getKeyStoreForSSLIdentity(PrivateKey privateKey, CertPath trustChain)
       throws java.security.cert.CertificateException, KeyStoreException, IOException, NoSuchAlgorithmException {
     KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     keyStore.load(null, null);

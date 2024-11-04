@@ -57,7 +57,8 @@ import org.apache.hadoop.hdds.ratis.ContainerCommandRequestMessage;
 import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdds.utils.HddsServerUtil;
 import org.apache.hadoop.ozone.HddsDatanodeService;
@@ -523,12 +524,14 @@ public final class XceiverServerRatis implements XceiverServerSpi {
         .valueOf(pendingRequestsMegaBytesLimit, TraditionalBinaryPrefix.MEGA));
   }
 
+  @SuppressWarnings("checkstyle:ParameterNumber")
   public static XceiverServerRatis newXceiverServerRatis(HddsDatanodeService hddsDatanodeService,
       DatanodeDetails datanodeDetails, ConfigurationSource ozoneConf,
       ContainerDispatcher dispatcher, ContainerController containerController,
-      CertificateClient caClient, StateContext context) throws IOException {
+      SSLIdentityStorage sslIdentityStorage, TrustedCertStorage trustedCertStorage, StateContext context)
+      throws IOException {
     Parameters parameters = createTlsParameters(
-        new SecurityConfig(ozoneConf), caClient);
+        new SecurityConfig(ozoneConf), sslIdentityStorage, trustedCertStorage);
 
     return new XceiverServerRatis(hddsDatanodeService, datanodeDetails, dispatcher,
         containerController, context, ozoneConf, parameters);
@@ -540,15 +543,15 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   // authenticate from client to server is via block token (or container token).
   // DN Ratis server act as both SSL client and server and we must pass TLS
   // configuration for both.
-  private static Parameters createTlsParameters(SecurityConfig conf,
-      CertificateClient caClient) throws IOException {
+  private static Parameters createTlsParameters(SecurityConfig conf, SSLIdentityStorage sslIdentityStorage,
+      TrustedCertStorage trustedCertStorage) throws IOException {
     if (conf.isSecurityEnabled() && conf.isGrpcTlsEnabled()) {
       GrpcTlsConfig serverConfig = new GrpcTlsConfig(
-          caClient.getKeyManager(),
-          caClient.getTrustManager(), true);
+          sslIdentityStorage.getKeyManager(),
+          trustedCertStorage.getTrustManager(), true);
       GrpcTlsConfig clientConfig = new GrpcTlsConfig(
-          caClient.getKeyManager(),
-          caClient.getTrustManager(), false);
+          sslIdentityStorage.getKeyManager(),
+          trustedCertStorage.getTrustManager(), false);
       return RatisHelper.setServerTlsConf(serverConfig, clientConfig);
     }
 

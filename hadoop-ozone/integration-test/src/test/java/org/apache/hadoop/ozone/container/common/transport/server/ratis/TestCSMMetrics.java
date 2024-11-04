@@ -191,7 +191,7 @@ public class TestCSMMetrics {
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
     return XceiverServerRatis.newXceiverServerRatis(null, dn, conf, dispatcher,
         new ContainerController(new ContainerSet(1000), Maps.newHashMap()),
-        null, null);
+        null, null, null);
   }
 
   private static class TestContainerDispatcher implements ContainerDispatcher {

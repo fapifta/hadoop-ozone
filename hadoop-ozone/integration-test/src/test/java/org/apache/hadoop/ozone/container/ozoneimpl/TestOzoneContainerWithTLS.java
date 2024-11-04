@@ -27,11 +27,15 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerC
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientManager.ScmClientConfig;
 import org.apache.hadoop.hdds.scm.client.ClientTrustManager;
+import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
+import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
 import org.apache.hadoop.hdds.security.symmetric.SecretKeyClient;
 import org.apache.hadoop.hdds.security.token.ContainerTokenIdentifier;
 import org.apache.hadoop.hdds.security.token.ContainerTokenSecretManager;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.ozone.client.SecretKeyTestClient;
 import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
@@ -50,12 +54,14 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.security.KeyStore;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
@@ -110,6 +116,8 @@ public class TestOzoneContainerWithTLS {
   private DatanodeDetails dn;
   private Pipeline pipeline;
   private CertificateClientTestImpl caClient;
+  private SSLIdentityStorage sslIdentityStorage;
+  private TrustedCertStorage trustedCertStorage;
   private SecretKeyClient keyClient;
   private ContainerTokenSecretManager secretManager;
 
@@ -139,6 +147,15 @@ public class TestOzoneContainerWithTLS {
 
     clusterID = UUID.randomUUID().toString();
     caClient = new CertificateClientTestImpl(conf, false);
+    sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
+    trustedCertStorage = Mockito.mock(TrustedCertStorage.class);
+    Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
+        caClient.getKeyStoreForSSLIdentity(caClient.getPrivateKey(), caClient.getCertPath()));
+    Mockito.when(trustedCertStorage.getKeyStore()).thenReturn(
+        caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCerts()));
+    Mockito.when(sslIdentityStorage.getKeyManager()).thenReturn(new ReloadingX509KeyManager(sslIdentityStorage));
+    Mockito.when(trustedCertStorage.getTrustManager()).thenReturn(
+        new ReloadingX509TrustManager(KeyStore.getDefaultType(), trustedCertStorage));
     keyClient = new SecretKeyTestClient();
     secretManager = new ContainerTokenSecretManager(1000, keyClient);
 
@@ -311,7 +328,7 @@ public class TestOzoneContainerWithTLS {
     try {
       StateContext stateContext = ContainerTestUtils.getMockContext(dn, conf);
       container = new OzoneContainer(
-          null, dn, conf, stateContext, caClient, keyClient);
+          null, dn, conf, stateContext, sslIdentityStorage, trustedCertStorage, keyClient);
       MutableVolumeSet volumeSet = container.getVolumeSet();
       StorageVolumeUtil.getHddsVolumesList(volumeSet.getVolumesList())
           .forEach(hddsVolume -> hddsVolume.setDbParentDir(tempFolder.toFile()));

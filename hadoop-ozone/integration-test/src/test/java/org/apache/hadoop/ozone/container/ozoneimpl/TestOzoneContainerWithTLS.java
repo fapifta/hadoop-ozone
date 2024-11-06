@@ -27,8 +27,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerC
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientManager.ScmClientConfig;
 import org.apache.hadoop.hdds.scm.client.ClientTrustManager;
-import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
-import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
+import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.symmetric.SecretKeyClient;
 import org.apache.hadoop.hdds.security.token.ContainerTokenIdentifier;
 import org.apache.hadoop.hdds.security.token.ContainerTokenSecretManager;
@@ -61,7 +60,6 @@ import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.security.KeyStore;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
@@ -147,15 +145,14 @@ public class TestOzoneContainerWithTLS {
 
     clusterID = UUID.randomUUID().toString();
     caClient = new CertificateClientTestImpl(conf, false);
-    sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
-    trustedCertStorage = Mockito.mock(TrustedCertStorage.class);
+    sslIdentityStorage = new SSLIdentityStorage(new SecurityConfig(conf), "TestComponent", null);
+    trustedCertStorage = new TrustedCertStorage(new SecurityConfig(conf), "TestComponent");
+    sslIdentityStorage = Mockito.spy(sslIdentityStorage);
+    trustedCertStorage = Mockito.spy(trustedCertStorage);
     Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
         caClient.getKeyStoreForSSLIdentity(caClient.getPrivateKey(), caClient.getCertPath()));
     Mockito.when(trustedCertStorage.getKeyStore()).thenReturn(
         caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCerts()));
-    Mockito.when(sslIdentityStorage.getKeyManager()).thenReturn(new ReloadingX509KeyManager(sslIdentityStorage));
-    Mockito.when(trustedCertStorage.getTrustManager()).thenReturn(
-        new ReloadingX509TrustManager(KeyStore.getDefaultType(), trustedCertStorage));
     keyClient = new SecretKeyTestClient();
     secretManager = new ContainerTokenSecretManager(1000, keyClient);
 
@@ -229,6 +226,13 @@ public class TestOzoneContainerWithTLS {
       assertDownloadContainerFails(containers.get(0), sourceDatanodes);
 
       caClient.renewKey();
+      Thread.sleep(1000); // wait for reloading trust managers to reload
+      Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
+          caClient.getKeyStoreForSSLIdentity(caClient.getPrivateKey(), caClient.getCertPath()));
+      Mockito.when(trustedCertStorage.getKeyStore()).thenReturn(
+          caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCerts()));
+      sslIdentityStorage.notifyCertificateRenewed("", caClient.getCertSerialId());
+      trustedCertStorage.notifyCertificateRenewed("", caClient.getCertSerialId());
       containers.add(createAndCloseContainer(client, containerTokenEnabled));
       assertDownloadContainerWorks(containers, sourceDatanodes);
     } finally {
@@ -292,6 +296,12 @@ public class TestOzoneContainerWithTLS {
       caClient.renewRootCA();
       caClient.renewKey();
       Thread.sleep(1000); // wait for reloading trust managers to reload
+      Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
+          caClient.getKeyStoreForSSLIdentity(caClient.getPrivateKey(), caClient.getCertPath()));
+      Mockito.when(trustedCertStorage.getKeyStore()).thenReturn(
+          caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCerts()));
+      sslIdentityStorage.notifyCertificateRenewed("", caClient.getCertSerialId());
+      trustedCertStorage.notifyCertificateRenewed("", caClient.getCertSerialId());
 
       createAndCloseContainer(client, false);
       assertClientTrustManagerFailedAndRetried(logs);

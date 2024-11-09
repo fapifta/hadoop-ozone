@@ -108,7 +108,7 @@ public class SCMRatisServerImpl implements SCMRatisServer {
     // trigger leader election.
 
     grpcTlsConfig = createSCMRatisTLSConfig(new SecurityConfig(conf),
-        scm.getScmCertificateClient());
+        scm.getSslIdentityStorage(), scm.getTrustedCertStorage());
     final Parameters parameters = RatisHelper.setServerTlsConf(grpcTlsConfig);
 
     this.server = newRaftServer(scm.getScmId(), conf)

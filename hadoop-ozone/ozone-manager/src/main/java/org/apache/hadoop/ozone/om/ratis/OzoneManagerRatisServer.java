@@ -48,7 +48,8 @@ import org.apache.hadoop.hdds.conf.RatisConfUtils;
 import org.apache.hadoop.hdds.conf.StorageUnit;
 import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ipc.ProtobufRpcEngine.Server;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -143,7 +144,7 @@ public final class OzoneManagerRatisServer {
   private OzoneManagerRatisServer(ConfigurationSource conf, OzoneManager om,
       String raftGroupIdStr, RaftPeerId localRaftPeerId,
       InetSocketAddress addr, List<RaftPeer> peers, boolean isBootstrapping,
-      SecurityConfig secConfig, CertificateClient certClient)
+      SecurityConfig secConfig, SSLIdentityStorage sslIdentityStorage, TrustedCertStorage trustedCertStorage)
       throws IOException {
     this.ozoneManager = om;
     this.port = addr.getPort();
@@ -171,7 +172,7 @@ public final class OzoneManagerRatisServer {
     }
     this.omStateMachine = getStateMachine(conf);
 
-    Parameters parameters = createServerTlsParameters(secConfig, certClient);
+    Parameters parameters = createServerTlsParameters(secConfig, sslIdentityStorage, trustedCertStorage);
     this.server = RaftServer.newBuilder()
         .setServerId(this.raftPeerId)
         .setGroup(this.raftGroup)
@@ -193,10 +194,11 @@ public final class OzoneManagerRatisServer {
   /**
    * Creates an instance of OzoneManagerRatisServer.
    */
+  @SuppressWarnings({"parameternumber"})
   public static OzoneManagerRatisServer newOMRatisServer(
       ConfigurationSource ozoneConf, OzoneManager omProtocol,
       OMNodeDetails omNodeDetails, Map<String, OMNodeDetails> peerNodes,
-      SecurityConfig secConfig, CertificateClient certClient,
+      SecurityConfig secConfig, SSLIdentityStorage sslIdentityStorage, TrustedCertStorage trustedCertStorage,
       boolean isBootstrapping) throws IOException {
 
     // RaftGroupId is the omServiceId
@@ -246,8 +248,8 @@ public final class OzoneManagerRatisServer {
     }
 
     return new OzoneManagerRatisServer(ozoneConf, omProtocol, omServiceId,
-        localRaftPeerId, ratisAddr, raftPeers, isBootstrapping, secConfig,
-        certClient);
+        localRaftPeerId, ratisAddr, raftPeers, isBootstrapping, secConfig, sslIdentityStorage, trustedCertStorage
+    );
   }
 
   /**
@@ -862,9 +864,9 @@ public final class OzoneManagerRatisServer {
     return raftGroupId;
   }
 
-  private static Parameters createServerTlsParameters(SecurityConfig conf,
-      CertificateClient caClient) throws IOException {
-    GrpcTlsConfig config = createServerTlsConfig(conf, caClient);
+  private static Parameters createServerTlsParameters(SecurityConfig conf, SSLIdentityStorage sslIdentityStorage,
+      TrustedCertStorage trustedCertStorage) throws IOException {
+    GrpcTlsConfig config = createServerTlsConfig(conf, sslIdentityStorage, trustedCertStorage);
     return config == null ? null : RatisHelper.setServerTlsConf(config);
   }
 }

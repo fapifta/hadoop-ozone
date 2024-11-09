@@ -24,7 +24,8 @@ import org.apache.hadoop.hdds.protocol.scm.proto.InterSCMProtocolProtos.CopyDBCh
 import org.apache.hadoop.hdds.protocol.scm.proto.InterSCMProtocolServiceGrpc;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.ratis.thirdparty.io.grpc.ManagedChannel;
 import org.apache.ratis.thirdparty.io.grpc.netty.GrpcSslContexts;
@@ -58,13 +59,13 @@ public class InterSCMGrpcClient implements SCMSnapshotDownloader {
   private final long timeout;
 
   public InterSCMGrpcClient(final String host,
-      int port, final ConfigurationSource conf,
-      CertificateClient scmCertificateClient) throws IOException {
+      int port, final ConfigurationSource conf, SSLIdentityStorage sslIdentityStorage,
+      TrustedCertStorage trustedCertStorage) throws IOException {
     Preconditions.checkNotNull(conf);
     timeout = conf.getTimeDuration(
-            ScmConfigKeys.OZONE_SCM_HA_GRPC_DEADLINE_INTERVAL,
-            ScmConfigKeys.OZONE_SCM_HA_GRPC_DEADLINE_INTERVAL_DEFAULT,
-            TimeUnit.MILLISECONDS);
+        ScmConfigKeys.OZONE_SCM_HA_GRPC_DEADLINE_INTERVAL,
+        ScmConfigKeys.OZONE_SCM_HA_GRPC_DEADLINE_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
     NettyChannelBuilder channelBuilder =
         NettyChannelBuilder.forAddress(host, port).usePlaintext()
             .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE)
@@ -73,8 +74,8 @@ public class InterSCMGrpcClient implements SCMSnapshotDownloader {
     if (securityConfig.isSecurityEnabled()
         && securityConfig.isGrpcTlsEnabled()) {
       SslContextBuilder sslClientContextBuilder = SslContextBuilder.forClient();
-      sslClientContextBuilder.keyManager(scmCertificateClient.getKeyManager());
-      sslClientContextBuilder.trustManager(scmCertificateClient.getTrustManager());
+      sslClientContextBuilder.keyManager(sslIdentityStorage.getKeyManager());
+      sslClientContextBuilder.trustManager(trustedCertStorage.getTrustManager());
       SslContextBuilder sslContextBuilder = GrpcSslContexts.configure(
           sslClientContextBuilder, securityConfig.getGrpcSslProvider());
       channelBuilder.sslContext(sslContextBuilder.build())

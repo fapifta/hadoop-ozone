@@ -1371,7 +1371,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return new GrpcOzoneManagerServer(conf,
         this.omServerProtocol,
         this.delegationTokenMgr,
-        this.certClient,
+        this.sslIdentityStorage,
         this.threadPrefix);
   }
 
@@ -2219,7 +2219,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
             registerRatisMetricReporters(ratisMetricsMap, this::isStopped);
         omRatisServer = OzoneManagerRatisServer.newOMRatisServer(
             configuration, this, omNodeDetails, peerNodesMap,
-            secConfig, certClient, shouldBootstrap);
+            secConfig, sslIdentityStorage, trustedCertStorage, shouldBootstrap);
       }
       LOG.info("OzoneManager Ratis server initialized at port {}",
           omRatisServer.getServerPort());
@@ -3372,7 +3372,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
 
       final GrpcTlsConfig tlsConfig =
-          OzoneManagerRatisUtils.createServerTlsConfig(secConfig, certClient);
+          OzoneManagerRatisUtils.createServerTlsConfig(secConfig, sslIdentityStorage, trustedCertStorage);
 
       RatisHelper.transferRatisLeadership(configuration, division.getGroup(),
           targetPeerId, tlsConfig);

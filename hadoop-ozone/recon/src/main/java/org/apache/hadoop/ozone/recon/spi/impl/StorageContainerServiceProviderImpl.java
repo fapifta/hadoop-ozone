@@ -214,7 +214,7 @@ public class StorageContainerServiceProviderImpl
                            secConf, scmSecurityClient, reconStorage, null, null, sslIdentityStorage,
                            trustedCertStorage);
                    SCMSnapshotDownloader downloadClient = new InterSCMGrpcClient(
-                       hostAddress, grpcPort, configuration, certClient)) {
+                       hostAddress, grpcPort, configuration, sslIdentityStorage, trustedCertStorage)) {
                 downloadClient.download(targetFile.toPath()).get();
               } catch (ExecutionException | InterruptedException e) {
                 LOG.error("Rocks DB checkpoint downloading failed: {}", e);

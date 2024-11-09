@@ -26,7 +26,6 @@ import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.ratis.thirdparty.io.grpc.Server;
 import org.apache.ratis.thirdparty.io.grpc.ServerBuilder;
@@ -68,10 +67,9 @@ public class InterSCMGrpcProtocolService {
     if (securityConfig.isSecurityEnabled()
         && securityConfig.isGrpcTlsEnabled()) {
       try {
-        CertificateClient certClient = scm.getScmCertificateClient();
         SslContextBuilder sslServerContextBuilder =
-            forServer(certClient.getKeyManager())
-                .trustManager(certClient.getTrustManager());
+            forServer(scm.getSslIdentityStorage().getKeyManager())
+                .trustManager(scm.getTrustedCertStorage().getTrustManager());
         SslContextBuilder sslContextBuilder = GrpcSslContexts.configure(
             sslServerContextBuilder, securityConfig.getGrpcSslProvider());
         sslContextBuilder.clientAuth(ClientAuth.REQUIRE);

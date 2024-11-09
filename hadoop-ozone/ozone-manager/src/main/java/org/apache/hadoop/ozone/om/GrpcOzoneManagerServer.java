@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.ozone.grpc.metrics.GrpcMetricsServerRequestInterceptor;
 import org.apache.hadoop.ozone.grpc.metrics.GrpcMetricsServerResponseInterceptor;
 import org.apache.hadoop.ozone.grpc.metrics.GrpcMetricsServerTransportFilter;
@@ -80,12 +80,12 @@ public class GrpcOzoneManagerServer {
   private EventLoopGroup workerEventLoopGroup;
 
   public GrpcOzoneManagerServer(OzoneConfiguration config,
-                                OzoneManagerProtocolServerSideTranslatorPB
-                                    omTranslator,
-                                OzoneDelegationTokenSecretManager
-                                    delegationTokenMgr,
-                                CertificateClient caClient,
-                                String threadPrefix) {
+      OzoneManagerProtocolServerSideTranslatorPB
+          omTranslator,
+      OzoneDelegationTokenSecretManager
+          delegationTokenMgr,
+      SSLIdentityStorage sslIdentityStorage,
+      String threadPrefix) {
     maxSize = config.getInt(OZONE_OM_GRPC_MAXIMUM_RESPONSE_LENGTH,
         OZONE_OM_GRPC_MAXIMUM_RESPONSE_LENGTH_DEFAULT);
     OptionalInt haPort = HddsUtils.getNumberFromConfigKeys(config,
@@ -107,13 +107,14 @@ public class GrpcOzoneManagerServer {
     init(omTranslator,
         delegationTokenMgr,
         config,
-        caClient);
+        sslIdentityStorage
+    );
   }
 
   public void init(OzoneManagerProtocolServerSideTranslatorPB omTranslator,
-                   OzoneDelegationTokenSecretManager delegationTokenMgr,
-                   OzoneConfiguration omServerConfig,
-                   CertificateClient caClient) {
+      OzoneDelegationTokenSecretManager delegationTokenMgr,
+      OzoneConfiguration omServerConfig,
+      SSLIdentityStorage sslIdentityStorage) {
 
     int poolSize = omServerConfig.getInt(OZONE_OM_GRPC_READ_THREAD_NUM_KEY,
         OZONE_OM_GRPC_READ_THREAD_NUM_DEFAULT);
@@ -163,7 +164,7 @@ public class GrpcOzoneManagerServer {
     if (secConf.isSecurityEnabled() && secConf.isGrpcTlsEnabled()) {
       try {
         SslContextBuilder sslClientContextBuilder =
-            SslContextBuilder.forServer(caClient.getKeyManager());
+            SslContextBuilder.forServer(sslIdentityStorage.getKeyManager());
         SslContextBuilder sslContextBuilder = GrpcSslContexts.configure(
             sslClientContextBuilder,
             SslProvider.valueOf(omServerConfig.get(HDDS_GRPC_TLS_PROVIDER,

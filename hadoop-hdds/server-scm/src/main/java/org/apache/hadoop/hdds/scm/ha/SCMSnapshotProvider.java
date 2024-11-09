@@ -32,7 +32,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.hdds.utils.db.RocksDBCheckpoint;
 
@@ -58,14 +59,16 @@ public class SCMSnapshotProvider {
 
   private Map<String, SCMNodeDetails> peerNodesMap;
 
-  private final CertificateClient scmCertificateClient;
+  private SSLIdentityStorage sslIdentityStorage;
+  private TrustedCertStorage trustedCertStorage;
 
   public SCMSnapshotProvider(ConfigurationSource conf,
-      List<SCMNodeDetails> peerNodes,
-      CertificateClient scmCertificateClient) {
+      List<SCMNodeDetails> peerNodes, SSLIdentityStorage sslStorage, TrustedCertStorage trustedStorage) {
     LOG.info("Initializing SCM Snapshot Provider");
     this.conf = conf;
-    this.scmCertificateClient = scmCertificateClient;
+
+    this.sslIdentityStorage = sslStorage;
+    this.trustedCertStorage = trustedStorage;
     // Create Ratis storage dir
     String scmRatisDirectory = SCMHAUtils.getSCMRatisDirectory(conf);
 
@@ -114,7 +117,7 @@ public class SCMSnapshotProvider {
             .getHostAddress();
 
     try (SCMSnapshotDownloader downloadClient =
-        new InterSCMGrpcClient(host, port, conf, scmCertificateClient)) {
+             new InterSCMGrpcClient(host, port, conf, sslIdentityStorage, trustedCertStorage)) {
       downloadClient.download(targetFile.toPath()).get();
     } catch (ExecutionException | InterruptedException e) {
       LOG.error("Rocks DB checkpoint downloading failed", e);

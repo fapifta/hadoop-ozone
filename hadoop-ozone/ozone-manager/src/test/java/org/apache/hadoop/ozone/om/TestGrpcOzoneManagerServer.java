@@ -47,7 +47,7 @@ public class TestGrpcOzoneManagerServer {
     server = new GrpcOzoneManagerServer(conf,
         omServerProtocol,
         ozoneManager.getDelegationTokenMgr(),
-        ozoneManager.getCertificateClient(),
+        null,
         "");
 
     try {

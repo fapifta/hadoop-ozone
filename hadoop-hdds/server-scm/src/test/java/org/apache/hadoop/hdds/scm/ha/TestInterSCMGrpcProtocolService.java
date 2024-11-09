@@ -28,7 +28,6 @@ import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
 import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
 import org.apache.hadoop.hdds.security.x509.CertificateTestUtils;
-import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
@@ -93,19 +92,22 @@ class TestInterSCMGrpcProtocolService {
 
   @TempDir
   private Path temp;
+  private SSLIdentityStorage sslIdentityStorage;
+  private TrustedCertStorage trustedCertStorage;
 
   @Test
   void testMTLSOnInterScmGrpcProtocolServiceAccess() throws Exception {
     int port = PortAllocator.getFreePort();
     OzoneConfiguration conf = setupConfiguration(port);
-    SCMCertificateClient
-        scmCertClient = setupCertificateClientForMTLS(conf);
+    sslIdentityStorage = mock(SSLIdentityStorage.class);
+    trustedCertStorage = mock(TrustedCertStorage.class);
+    setupCertificateClientForMTLS(conf);
     InterSCMGrpcProtocolService service =
-        new InterSCMGrpcProtocolService(conf, scmWith(scmCertClient));
+        new InterSCMGrpcProtocolService(conf, scmWith());
     service.start();
 
     InterSCMGrpcClient client =
-        new InterSCMGrpcClient("localhost", port, conf, scmCertClient);
+        new InterSCMGrpcClient("localhost", port, conf, sslIdentityStorage, trustedCertStorage);
     Path tempFile = temp.resolve(CP_FILE_NAME);
     CompletableFuture<Path> res = client.download(tempFile);
     Path downloaded = res.get();
@@ -154,15 +156,15 @@ class TestInterSCMGrpcProtocolService {
     }
   }
 
-  private StorageContainerManager scmWith(
-      SCMCertificateClient scmCertClient) throws IOException {
+  private StorageContainerManager scmWith() throws IOException {
     StorageContainerManager scmMock = mock(StorageContainerManager.class);
-    when(scmMock.getScmCertificateClient()).thenReturn(scmCertClient);
     SCMMetadataStore metadataStore = metadataStore();
     when(scmMock.getScmMetadataStore()).thenReturn(metadataStore);
     SCMHAManager haManager = scmHAManager();
     when(scmMock.getScmHAManager()).thenReturn(haManager);
     when(scmMock.getClusterId()).thenReturn("clusterId");
+    when(scmMock.getSslIdentityStorage()).thenReturn(sslIdentityStorage);
+    when(scmMock.getTrustedCertStorage()).thenReturn(trustedCertStorage);
     return scmMock;
   }
 
@@ -203,7 +205,8 @@ class TestInterSCMGrpcProtocolService {
     return tableMock;
   }
 
-  private SCMCertificateClient setupCertificateClientForMTLS(
+
+  private void setupCertificateClientForMTLS(
       OzoneConfiguration conf
   ) throws Exception {
     KeyPair serviceKeys = CertificateTestUtils.aKeyPair(conf);
@@ -234,10 +237,8 @@ class TestInterSCMGrpcProtocolService {
     clientKeyManager = spy(toSpyClientKeyManager);
     serverKeyManager = spy(toSpyServerKeyManager);
 
-    SCMCertificateClient scmCertClient = mock(SCMCertificateClient.class);
-    doReturn(serverKeyManager, clientKeyManager).when(scmCertClient).getKeyManager();
-    doReturn(serverTrustManager, clientTrustManager).when(scmCertClient).getTrustManager();
-    return scmCertClient;
+    doReturn(serverKeyManager, clientKeyManager).when(sslIdentityStorage).getKeyManager();
+    doReturn(serverTrustManager, clientTrustManager).when(trustedCertStorage).getTrustManager();
   }
 
   private OzoneConfiguration setupConfiguration(int port) {

@@ -882,7 +882,7 @@ public class SCMClientProtocolServer implements
       }
       final GrpcTlsConfig tlsConfig =
           createSCMRatisTLSConfig(new SecurityConfig(scm.getConfiguration()),
-          scm.getScmCertificateClient());
+              scm.getSslIdentityStorage(), scm.getTrustedCertStorage());
 
       RatisHelper.transferRatisLeadership(scm.getConfiguration(), group,
           targetPeerId, tlsConfig);

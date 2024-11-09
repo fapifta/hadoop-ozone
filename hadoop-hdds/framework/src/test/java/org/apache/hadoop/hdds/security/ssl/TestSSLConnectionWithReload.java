@@ -31,6 +31,8 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.ratis.thirdparty.io.grpc.ManagedChannel;
@@ -43,6 +45,7 @@ import org.apache.ratis.thirdparty.io.netty.handler.ssl.ClientAuth;
 import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslContextBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import javax.net.ssl.SSLException;
 import java.util.ArrayList;
@@ -58,6 +61,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 public class TestSSLConnectionWithReload {
   private CertificateClientTestImpl caClient;
+  private SSLIdentityStorage sslIdentityStorage;
+  private TrustedCertStorage trustedCertStorage;
   private SecurityConfig secConf;
   private static final int RELOAD_INTERVAL = 2000;
 
@@ -66,6 +71,14 @@ public class TestSSLConnectionWithReload {
     OzoneConfiguration conf = new OzoneConfiguration();
     caClient = new CertificateClientTestImpl(conf);
     secConf = new SecurityConfig(conf);
+    sslIdentityStorage = new SSLIdentityStorage(secConf, "", caClient.getCertSerialId());
+    sslIdentityStorage = Mockito.spy(sslIdentityStorage);
+    Mockito.doReturn(caClient.getKeyStoreForSSLIdentity(caClient.getPrivateKey(),
+        caClient.getCertPath())).when(sslIdentityStorage).getKeyStore();
+    trustedCertStorage = new TrustedCertStorage(secConf, "");
+    trustedCertStorage = Mockito.spy(trustedCertStorage);
+    Mockito.doReturn(caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCerts()))
+        .when(trustedCertStorage).getKeyStore();
   }
 
   @Test
@@ -152,8 +165,8 @@ public class TestSSLConnectionWithReload {
         NettyChannelBuilder.forAddress("localhost", port);
 
     SslContextBuilder sslContextBuilder = GrpcSslContexts.forClient();
-    sslContextBuilder.trustManager(caClient.getTrustManager());
-    sslContextBuilder.keyManager(caClient.getKeyManager());
+    sslContextBuilder.trustManager(trustedCertStorage.getTrustManager());
+    sslContextBuilder.keyManager(sslIdentityStorage.getKeyManager());
     channelBuilder.useTransportSecurity().sslContext(sslContextBuilder.build());
     return channelBuilder.build();
   }
@@ -162,7 +175,7 @@ public class TestSSLConnectionWithReload {
     NettyServerBuilder nettyServerBuilder = NettyServerBuilder.forPort(0)
         .addService(new GrpcService());
     SslContextBuilder sslContextBuilder = SslContextBuilder.forServer(
-        caClient.getKeyManager());
+        sslIdentityStorage.getKeyManager());
     sslContextBuilder.clientAuth(ClientAuth.REQUIRE);
     sslContextBuilder.trustManager(caClient.getTrustManager());
     sslContextBuilder = GrpcSslContexts.configure(

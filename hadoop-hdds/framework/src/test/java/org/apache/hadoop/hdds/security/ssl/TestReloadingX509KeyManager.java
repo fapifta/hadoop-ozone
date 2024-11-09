@@ -20,9 +20,11 @@ package org.apache.hadoop.hdds.security.ssl;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.ozone.test.GenericTestUtils.LogCapturer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.security.PrivateKey;
 
@@ -38,21 +40,28 @@ public class TestReloadingX509KeyManager {
       LogCapturer.captureLogs(ReloadingX509KeyManager.LOG);
   private static OzoneConfiguration conf;
   private static CertificateClientTestImpl caClient;
+  private static SSLIdentityStorage sslIdentityStorage;
 
   @BeforeAll
   public static void setUp() throws Exception {
     conf = new OzoneConfiguration();
     caClient = new CertificateClientTestImpl(conf);
+    sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
+    Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
+        caClient.getKeyStoreForSSLIdentity(caClient.getPrivateKey(), caClient.getCertPath()));
   }
 
   @Test
   public void testReload() throws Exception {
-    ReloadingX509KeyManager km = caClient.getKeyManager();
+    ReloadingX509KeyManager km = new ReloadingX509KeyManager(sslIdentityStorage);
     PrivateKey privateKey1 = caClient.getPrivateKey();
     assertEquals(privateKey1, km.getPrivateKey(caClient.getCertificate().getSerialNumber().toString()));
 
     caClient.renewRootCA();
     caClient.renewKey();
+    Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
+        caClient.getKeyStoreForSSLIdentity(caClient.getPrivateKey(), caClient.getCertPath()));
+    km.notifyCertificateRenewed("", caClient.getCertSerialId());
     PrivateKey privateKey2 = caClient.getPrivateKey();
     assertNotEquals(privateKey1, privateKey2);
 

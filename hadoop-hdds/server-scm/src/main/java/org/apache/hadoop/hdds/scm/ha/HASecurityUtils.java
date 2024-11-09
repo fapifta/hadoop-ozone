@@ -31,7 +31,8 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.SubCAServer;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultCAProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.conf.RaftProperties;
@@ -167,13 +168,12 @@ public final class  HASecurityUtils {
    * Create GrpcTlsConfig.
    *
    * @param conf
-   * @param certificateClient
    */
-  public static GrpcTlsConfig createSCMRatisTLSConfig(SecurityConfig conf,
-      CertificateClient certificateClient) throws IOException {
+  public static GrpcTlsConfig createSCMRatisTLSConfig(SecurityConfig conf, SSLIdentityStorage sslIdentityStorage,
+      TrustedCertStorage trustedCertStorage) throws IOException {
     if (conf.isSecurityEnabled() && conf.isGrpcTlsEnabled()) {
-      return new GrpcTlsConfig(certificateClient.getKeyManager(),
-          certificateClient.getTrustManager(), true);
+      return new GrpcTlsConfig(sslIdentityStorage.getKeyManager(),
+          trustedCertStorage.getTrustManager(), true);
     }
     return null;
   }

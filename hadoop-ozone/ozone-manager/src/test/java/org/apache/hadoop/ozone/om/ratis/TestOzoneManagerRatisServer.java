@@ -28,7 +28,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
@@ -84,13 +83,14 @@ public class TestOzoneManagerRatisServer {
   private OMNodeDetails omNodeDetails;
   private TermIndex initialTermIndex;
   private SecurityConfig secConfig;
-  private OMCertificateClient certClient;
+  private SSLIdentityStorage sslIdentityStorage;
+  private TrustedCertStorage trustedCertStorage;
 
   @BeforeAll
   public static void setup() {
     ExitUtils.disableSystemExit();
   }
-  
+
   @BeforeEach
   public void init(@TempDir Path metaDirPath) throws Exception {
     conf = new OzoneConfiguration();
@@ -125,16 +125,11 @@ public class TestOzoneManagerRatisServer {
     when(ozoneManager.getTransactionInfo()).thenReturn(TransactionInfo.DEFAULT_VALUE);
     when(ozoneManager.getConfiguration()).thenReturn(conf);
     secConfig = new SecurityConfig(conf);
-    HddsProtos.OzoneManagerDetailsProto omInfo =
-        OzoneManager.getOmDetailsProto(conf, omID);
-    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(secConfig, OMCertificateClient.COMPONENT_NAME,
+    sslIdentityStorage = new SSLIdentityStorage(secConfig, OMCertificateClient.COMPONENT_NAME,
         omStorage.getOmCertSerialId());
-    TrustedCertStorage trustedCertStorage = new TrustedCertStorage(secConfig, OMCertificateClient.COMPONENT_NAME);
-    certClient =
-        new OMCertificateClient(
-            secConfig, null, omStorage, omInfo, "", null, null, null, sslIdentityStorage, trustedCertStorage);
+    trustedCertStorage = new TrustedCertStorage(secConfig, OMCertificateClient.COMPONENT_NAME);
     omRatisServer = OzoneManagerRatisServer.newOMRatisServer(conf, ozoneManager,
-        omNodeDetails, Collections.emptyMap(), secConfig, certClient, false);
+        omNodeDetails, Collections.emptyMap(), secConfig, sslIdentityStorage, trustedCertStorage, false);
     omRatisServer.start();
   }
 
@@ -143,7 +138,6 @@ public class TestOzoneManagerRatisServer {
     if (omRatisServer != null) {
       omRatisServer.stop();
     }
-    certClient.close();
   }
 
   /**
@@ -173,7 +167,7 @@ public class TestOzoneManagerRatisServer {
 
     // Start new Ratis server. It should pick up and load the new SnapshotInfo
     omRatisServer = OzoneManagerRatisServer.newOMRatisServer(conf, ozoneManager,
-        omNodeDetails, Collections.emptyMap(), secConfig, certClient, false);
+        omNodeDetails, Collections.emptyMap(), secConfig, sslIdentityStorage, trustedCertStorage, false);
     omRatisServer.start();
     TermIndex lastAppliedTermIndex =
         omRatisServer.getLastAppliedTermIndex();
@@ -238,7 +232,7 @@ public class TestOzoneManagerRatisServer {
     omRatisServer.stop();
     OzoneManagerRatisServer newOmRatisServer = OzoneManagerRatisServer
         .newOMRatisServer(newConf, ozoneManager, nodeDetails,
-            Collections.emptyMap(), secConfig, certClient, false);
+            Collections.emptyMap(), secConfig, sslIdentityStorage, trustedCertStorage, false);
     newOmRatisServer.start();
 
     UUID uuid = UUID.nameUUIDFromBytes(customOmServiceId.getBytes(UTF_8));

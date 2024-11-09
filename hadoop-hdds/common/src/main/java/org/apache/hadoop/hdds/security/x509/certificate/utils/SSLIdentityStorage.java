@@ -49,12 +49,11 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
   private static final Logger LOG = LoggerFactory.getLogger(SSLIdentityStorage.class);
 
   private String certId;
-  private final KeyCodec keyCodec;
+  private KeyCodec keyCodec;
   private ReloadingX509KeyManager keyManager;
 
   public SSLIdentityStorage(SecurityConfig config, String componentName, String certId) {
     super(config, componentName);
-    this.keyCodec = new KeyCodec(config, componentName);
     this.certId = certId;
   }
 
@@ -73,6 +72,12 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
     return (X509Certificate) getCertPaths().get(0).getCertificates().get(0);
   }
 
+  private void initKeyCodec() {
+    if (keyCodec == null) {
+      keyCodec = new KeyCodec(getSecurityConfig(), getComponentName());
+    }
+  }
+
   /**
    * Return only the certificate path that has the same id at the leaf certificate as the known certId.
    *
@@ -89,6 +94,7 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
     if (OzoneSecurityUtil.checkIfFileExist(keyPath,
         getSecurityConfig().getPublicKeyFileName())) {
       try {
+        initKeyCodec();
         publicKey = keyCodec.readPublicKey();
       } catch (InvalidKeySpecException | NoSuchAlgorithmException
                | IOException e) {
@@ -104,6 +110,7 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
     if (OzoneSecurityUtil.checkIfFileExist(keyPath,
         getSecurityConfig().getPrivateKeyFileName())) {
       try {
+        initKeyCodec();
         privateKey = keyCodec.readPrivateKey();
       } catch (InvalidKeySpecException | NoSuchAlgorithmException
                | IOException e) {
@@ -127,6 +134,7 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
   }
 
   public void storeKeyPair(KeyPair keyPair) throws IOException {
+    initKeyCodec();
     keyCodec.writeKey(keyPair);
   }
 

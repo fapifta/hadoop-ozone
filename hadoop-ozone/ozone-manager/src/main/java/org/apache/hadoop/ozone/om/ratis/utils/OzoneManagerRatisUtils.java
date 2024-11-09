@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+
 import java.io.File;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
@@ -28,7 +29,8 @@ import java.nio.file.Paths;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.utils.HAUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -499,10 +501,10 @@ public final class OzoneManagerRatisUtils {
     }
   }
 
-  public static GrpcTlsConfig createServerTlsConfig(SecurityConfig conf,
-      CertificateClient caClient) throws IOException {
+  public static GrpcTlsConfig createServerTlsConfig(SecurityConfig conf, SSLIdentityStorage sslIdentityStorage,
+      TrustedCertStorage trustedCertStorage) throws IOException {
     if (conf.isSecurityEnabled() && conf.isGrpcTlsEnabled()) {
-      return new GrpcTlsConfig(caClient.getKeyManager(), caClient.getTrustManager(), true);
+      return new GrpcTlsConfig(sslIdentityStorage.getKeyManager(), trustedCertStorage.getTrustManager(), true);
     }
 
     return null;

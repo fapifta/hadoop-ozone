@@ -35,7 +35,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.SendContai
 import org.apache.hadoop.hdds.protocol.datanode.proto.IntraDatanodeProtocolServiceGrpc;
 import org.apache.hadoop.hdds.protocol.datanode.proto.IntraDatanodeProtocolServiceGrpc.IntraDatanodeProtocolServiceStub;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.ozone.OzoneConsts;
 
 import com.google.common.base.Preconditions;
@@ -68,7 +69,7 @@ public class GrpcReplicationClient implements AutoCloseable {
 
   public GrpcReplicationClient(
       String host, int port,
-      SecurityConfig secConfig, CertificateClient certClient,
+      SecurityConfig secConfig, SSLIdentityStorage sslIdentityStorage, TrustedCertStorage trustedCertStorage,
       CopyContainerCompression compression)
       throws IOException {
     NettyChannelBuilder channelBuilder =
@@ -81,11 +82,11 @@ public class GrpcReplicationClient implements AutoCloseable {
       channelBuilder.useTransportSecurity();
 
       SslContextBuilder sslContextBuilder = GrpcSslContexts.forClient();
-      if (certClient != null) {
+      if (sslIdentityStorage != null && trustedCertStorage != null) {
         sslContextBuilder
-            .trustManager(certClient.getTrustManager())
+            .trustManager(trustedCertStorage.getTrustManager())
             .clientAuth(ClientAuth.REQUIRE)
-            .keyManager(certClient.getKeyManager());
+            .keyManager(sslIdentityStorage.getKeyManager());
       }
       if (secConfig.useTestCert()) {
         channelBuilder.overrideAuthority("localhost");

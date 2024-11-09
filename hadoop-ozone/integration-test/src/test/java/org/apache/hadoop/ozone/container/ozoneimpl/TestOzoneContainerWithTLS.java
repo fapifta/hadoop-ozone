@@ -356,7 +356,7 @@ public class TestOzoneContainerWithTLS {
       List<DatanodeDetails> sourceDatanodes) {
     LogCapturer logCapture = captureLogs(SimpleContainerDownloader.LOG);
     SimpleContainerDownloader downloader =
-        new SimpleContainerDownloader(conf, caClient);
+        new SimpleContainerDownloader(conf, sslIdentityStorage, trustedCertStorage);
     Path file = downloader.getContainerDataFromReplicas(containerId,
         sourceDatanodes, tempFolder.resolve("tmp"), NO_COMPRESSION);
     downloader.close();
@@ -369,7 +369,7 @@ public class TestOzoneContainerWithTLS {
       List<DatanodeDetails> sourceDatanodes) {
     for (Long cId : containers) {
       SimpleContainerDownloader downloader =
-          new SimpleContainerDownloader(conf, caClient);
+          new SimpleContainerDownloader(conf, sslIdentityStorage, trustedCertStorage);
       Path file = downloader.getContainerDataFromReplicas(cId, sourceDatanodes,
           tempFolder.resolve("tmp"), NO_COMPRESSION);
       downloader.close();

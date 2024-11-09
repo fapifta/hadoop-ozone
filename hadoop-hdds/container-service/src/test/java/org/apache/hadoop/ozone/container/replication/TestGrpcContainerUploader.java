@@ -118,7 +118,7 @@ class TestGrpcContainerUploader {
   private static GrpcContainerUploader createSubject(
       GrpcReplicationClient client) {
 
-    return new GrpcContainerUploader(new InMemoryConfiguration(), null) {
+    return new GrpcContainerUploader(new InMemoryConfiguration(), null, null) {
       @Override
       protected GrpcReplicationClient createReplicationClient(
           DatanodeDetails target, CopyContainerCompression compression) {

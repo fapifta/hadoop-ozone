@@ -24,7 +24,8 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails.Port;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.SendContainerRequest;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.SendContainerResponse;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.ratis.thirdparty.io.grpc.stub.CallStreamObserver;
 import org.apache.ratis.thirdparty.io.grpc.stub.StreamObserver;
@@ -45,11 +46,13 @@ public class GrpcContainerUploader implements ContainerUploader {
       LoggerFactory.getLogger(GrpcContainerUploader.class);
 
   private final SecurityConfig securityConfig;
-  private final CertificateClient certClient;
+  private final SSLIdentityStorage sslIdentityStorage;
+  private final TrustedCertStorage trustedCertStorage;
 
   public GrpcContainerUploader(
-      ConfigurationSource conf, CertificateClient certClient) {
-    this.certClient = certClient;
+      ConfigurationSource conf, SSLIdentityStorage sslStrorage, TrustedCertStorage trustedStorage) {
+    this.sslIdentityStorage = sslStrorage;
+    this.trustedCertStorage = trustedStorage;
     securityConfig = new SecurityConfig(conf);
   }
 
@@ -91,7 +94,7 @@ public class GrpcContainerUploader implements ContainerUploader {
       throws IOException {
     return new GrpcReplicationClient(target.getIpAddress(),
         target.getPort(Port.Name.REPLICATION).getValue(),
-        securityConfig, certClient, compression);
+        securityConfig, sslIdentityStorage, trustedCertStorage, compression);
   }
 
   /**

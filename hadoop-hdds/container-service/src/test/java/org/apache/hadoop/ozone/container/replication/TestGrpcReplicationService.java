@@ -176,7 +176,7 @@ class TestGrpcReplicationService {
   @Test
   public void testDownload() throws IOException {
     SimpleContainerDownloader downloader =
-        new SimpleContainerDownloader(conf, null);
+        new SimpleContainerDownloader(conf, null, null);
     Path downloadDir = Files.createDirectory(tempDir.resolve("DownloadDir"));
     Path result = downloader.getContainerDataFromReplicas(
         CONTAINER_ID,
@@ -201,7 +201,7 @@ class TestGrpcReplicationService {
     ContainerReplicationSource source =
         new OnDemandContainerReplicationSource(containerController);
 
-    GrpcContainerUploader uploader = new GrpcContainerUploader(conf, null);
+    GrpcContainerUploader uploader = new GrpcContainerUploader(conf, null, null);
 
     PushReplicator pushReplicator = new PushReplicator(conf, source, uploader);
 

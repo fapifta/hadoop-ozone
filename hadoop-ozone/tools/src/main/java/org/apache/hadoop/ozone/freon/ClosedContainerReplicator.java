@@ -204,7 +204,7 @@ public class ClosedContainerReplicator extends BaseFreonGenerator implements
     ContainerImporter importer = new ContainerImporter(conf, containerSet,
         controller, volumeSet);
     replicator = new DownloadAndImportReplicator(conf, containerSet, importer,
-        new SimpleContainerDownloader(conf, null));
+        new SimpleContainerDownloader(conf, null, null));
 
     DatanodeConfiguration datanodeConfig =
         conf.getObject(DatanodeConfiguration.class);

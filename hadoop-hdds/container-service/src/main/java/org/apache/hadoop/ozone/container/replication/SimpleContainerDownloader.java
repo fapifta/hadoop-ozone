@@ -30,9 +30,10 @@ import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.utils.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,12 +51,14 @@ public class SimpleContainerDownloader implements ContainerDownloader {
       LoggerFactory.getLogger(SimpleContainerDownloader.class);
 
   private final SecurityConfig securityConfig;
-  private final CertificateClient certClient;
+  private final SSLIdentityStorage sslIdentityStorage;
+  private final TrustedCertStorage trustedCertStorage;
 
   public SimpleContainerDownloader(
-      ConfigurationSource conf, CertificateClient certClient) {
+      ConfigurationSource conf, SSLIdentityStorage sslStorage, TrustedCertStorage trustedStorage) {
     securityConfig = new SecurityConfig(conf);
-    this.certClient = certClient;
+    this.sslIdentityStorage = sslStorage;
+    this.trustedCertStorage = trustedStorage;
   }
 
   @Override
@@ -126,7 +129,7 @@ public class SimpleContainerDownloader implements ContainerDownloader {
   ) throws IOException {
     return new GrpcReplicationClient(datanode.getIpAddress(),
         datanode.getPort(Name.REPLICATION).getValue(),
-        securityConfig, certClient, compression);
+        securityConfig, sslIdentityStorage, trustedCertStorage, compression);
   }
 
   @VisibleForTesting

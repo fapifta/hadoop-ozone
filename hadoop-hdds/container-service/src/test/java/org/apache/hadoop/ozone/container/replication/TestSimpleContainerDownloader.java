@@ -186,7 +186,7 @@ public class TestSimpleContainerDownloader {
     private TestingContainerDownloader(
         boolean disableShuffle, boolean directException,
         DatanodeDetails... failedDatanodes) {
-      super(new OzoneConfiguration(), null);
+      super(new OzoneConfiguration(), null, null);
       this.disableShuffle = disableShuffle;
       this.directException = directException;
       this.failedDatanodes = Arrays.asList(failedDatanodes);

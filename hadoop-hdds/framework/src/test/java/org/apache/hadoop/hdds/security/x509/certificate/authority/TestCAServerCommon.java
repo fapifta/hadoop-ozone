@@ -26,7 +26,6 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultCAProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultProfile;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 
@@ -210,8 +209,7 @@ public class TestCAServerCommon {
     List<? extends Certificate> certBundle = holder.get().getCertificates();
     X509Certificate caInReturnedBundle = (X509Certificate) certBundle.get(1);
     assertEquals(caInReturnedBundle, certificateServer.getCaCertPath().getCertificates().get(0));
-    X509Certificate signedCert =
-        CertificateCodec.firstCertificateFrom(holder.get());
+    X509Certificate signedCert = (X509Certificate) holder.get().getCertificates().get(0);
     //Test that the ca has signed of the returned certificate
     assertEquals(caInReturnedBundle.getSubjectX500Principal(),
         signedCert.getIssuerX500Principal());
@@ -250,7 +248,7 @@ public class TestCAServerCommon {
         String.valueOf(System.nanoTime()));
     // Right now our calls are synchronous. Eventually this will have to wait.
     assertTrue(holder.isDone());
-    assertNotNull(CertificateCodec.firstCertificateFrom(holder.get()));
+    assertNotNull(holder.get().getCertificates().get(0));
   }
 
   @ParameterizedTest

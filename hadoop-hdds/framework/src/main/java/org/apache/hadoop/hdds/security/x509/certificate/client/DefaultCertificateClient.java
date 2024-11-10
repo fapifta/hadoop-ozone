@@ -64,7 +64,6 @@ import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslator
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
@@ -474,7 +473,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   private X509Certificate firstCertificateFrom(CertPath certificatePath) {
-    return CertificateCodec.firstCertificateFrom(certificatePath);
+    return (X509Certificate) certificatePath.getCertificates().get(0);
   }
 
   /**

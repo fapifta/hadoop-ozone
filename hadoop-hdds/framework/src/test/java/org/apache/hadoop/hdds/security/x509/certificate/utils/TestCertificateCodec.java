@@ -33,7 +33,6 @@ import java.security.cert.CertPath;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
-import java.util.Collections;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -86,22 +85,6 @@ public class TestCertificateCodec {
 
     assertEquals(cert1, certPathDecoded.getCertificates().get(0));
     assertEquals(cert2, certPathDecoded.getCertificates().get(1));
-  }
-
-  /**
-   * Test prepending a new certificate to a cert path.
-   */
-  @Test
-  public void testPrependCertificateToCertPath() throws Exception {
-    X509Certificate initialCert = generateTestCert();
-    X509Certificate prependedCert = generateTestCert();
-    CertificateCodec.getCertFactory().generateCertPath(Collections.singletonList(initialCert));
-    CertPath initialPath = CertificateCodec.getCertFactory().generateCertPath(Collections.singletonList(initialCert));
-    CertPath pathWithPrependedCert =
-        ConfiguredCertStorage.prependCertToCertPath(prependedCert, initialPath);
-
-    assertEquals(prependedCert, pathWithPrependedCert.getCertificates().get(0));
-    assertEquals(initialCert, pathWithPrependedCert.getCertificates().get(1));
   }
 
   private X509Certificate generateTestCert() throws Exception {

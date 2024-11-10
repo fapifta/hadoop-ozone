@@ -159,9 +159,8 @@ public class TestOzoneDelegationTokenSecretManager {
    * */
   private OMCertificateClient setupCertificateClient() throws Exception {
     KeyPair keyPair = KeyStoreTestUtil.generateKeyPair("RSA");
-    CertificateFactory fact = CertificateCodec.getCertFactory();
     X509Certificate singleCert = KeyStoreTestUtil.generateCertificate("CN=OzoneMaster", keyPair, 30, "SHA256withRSA");
-    CertPath certPath = fact.generateCertPath(ImmutableList.of(singleCert));
+    CertPath certPath = CertificateFactory.getInstance("X.509").generateCertPath(ImmutableList.of(singleCert));
 
     OMStorage omStorage = mock(OMStorage.class);
     when(omStorage.getOmCertSerialId()).thenReturn(singleCert.getSerialNumber().toString());

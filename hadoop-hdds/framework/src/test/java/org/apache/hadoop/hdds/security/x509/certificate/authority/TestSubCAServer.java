@@ -111,8 +111,7 @@ public class TestSubCAServer {
         CertificateApprover.ApprovalType.TESTING_AUTOMATIC, SCM,
         String.valueOf(System.nanoTime()));
     assertTrue(holder.isDone());
-    X509Certificate certificate =
-        CertificateCodec.firstCertificateFrom(holder.get());
+    X509Certificate certificate = (X509Certificate) holder.get().getCertificates().get(0);
 
     assertNotNull(certificate);
     LocalDate invalidAfterDate = certificate.getNotAfter().toInstant()

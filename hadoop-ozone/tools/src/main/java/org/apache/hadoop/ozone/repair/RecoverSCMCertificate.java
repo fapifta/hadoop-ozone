@@ -239,16 +239,13 @@ public class RecoverSCMCertificate implements Callable<Void>, SubcommandWithPare
     ArrayList<X509Certificate> updatedList = new ArrayList<>();
     updatedList.add(scmCert);
     updatedList.add(rootCert);
-    CertificateFactory certFactory =
-        CertificateCodec.getCertFactory();
-    return certFactory.generateCertPath(updatedList);
+    return CertificateFactory.getInstance("X.509").generateCertPath(updatedList);
   }
 
   public CertPath getRootCertPath(X509Certificate rootCert)
       throws CertificateException {
     ArrayList<X509Certificate> updatedList = new ArrayList<>();
     updatedList.add(rootCert);
-    CertificateFactory factory = CertificateCodec.getCertFactory();
-    return factory.generateCertPath(updatedList);
+    return CertificateFactory.getInstance("X.509").generateCertPath(updatedList);
   }
 }

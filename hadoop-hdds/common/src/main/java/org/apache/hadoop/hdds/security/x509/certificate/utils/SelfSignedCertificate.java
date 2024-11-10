@@ -24,6 +24,7 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.security.KeyPair;
 import java.security.cert.CertPath;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -336,7 +337,8 @@ public final class SelfSignedCertificate {
 
     public String buildAndEncodeCertPath() throws IOException {
       try {
-        CertPath certPath = CertificateCodec.getCertFactory().generateCertPath(Collections.singletonList(build()));
+        CertPath certPath =
+            CertificateFactory.getInstance("X.509").generateCertPath(Collections.singletonList(build()));
         return CertificateCodec.getPEMEncodedString(certPath);
       } catch (java.security.cert.CertificateException e) {
         throw new IOException(e);

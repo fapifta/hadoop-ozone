@@ -34,6 +34,7 @@ import java.security.PublicKey;
 import java.security.cert.CertPath;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
@@ -141,6 +142,6 @@ public class ConfiguredCertStorage extends CertificateStorage {
     for (Certificate cert : certificates) {
       updatedList.add((X509Certificate) cert);
     }
-    return CertificateCodec.getCertFactory().generateCertPath(updatedList);
+    return CertificateFactory.getInstance("X.509").generateCertPath(updatedList);
   }
 }

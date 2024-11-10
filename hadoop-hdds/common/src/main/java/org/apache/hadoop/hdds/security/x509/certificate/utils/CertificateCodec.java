@@ -90,7 +90,7 @@ public final class CertificateCodec {
    *
    * @param <W> The writer type.
    */
-  public static <W extends Writer> W writePEMEncoded(
+  private static <W extends Writer> W writePEMEncoded(
       X509Certificate certificate, W writer) throws IOException {
     try (JcaPEMWriter pemWriter = new JcaPEMWriter(writer)) {
       pemWriter.writeObject(certificate);
@@ -117,18 +117,6 @@ public final class CertificateCodec {
     }
   }
 
-  public static X509Certificate firstCertificateFrom(CertPath certificatePath) {
-    return (X509Certificate) certificatePath.getCertificates().get(0);
-  }
-
-  public static CertificateFactory getCertFactory() throws CertificateException {
-    try {
-      return CertificateFactory.getInstance("X.509", "BC");
-    } catch (NoSuchProviderException e) {
-      throw new RuntimeException("BouncyCastle JCE provider not loaded.", e);
-    }
-  }
-
   /**
    * Gets a certificate path from the specified pem encoded String.
    */
@@ -139,9 +127,11 @@ public final class CertificateCodec {
 
   public static CertPath generateCertPathFromInputStream(InputStream inputStream) throws IOException {
     try {
-      return getCertFactory().generateCertPath(inputStream, "PEM");
+      return CertificateFactory.getInstance("X.509", "BC").generateCertPath(inputStream, "PEM");
     } catch (CertificateException e) {
       throw new IOException(e);
+    } catch (NoSuchProviderException e) {
+      throw new RuntimeException("Certificate factory provider not loaded.", e);
     }
   }
 }

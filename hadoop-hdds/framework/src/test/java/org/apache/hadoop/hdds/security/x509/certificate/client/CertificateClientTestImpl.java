@@ -29,6 +29,7 @@ import java.security.PublicKey;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.cert.CertPath;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -55,7 +56,6 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.DefaultApprover;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultProfile;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
@@ -205,7 +205,7 @@ public class CertificateClientTestImpl implements CertificateClient {
       List<X509Certificate> list = new ArrayList<>();
       list.add(x509Certificate);
       list.add(rootCert);
-      resultPath = CertificateCodec.getCertFactory().generateCertPath(list);
+      resultPath = CertificateFactory.getInstance("X.509").generateCertPath(list);
     } catch (java.security.cert.CertificateException ignored) {
 
     }

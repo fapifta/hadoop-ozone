@@ -177,7 +177,7 @@ public class TestSSLConnectionWithReload {
     SslContextBuilder sslContextBuilder = SslContextBuilder.forServer(
         sslIdentityStorage.getKeyManager());
     sslContextBuilder.clientAuth(ClientAuth.REQUIRE);
-    sslContextBuilder.trustManager(caClient.getTrustManager());
+    sslContextBuilder.trustManager(trustedCertStorage.getTrustManager());
     sslContextBuilder = GrpcSslContexts.configure(
         sslContextBuilder, secConf.getGrpcSslProvider());
     nettyServerBuilder.sslContext(sslContextBuilder.build());

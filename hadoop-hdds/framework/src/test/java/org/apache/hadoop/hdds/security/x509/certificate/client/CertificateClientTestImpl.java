@@ -18,7 +18,6 @@ package org.apache.hadoop.hdds.security.x509.certificate.client;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyStore;
@@ -54,8 +53,6 @@ import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
-import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.DefaultApprover;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
@@ -91,8 +88,6 @@ public class CertificateClientTestImpl implements CertificateClient {
 
   private HDDSKeyGenerator keyGen;
   private DefaultApprover approver;
-  private ReloadingX509KeyManager keyManager;
-  private ReloadingX509TrustManager trustManager;
   private Map<String, X509Certificate> certificateMap;
   private ScheduledExecutorService executorService;
   private Set<CertificateNotification> notificationReceivers;
@@ -349,32 +344,6 @@ public class CertificateClientTestImpl implements CertificateClient {
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
-    }
-  }
-
-  @Override
-  public ReloadingX509KeyManager getKeyManager() throws CertificateException {
-    try {
-      if (keyManager == null) {
-        keyManager = new ReloadingX509KeyManager(sslIdentityStorage);
-        notificationReceivers.add(keyManager);
-      }
-      return keyManager;
-    } catch (IOException | GeneralSecurityException e) {
-      throw new CertificateException("Failed to init keyManager", e, CertificateException.ErrorCode.KEYSTORE_ERROR);
-    }
-  }
-
-  @Override
-  public ReloadingX509TrustManager getTrustManager() throws CertificateException {
-    try {
-      if (trustManager == null) {
-        trustManager = new ReloadingX509TrustManager(KeyStore.getDefaultType(), certificateStorage);
-        notificationReceivers.add(trustManager);
-      }
-      return trustManager;
-    } catch (IOException | GeneralSecurityException e) {
-      throw new CertificateException("Failed to init trustManager", e);
     }
   }
 

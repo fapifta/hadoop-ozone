@@ -26,11 +26,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
-import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
@@ -64,8 +62,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
-import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
@@ -111,8 +107,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private String certSerialId;
   private String component;
   private final String threadNamePrefix;
-  private ReloadingX509KeyManager keyManager;
-  private ReloadingX509TrustManager trustManager;
 
   private ScheduledExecutorService executorService;
   private Consumer<String> certIdSaveCallback;
@@ -716,32 +710,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   public String getComponentName() {
     return component;
-  }
-
-  @Override
-  public synchronized ReloadingX509TrustManager getTrustManager() throws CertificateException {
-    try {
-      if (trustManager == null) {
-        trustManager = new ReloadingX509TrustManager(KeyStore.getDefaultType(), trustedCertStorage);
-        notificationReceivers.add(trustManager);
-      }
-      return trustManager;
-    } catch (IOException | GeneralSecurityException e) {
-      throw new CertificateException("Failed to init trustManager", e, CertificateException.ErrorCode.KEYSTORE_ERROR);
-    }
-  }
-
-  @Override
-  public synchronized ReloadingX509KeyManager getKeyManager() throws CertificateException {
-    try {
-      if (keyManager == null) {
-        keyManager = new ReloadingX509KeyManager(sslIdentityStorage);
-        notificationReceivers.add(keyManager);
-      }
-      return keyManager;
-    } catch (IOException | GeneralSecurityException e) {
-      throw new CertificateException("Failed to init keyManager", e, CertificateException.ErrorCode.KEYSTORE_ERROR);
-    }
   }
 
   /**

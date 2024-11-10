@@ -21,8 +21,6 @@ package org.apache.hadoop.hdds.security.x509.certificate.client;
 
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.OzoneSecurityException;
-import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
-import org.apache.hadoop.hdds.security.ssl.ReloadingX509TrustManager;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
@@ -111,24 +109,6 @@ public interface CertificateClient extends Closeable {
           OM_PUBLIC_PRIVATE_KEY_FILE_NOT_EXIST);
     }
   }
-
-  /**
-   * Gets a KeyManager containing this CertificateClient's key material and trustchain.
-   * During certificate rotation this KeyManager is automatically updated with the new keys/certificates.
-   *
-   * @return A KeyManager containing keys and the trustchain for this CertificateClient.
-   * @throws CertificateException
-   */
-  ReloadingX509KeyManager getKeyManager() throws CertificateException;
-
-  /**
-   * Gets a TrustManager containing the trusted certificates of this CertificateClient.
-   * During certificate rotation this TrustManager is automatically updated with the new certificates.
-   *
-   * @return A TrustManager containing trusted certificates for this CertificateClient.
-   * @throws CertificateException
-   */
-  ReloadingX509TrustManager getTrustManager() throws CertificateException;
 
   /**
    * Register a receiver that will be called after the certificate renewed.

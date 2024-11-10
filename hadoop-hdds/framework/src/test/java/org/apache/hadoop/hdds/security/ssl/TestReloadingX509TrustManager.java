@@ -20,10 +20,13 @@ package org.apache.hadoop.hdds.security.ssl;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.ozone.test.GenericTestUtils.LogCapturer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
+import java.security.KeyStore;
 import java.security.cert.X509Certificate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,21 +40,29 @@ public class TestReloadingX509TrustManager {
   private final LogCapturer reloaderLog =
       LogCapturer.captureLogs(ReloadingX509TrustManager.LOG);
   private static CertificateClientTestImpl caClient;
+  private static TrustedCertStorage trustedCertStorage;
 
   @BeforeAll
   public static void setUp() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
     caClient = new CertificateClientTestImpl(conf);
+    trustedCertStorage = Mockito.mock(TrustedCertStorage.class);
+    Mockito.when(trustedCertStorage.getKeyStore()).thenReturn(
+        caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCerts()));
   }
 
   @Test
   public void testReload() throws Exception {
-    ReloadingX509TrustManager tm = caClient.getTrustManager();
+    ReloadingX509TrustManager tm = new ReloadingX509TrustManager(KeyStore.getDefaultType(), trustedCertStorage);
     X509Certificate cert1 = caClient.getRootCACertificate();
     assertThat(tm.getAcceptedIssuers()).containsOnly(cert1);
 
     caClient.renewRootCA();
     caClient.renewKey();
+
+    Mockito.when(trustedCertStorage.getKeyStore()).thenReturn(
+        caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCerts()));
+    tm.notifyCertificateRenewed("", caClient.getCertSerialId());
     X509Certificate cert2 = caClient.getRootCACertificate();
     assertNotEquals(cert1, cert2);
 

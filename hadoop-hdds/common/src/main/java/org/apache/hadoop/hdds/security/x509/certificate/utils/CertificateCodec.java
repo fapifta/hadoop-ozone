@@ -28,8 +28,6 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
@@ -63,25 +61,13 @@ public final class CertificateCodec {
    * Get a valid pem encoded string for the certification path.
    */
   public static String getPEMEncodedString(CertPath certPath)
-      throws SCMSecurityException {
+      throws IOException {
     List<? extends Certificate> certsInPath = certPath.getCertificates();
     ArrayList<String> pemEncodedList = new ArrayList<>(certsInPath.size());
     for (Certificate cert : certsInPath) {
       pemEncodedList.add(getPEMEncodedString((X509Certificate) cert));
     }
     return StringUtils.join(pemEncodedList, "\n");
-  }
-
-  /**
-   * Encode the given certificate in PEM
-   * and then write it out to the given {@link OutputStream}.
-   *
-   * @param <OUT> The output type.
-   */
-  public static <OUT extends OutputStream> OUT writePEMEncoded(
-      X509Certificate certificate, OUT out) throws IOException {
-    writePEMEncoded(certificate, new OutputStreamWriter(out, DEFAULT_CHARSET));
-    return out;
   }
 
   /**
@@ -98,6 +84,10 @@ public final class CertificateCodec {
     return writer;
   }
 
+  public static String encode(X509Certificate certificate) throws IOException {
+    return writePEMEncoded(certificate, new StringWriter()).toString();
+  }
+
   /**
    * Returns the Certificate as a PEM encoded String.
    *
@@ -106,7 +96,7 @@ public final class CertificateCodec {
    * @throws SCMSecurityException - On failure to create a PEM String.
    */
   public static String getPEMEncodedString(X509Certificate certificate)
-      throws SCMSecurityException {
+      throws IOException {
     try {
       return writePEMEncoded(certificate, new StringWriter()).toString();
     } catch (IOException e) {

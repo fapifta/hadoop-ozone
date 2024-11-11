@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdds.security.x509.certificate;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.CertInfoProto;
-import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.utils.db.Codec;
 import org.apache.hadoop.hdds.utils.db.DelegatedCodec;
@@ -65,7 +64,7 @@ public final class CertInfo implements Comparable<CertInfo>, Serializable {
         .build();
   }
 
-  public CertInfoProto getProtobuf() throws SCMSecurityException {
+  public CertInfoProto getProtobuf() throws IOException {
     return CertInfoProto.newBuilder()
         .setX509Certificate(getX509CertificatePEMEncodedString())
         .setTimestamp(getTimestamp())
@@ -76,8 +75,7 @@ public final class CertInfo implements Comparable<CertInfo>, Serializable {
     return x509Certificate;
   }
 
-  public String getX509CertificatePEMEncodedString()
-      throws SCMSecurityException {
+  public String getX509CertificatePEMEncodedString() throws IOException {
     return CertificateCodec.getPEMEncodedString(getX509Certificate());
   }
 

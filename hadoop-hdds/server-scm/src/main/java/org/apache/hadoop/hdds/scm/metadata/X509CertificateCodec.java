@@ -22,15 +22,14 @@ package org.apache.hadoop.hdds.scm.metadata;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.utils.db.Codec;
 import org.apache.hadoop.hdds.utils.db.CodecBuffer;
-import org.apache.hadoop.hdds.utils.io.LengthOutputStream;
-import org.apache.ratis.util.function.CheckedFunction;
 
 import jakarta.annotation.Nonnull;
 
@@ -61,16 +60,11 @@ public final class X509CertificateCodec implements Codec<X509Certificate> {
     return true;
   }
 
-  CheckedFunction<OutputStream, Integer, IOException> writeTo(
-      X509Certificate object) {
-    return out -> CertificateCodec.writePEMEncoded(object,
-        new LengthOutputStream(out)).getLength();
-  }
-
   @Override
   public CodecBuffer toCodecBuffer(@Nonnull X509Certificate object,
       CodecBuffer.Allocator allocator) throws IOException {
-    return allocator.apply(-INITIAL_CAPACITY).put(writeTo(object));
+    return allocator.apply(-INITIAL_CAPACITY).put(ByteBuffer.wrap(CertificateCodec.getPEMEncodedString(object).getBytes(
+        StandardCharsets.UTF_8)));
   }
 
   @Override

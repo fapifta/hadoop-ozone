@@ -20,7 +20,6 @@
 package org.apache.hadoop.ozone.om;
 
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
@@ -147,7 +146,7 @@ final class ServiceInfoProvider {
   private String toPEMEncodedString(X509Certificate cert) {
     try {
       return cert == null ? null : CertificateCodec.getPEMEncodedString(cert);
-    } catch (SCMSecurityException e) {
+    } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }

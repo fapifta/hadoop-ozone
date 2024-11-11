@@ -91,7 +91,7 @@ public class TestRootCAServer {
         componentName);
 
     certStorage.writeCertificate(tempDir, externalCaCertFileName,
-        CertificateCodec.encode(externalCert));
+        CertificateCodec.get().encode(externalCert));
 
     CertificateServer testCA = new RootCAServer("testCA",
         RandomStringUtils.randomAlphabetic(4),
@@ -141,7 +141,7 @@ public class TestRootCAServer {
     ConfiguredCertStorage certStorage = new ConfiguredCertStorage(securityConfig, componentName);
 
     CertPath certPath = certFactory.generateCertPath(ImmutableList.of(signedCert, externalCert));
-    certStorage.writeCertificate(testDir, externalCaCertFileName, CertificateCodec.encode(certPath));
+    certStorage.writeCertificate(testDir, externalCaCertFileName, CertificateCodec.get().encode(certPath));
 
     CertificateServer testCA = new RootCAServer("testCA",
         RandomStringUtils.randomAlphabetic(4),

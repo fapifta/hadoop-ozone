@@ -77,7 +77,7 @@ public final class CertInfo implements Comparable<CertInfo>, Serializable {
   }
 
   public String getX509CertificatePEMEncodedString() throws IOException {
-    return CertificateCodec.encode(getX509Certificate());
+    return CertificateCodec.get().encode(getX509Certificate());
   }
 
   public long getTimestamp() {

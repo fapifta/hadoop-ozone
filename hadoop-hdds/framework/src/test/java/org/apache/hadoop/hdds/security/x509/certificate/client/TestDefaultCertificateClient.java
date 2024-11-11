@@ -109,7 +109,7 @@ public class TestDefaultCertificateClient {
     Files.createDirectories(dnSecurityConfig.getKeyLocation(DN_COMPONENT));
     x509Certificate = generateX509Cert(null);
     certSerialId = x509Certificate.getSerialNumber().toString();
-    encodedCert = CertificateCodec.encode(x509Certificate);
+    encodedCert = CertificateCodec.get().encode(x509Certificate);
     scmSecurityClient = mock(SCMSecurityProtocolClientSideTranslatorPB.class);
     getCertClient();
   }
@@ -185,7 +185,7 @@ public class TestDefaultCertificateClient {
   }
 
   private void storeCertificate(X509Certificate cert, CAType caType) throws IOException {
-    dnCertClient.getTrustedCertStorage().storeCertificate(CertificateCodec.encode(cert), caType);
+    dnCertClient.getTrustedCertStorage().storeCertificate(CertificateCodec.get().encode(cert), caType);
   }
 
   private X509Certificate generateX509Cert(KeyPair keyPair) throws Exception {
@@ -470,7 +470,7 @@ public class TestDefaultCertificateClient {
     configuredCertStorage.storeDefaultCertificate(encodedCert);
 
     X509Certificate newCert = generateX509Cert(null);
-    String pemCert = CertificateCodec.encode(newCert);
+    String pemCert = CertificateCodec.get().encode(newCert);
     SCMGetCertResponseProto responseProto =
         SCMGetCertResponseProto
             .newBuilder().setResponseCode(
@@ -521,7 +521,7 @@ public class TestDefaultCertificateClient {
     X509Certificate cert = KeyStoreTestUtil.generateCertificate(
         "CN=OzoneMaster", keyPair, 30, "SHA256withRSA");
     dnCertClient.getTrustedCertStorage()
-        .storeCertificate(CertificateCodec.encode(cert), CAType.NONE, newCertDir.toPath());
+        .storeCertificate(CertificateCodec.get().encode(cert), CAType.NONE, newCertDir.toPath());
     // a success renew after auto cleanup new key and cert dir
     dnCertClient.renewAndStoreKeyAndCertificate(true);
   }
@@ -550,7 +550,7 @@ public class TestDefaultCertificateClient {
 
     ConfiguredCertStorage certStorage = new ConfiguredCertStorage(conf, compName);
     X509Certificate cert = generateX509Cert(null);
-    certStorage.storeDefaultCertificate(CertificateCodec.encode(cert));
+    certStorage.storeDefaultCertificate(CertificateCodec.get().encode(cert));
 
     Logger logger = mock(Logger.class);
     String certId = cert.getSerialNumber().toString();

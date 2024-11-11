@@ -180,7 +180,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
           LOG.info("Fetched new root CA certificate {} from leader SCM",
               cert.getSerialNumber().toString());
           getTrustedCertStorage().storeCertificate(
-              CertificateCodec.encode(cert), CAType.SUBORDINATE,
+              CertificateCodec.get().encode(cert), CAType.SUBORDINATE,
               getSecurityConfig().getCertificateLocation(getComponentName()));
         }
         String scmCertId = getCertSerialId();

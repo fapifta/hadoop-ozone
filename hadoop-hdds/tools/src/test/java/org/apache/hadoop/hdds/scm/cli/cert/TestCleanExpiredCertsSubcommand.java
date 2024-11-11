@@ -72,7 +72,7 @@ class TestCleanExpiredCertsSubcommand {
     KeyPair keyPair = CertificateTestUtils.aKeyPair(new OzoneConfiguration());
     X509Certificate cert = createSelfSignedCert(keyPair, "aCert");
     ArrayList<String> certPemList = new ArrayList<>();
-    certPemList.add(CertificateCodec.encode(cert));
+    certPemList.add(CertificateCodec.get().encode(cert));
     when(scmSecurityProtocolMock.removeExpiredCertificates())
         .thenReturn(certPemList);
     cmd.execute(scmSecurityProtocolMock);

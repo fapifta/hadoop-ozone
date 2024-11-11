@@ -143,7 +143,7 @@ public class TestOmCertificateClientInit {
     if (certPresent) {
       ConfiguredCertStorage certStorage = new ConfiguredCertStorage(securityConfig,
           OM_COMPONENT);
-      certStorage.storeDefaultCertificate(CertificateCodec.encode(x509Certificate));
+      certStorage.storeDefaultCertificate(CertificateCodec.get().encode(x509Certificate));
     } else {
       FileUtils.deleteQuietly(Paths.get(
           securityConfig.getKeyLocation(OM_COMPONENT).toString(),

@@ -145,7 +145,7 @@ final class ServiceInfoProvider {
 
   private String toPEMEncodedString(X509Certificate cert) {
     try {
-      return cert == null ? null : CertificateCodec.encode(cert);
+      return cert == null ? null : CertificateCodec.get().encode(cert);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

@@ -339,7 +339,7 @@ public final class SelfSignedCertificate {
       try {
         CertPath certPath =
             CertificateFactory.getInstance("X.509").generateCertPath(Collections.singletonList(build()));
-        return CertificateCodec.encode(certPath);
+        return CertificateCodec.get().encode(certPath);
       } catch (java.security.cert.CertificateException e) {
         throw new IOException(e);
       }

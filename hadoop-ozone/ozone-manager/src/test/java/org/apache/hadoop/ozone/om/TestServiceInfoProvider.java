@@ -107,9 +107,9 @@ public class TestServiceInfoProvider {
       conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
       certClient = mock(CertificateClient.class);
       cert1 = createSelfSignedCert(aKeyPair(conf), "1st", Duration.ofDays(1));
-      pem1 = CertificateCodec.encode(cert1);
+      pem1 = CertificateCodec.get().encode(cert1);
       cert2 = createSelfSignedCert(aKeyPair(conf), "2nd", Duration.ofDays(2));
-      pem2 = CertificateCodec.encode(cert2);
+      pem2 = CertificateCodec.get().encode(cert2);
       TrustedCertStorage trustedCertStorage = mock(TrustedCertStorage.class);
       when(trustedCertStorage.getLeafCertificates()).thenReturn(new HashSet<>(Arrays.asList(cert1, cert2)));
       provider =
@@ -141,7 +141,7 @@ public class TestServiceInfoProvider {
 
       X509Certificate cert3 =
           createSelfSignedCert(aKeyPair(conf), "cn", Duration.ofDays(3));
-      String pem3 = CertificateCodec.encode(cert3);
+      String pem3 = CertificateCodec.get().encode(cert3);
       List<X509Certificate> certs = Arrays.asList(cert2, cert3);
       ArgumentCaptor<Function<List<X509Certificate>, CompletableFuture<Void>>>
           captor = ArgumentCaptor.forClass(Function.class);

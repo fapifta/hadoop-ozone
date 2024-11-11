@@ -51,6 +51,14 @@ public final class CertificateCodec {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(CertificateCodec.class);
+  private static CertificateCodec instance = new CertificateCodec();
+
+  public static CertificateCodec get() {
+    if (instance != null) {
+      instance = new CertificateCodec();
+    }
+    return instance;
+  }
 
   private CertificateCodec() {
 
@@ -59,7 +67,7 @@ public final class CertificateCodec {
   /**
    * Get a valid pem encoded string for the certification path.
    */
-  public static String encode(CertPath certPath) throws IOException {
+  public String encode(CertPath certPath) throws IOException {
     List<? extends Certificate> certsInPath = certPath.getCertificates();
     ArrayList<String> pemEncodedList = new ArrayList<>(certsInPath.size());
     for (Certificate cert : certsInPath) {
@@ -75,7 +83,7 @@ public final class CertificateCodec {
    * @return PEM Encoded Certificate String.
    * @throws SCMSecurityException - On failure to create a PEM String.
    */
-  public static String encode(X509Certificate certificate) throws IOException {
+  public String encode(X509Certificate certificate) throws IOException {
     try {
       return writePEMEncoded(certificate, new StringWriter()).toString();
     } catch (IOException e) {

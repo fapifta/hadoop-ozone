@@ -188,7 +188,7 @@ public class TestOzoneDelegationTokenSecretManager {
       }
     };
 
-    trustedStorage.storeCertificate(CertificateCodec.encode(certPath), CAType.ROOT);
+    trustedStorage.storeCertificate(CertificateCodec.get().encode(certPath), CAType.ROOT);
     return omCertificateClient;
   }
 

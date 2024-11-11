@@ -78,7 +78,7 @@ public class TestRootCaRotationPoller {
     HashSet<X509Certificate> knownCerts = new HashSet<>();
     knownCerts.add(knownCert);
     List<String> certsFromScm = new ArrayList<>();
-    certsFromScm.add(CertificateCodec.encode(knownCert));
+    certsFromScm.add(CertificateCodec.get().encode(knownCert));
     RootCaRotationPoller poller = new RootCaRotationPoller(secConf,
         knownCerts, scmSecurityClient, "");
     //When the scm returns the same set of root ca certificates, and they poll
@@ -112,8 +112,8 @@ public class TestRootCaRotationPoller {
     HashSet<X509Certificate> knownCerts = new HashSet<>();
     knownCerts.add(knownCert);
     List<String> certsFromScm = new ArrayList<>();
-    certsFromScm.add(CertificateCodec.encode(knownCert));
-    certsFromScm.add(CertificateCodec.encode(newRootCa));
+    certsFromScm.add(CertificateCodec.get().encode(knownCert));
+    certsFromScm.add(CertificateCodec.get().encode(newRootCa));
     RootCaRotationPoller poller = new RootCaRotationPoller(secConf,
         knownCerts, scmSecurityClient, "");
     //when the scm returns the unknown certificate to the poller
@@ -145,8 +145,8 @@ public class TestRootCaRotationPoller {
     HashSet<X509Certificate> knownCerts = new HashSet<>();
     knownCerts.add(knownCert);
     List<String> certsFromScm = new ArrayList<>();
-    certsFromScm.add(CertificateCodec.encode(knownCert));
-    certsFromScm.add(CertificateCodec.encode(newRootCa));
+    certsFromScm.add(CertificateCodec.get().encode(knownCert));
+    certsFromScm.add(CertificateCodec.get().encode(newRootCa));
     RootCaRotationPoller poller = new RootCaRotationPoller(secConf,
         knownCerts, scmSecurityClient, "");
     when(scmSecurityClient.getAllRootCaCertificates())

@@ -60,7 +60,7 @@ public class TestCertificateCodec {
   @Test
   public void testGetPEMEncodedString() throws Exception {
     X509Certificate cert = generateTestCert();
-    String pemString = CertificateCodec.encode(cert);
+    String pemString = CertificateCodec.get().encode(cert);
     assertTrue(pemString.startsWith(CertificateCodec.BEGIN_CERT));
     assertTrue(pemString.endsWith(CertificateCodec.END_CERT + "\n"));
 
@@ -80,7 +80,7 @@ public class TestCertificateCodec {
     CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
 
     CertPath pathToEncode = certificateFactory.generateCertPath(ImmutableList.of(cert1, cert2));
-    String encodedPath = CertificateCodec.encode(pathToEncode);
+    String encodedPath = CertificateCodec.get().encode(pathToEncode);
     CertPath certPathDecoded = CertificateUtil.decode(encodedPath);
 
     assertEquals(cert1, certPathDecoded.getCertificates().get(0));

@@ -27,7 +27,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
-import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
+import org.apache.hadoop.hdds.security.x509.keys.KeyStorage;
 import org.apache.hadoop.ozone.security.OMCertificateClient;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.junit.jupiter.api.BeforeEach;
@@ -141,7 +141,7 @@ class TestSecureOzoneManager {
     client =
         new OMCertificateClient(
             securityConfig, null, omStorage, omInfo, "", null, null, null, sslIdentityStorage, trustedCertStorage);
-    KeyCodec keyCodec = new KeyCodec(securityConfig, COMPONENT);
+    KeyStorage keyStorage = new KeyStorage(securityConfig, COMPONENT);
     FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPrivateKeyFileName()).toFile());
     assertEquals(CertificateClient.InitResponse.FAILURE, client.init());
@@ -175,7 +175,7 @@ class TestSecureOzoneManager {
             securityConfig, null, omStorage, omInfo, "", scmId, null, null, sslIdentityStorage, trustedCertStorage);
     FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
-    keyCodec.writePrivateKey(privateKey);
+    keyStorage.storePrivateKey(privateKey);
     assertEquals(CertificateClient.InitResponse.SUCCESS, client.init());
     assertNotNull(client.getPrivateKey());
     assertNotNull(client.getPublicKey());

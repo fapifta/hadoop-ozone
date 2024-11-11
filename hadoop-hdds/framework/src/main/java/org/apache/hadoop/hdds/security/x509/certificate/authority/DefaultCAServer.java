@@ -30,6 +30,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStor
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
+import org.apache.hadoop.hdds.security.x509.keys.KeyStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -173,9 +174,9 @@ public abstract class DefaultCAServer implements CertificateServer {
   }
 
   private KeyPair getCAKeys() throws IOException {
-    KeyCodec keyCodec = new KeyCodec(config, componentName);
+    KeyStorage keyStorage = new KeyStorage(config, componentName);
     try {
-      return new KeyPair(keyCodec.readPublicKey(), keyCodec.readPrivateKey());
+      return new KeyPair(keyStorage.readPublicKey(), keyStorage.readPrivateKey());
     } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
       throw new IOException(e);
     }
@@ -354,9 +355,8 @@ public abstract class DefaultCAServer implements CertificateServer {
       throws NoSuchProviderException, NoSuchAlgorithmException, IOException {
     HDDSKeyGenerator keyGenerator = new HDDSKeyGenerator(securityConfig);
     KeyPair keys = keyGenerator.generateKey();
-    KeyCodec keyCodec = new KeyCodec(securityConfig,
-        componentName);
-    keyCodec.writeKey(keys);
+    KeyStorage keyStorage = new KeyStorage(securityConfig, componentName);
+    keyStorage.storeKey(keys);
     return keys;
   }
 

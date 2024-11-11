@@ -43,6 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class TestCertificateCodec {
   private SecurityConfig securityConfig;
+  public static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
+  public static final String END_CERT = "-----END CERTIFICATE-----";
 
   @BeforeEach
   public void init(@TempDir Path tempDir) {
@@ -61,8 +63,8 @@ public class TestCertificateCodec {
   public void testGetPEMEncodedString() throws Exception {
     X509Certificate cert = generateTestCert();
     String pemString = CertificateCodec.get().encode(cert);
-    assertTrue(pemString.startsWith(CertificateCodec.BEGIN_CERT));
-    assertTrue(pemString.endsWith(CertificateCodec.END_CERT + "\n"));
+    assertTrue(pemString.startsWith(BEGIN_CERT));
+    assertTrue(pemString.endsWith(END_CERT + "\n"));
 
     // Read back the certificate and verify that all the comparisons pass.
     X509Certificate newCert = (X509Certificate) CertificateUtil.decode(pemString).getCertificates().get(0);

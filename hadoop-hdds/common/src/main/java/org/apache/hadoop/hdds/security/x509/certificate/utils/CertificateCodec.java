@@ -45,8 +45,7 @@ import static org.apache.hadoop.hdds.security.exception.SCMSecurityException.Err
  * A class used to read and write X.509 certificates  PEM encoded Streams.
  */
 public final class CertificateCodec {
-  public static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
-  public static final String END_CERT = "-----END CERTIFICATE-----";
+
   public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
   private static final Logger LOG =

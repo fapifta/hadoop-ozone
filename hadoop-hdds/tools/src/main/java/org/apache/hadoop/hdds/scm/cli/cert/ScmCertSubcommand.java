@@ -19,7 +19,7 @@ package org.apache.hadoop.hdds.scm.cli.cert;
 
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.scm.cli.ScmOption;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateUtil;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -46,7 +46,7 @@ public abstract class ScmCertSubcommand implements Callable<Void> {
         "Expiry", "Subject", "Issuer");
     for (String certPemStr : pemEncodedCerts) {
       try {
-        X509Certificate cert = (X509Certificate) CertificateCodec.getCertPathFrom(certPemStr).getCertificates().get(0);
+        X509Certificate cert = (X509Certificate) CertificateUtil.decode(certPemStr).getCertificates().get(0);
         printCert(cert);
       } catch (IOException e) {
         System.err.println("Failed to parse certificate: " + e.getMessage());

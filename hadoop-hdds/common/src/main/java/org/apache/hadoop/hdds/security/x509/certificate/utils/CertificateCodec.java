@@ -25,7 +25,6 @@ import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
@@ -60,8 +59,7 @@ public final class CertificateCodec {
   /**
    * Get a valid pem encoded string for the certification path.
    */
-  public static String encode(CertPath certPath)
-      throws IOException {
+  public static String encode(CertPath certPath) throws IOException {
     List<? extends Certificate> certsInPath = certPath.getCertificates();
     ArrayList<String> pemEncodedList = new ArrayList<>(certsInPath.size());
     for (Certificate cert : certsInPath) {
@@ -76,8 +74,7 @@ public final class CertificateCodec {
    *
    * @param <W> The writer type.
    */
-  private static <W extends Writer> W writePEMEncoded(
-      X509Certificate certificate, W writer) throws IOException {
+  private static <W extends Writer> W writePEMEncoded(X509Certificate certificate, W writer) throws IOException {
     try (JcaPEMWriter pemWriter = new JcaPEMWriter(writer)) {
       pemWriter.writeObject(certificate);
     }
@@ -91,8 +88,7 @@ public final class CertificateCodec {
    * @return PEM Encoded Certificate String.
    * @throws SCMSecurityException - On failure to create a PEM String.
    */
-  public static String encode(X509Certificate certificate)
-      throws IOException {
+  public static String encode(X509Certificate certificate) throws IOException {
     try {
       return writePEMEncoded(certificate, new StringWriter()).toString();
     } catch (IOException e) {
@@ -103,15 +99,7 @@ public final class CertificateCodec {
     }
   }
 
-  /**
-   * Gets a certificate path from the specified pem encoded String.
-   */
-  public static CertPath getCertPathFrom(String pemString) throws IOException {
-    // ByteArrayInputStream.close(), which is a noop, can be safely ignored.
-    return generateCertPathFromInputStream(new ByteArrayInputStream(pemString.getBytes(DEFAULT_CHARSET)));
-  }
-
-  public static CertPath generateCertPathFromInputStream(InputStream inputStream) throws IOException {
+  public static CertPath decode(InputStream inputStream) throws IOException {
     try {
       return CertificateFactory.getInstance("X.509", "BC").generateCertPath(inputStream, "PEM");
     } catch (CertificateException e) {

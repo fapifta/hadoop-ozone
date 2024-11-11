@@ -74,6 +74,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateCli
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateUtil;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
@@ -960,7 +961,7 @@ final class TestSecureOzoneCluster {
       String pemEncodedCACert =
           scm.getSecurityProtocolServer().getRootCACertificate();
       X509Certificate caCert =
-          (X509Certificate) CertificateCodec.getCertPathFrom(pemEncodedCACert).getCertificates().get(0);
+          (X509Certificate) CertificateUtil.decode(pemEncodedCACert).getCertificates().get(0);
       TrustedCertStorage trustedCertStorage = new TrustedCertStorage(new SecurityConfig(om.getConfiguration()), "om");
       X509Certificate caCertStored = trustedCertStorage.getLatestRootCaCert();
       assertEquals(caCert, caCertStored);

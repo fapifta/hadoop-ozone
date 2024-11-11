@@ -43,7 +43,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_DEF
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
 
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -136,7 +136,7 @@ public final class OzoneSecurityUtil {
   public static List<X509Certificate> convertToX509(List<String> pemEncodedCerts) throws IOException {
     List<X509Certificate> x509Certificates = new ArrayList<>(pemEncodedCerts.size());
     for (String cert : pemEncodedCerts) {
-      x509Certificates.add((X509Certificate) CertificateCodec.getCertPathFrom(cert).getCertificates().get(0));
+      x509Certificates.add((X509Certificate) CertificateUtil.decode(cert).getCertificates().get(0));
     }
     return x509Certificates;
   }

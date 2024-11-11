@@ -37,8 +37,8 @@ import org.apache.hadoop.hdds.security.x509.certificate.CertInfo;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateServer;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultCAProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateUtil;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.RotationHandlerStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
@@ -742,7 +742,7 @@ public class RootCARotationManager extends StatefulService {
     }
 
     X509Certificate cert =
-        (X509Certificate) CertificateCodec.getCertPathFrom(proto.getX509Certificate()).getCertificates().get(0);
+        (X509Certificate) CertificateUtil.decode(proto.getX509Certificate()).getCertificates().get(0);
 
     X509Certificate rootCert = trustedCertStorage.getLatestRootCaCert();
     int result = rootCert.getSerialNumber().compareTo(cert.getSerialNumber());

@@ -21,6 +21,7 @@ package org.apache.hadoop.hdds.scm.metadata;
 
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateUtil;
 import org.apache.hadoop.hdds.utils.db.Codec;
 
 import java.io.IOException;
@@ -62,7 +63,7 @@ public final class OldX509CertificateCodecForTesting
   @Override
   public X509Certificate fromPersistedFormat(byte[] rawData) throws IOException {
     String s = new String(rawData, StandardCharsets.UTF_8);
-    return (X509Certificate) CertificateCodec.getCertPathFrom(s).getCertificates().get(0);
+    return (X509Certificate) CertificateUtil.decode(s).getCertificates().get(0);
   }
 
   @Override

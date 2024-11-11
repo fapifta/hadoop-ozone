@@ -94,7 +94,7 @@ public final class CertificateCodec {
     }
   }
 
-  public static CertPath decode(InputStream inputStream) throws IOException {
+  public CertPath decode(InputStream inputStream) throws IOException {
     try {
       return CertificateFactory.getInstance("X.509", "BC").generateCertPath(inputStream, "PEM");
     } catch (CertificateException e) {

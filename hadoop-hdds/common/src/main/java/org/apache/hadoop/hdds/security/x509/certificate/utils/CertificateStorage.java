@@ -219,7 +219,7 @@ public abstract class CertificateStorage {
           "Path: " + certFile);
     }
     try (FileInputStream is = new FileInputStream(certFile)) {
-      return CertificateCodec.decode(is);
+      return CertificateCodec.get().decode(is);
     }
   }
 

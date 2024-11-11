@@ -36,6 +36,7 @@ public final class CertificateUtil {
    */
   public static CertPath decode(String pemString) throws IOException {
     // ByteArrayInputStream.close(), which is a noop, can be safely ignored.
-    return CertificateCodec.decode(new ByteArrayInputStream(pemString.getBytes(CertificateCodec.DEFAULT_CHARSET)));
+    return CertificateCodec.get().decode(
+        new ByteArrayInputStream(pemString.getBytes(CertificateCodec.DEFAULT_CHARSET)));
   }
 }

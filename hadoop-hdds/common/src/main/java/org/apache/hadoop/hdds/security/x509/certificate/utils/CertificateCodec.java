@@ -69,19 +69,6 @@ public final class CertificateCodec {
   }
 
   /**
-   * Encode the given certificate in PEM
-   * and then write it out to the given {@link Writer}.
-   *
-   * @param <W> The writer type.
-   */
-  private static <W extends Writer> W writePEMEncoded(X509Certificate certificate, W writer) throws IOException {
-    try (JcaPEMWriter pemWriter = new JcaPEMWriter(writer)) {
-      pemWriter.writeObject(certificate);
-    }
-    return writer;
-  }
-
-  /**
    * Returns the Certificate as a PEM encoded String.
    *
    * @param certificate - X.509 Certificate.
@@ -107,5 +94,18 @@ public final class CertificateCodec {
     } catch (NoSuchProviderException e) {
       throw new RuntimeException("Certificate factory provider not loaded.", e);
     }
+  }
+
+  /**
+   * Encode the given certificate in PEM
+   * and then write it out to the given {@link Writer}.
+   *
+   * @param <W> The writer type.
+   */
+  private static <W extends Writer> W writePEMEncoded(X509Certificate certificate, W writer) throws IOException {
+    try (JcaPEMWriter pemWriter = new JcaPEMWriter(writer)) {
+      pemWriter.writeObject(certificate);
+    }
+    return writer;
   }
 }

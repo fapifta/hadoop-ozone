@@ -158,7 +158,7 @@ public abstract class CertificateStorage {
 
   public void storeCertificate(X509Certificate certificate) throws IOException {
     writeCertificate(securityConfig.getCertificateLocation(componentName), securityConfig.getCertificateFileName(),
-        CertificateCodec.getPEMEncodedString(certificate));
+        CertificateCodec.encode(certificate));
   }
 
   public String storeCertificate(String pemEncodedCert, CAType caType) throws IOException {
@@ -171,7 +171,7 @@ public abstract class CertificateStorage {
   }
 
   public void storeDefaultCertificate(X509Certificate certificate) throws IOException {
-    storeDefaultCertificate(CertificateCodec.getPEMEncodedString(certificate));
+    storeDefaultCertificate(CertificateCodec.encode(certificate));
   }
 
   public String storeCertificate(String pemEncodedCert, CAType caType, Path path) throws IOException {

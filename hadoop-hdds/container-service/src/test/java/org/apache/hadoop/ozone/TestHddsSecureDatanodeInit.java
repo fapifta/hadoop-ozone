@@ -142,7 +142,7 @@ public class TestHddsSecureDatanodeInit {
 
     cert = generateX509Cert(new KeyPair(publicKey, privateKey),
         null, Duration.ofSeconds(CERT_LIFETIME));
-    encodedCert = CertificateCodec.getPEMEncodedString(cert);
+    encodedCert = CertificateCodec.encode(cert);
     datanodeDetails = MockDatanodeDetails.randomDatanodeDetails();
 
     scmClient = mock(SCMSecurityProtocolClientSideTranslatorPB.class);
@@ -243,7 +243,7 @@ public class TestHddsSecureDatanodeInit {
     keyCodec.writePrivateKey(privateKey);
     // provide a new valid SCMGetCertResponseProto
     X509Certificate newCert = generateX509Cert(null, null, Duration.ofSeconds(CERT_LIFETIME));
-    String pemCert = CertificateCodec.getPEMEncodedString(newCert);
+    String pemCert = CertificateCodec.encode(newCert);
     // provide an invalid SCMGetCertResponseProto. Without
     // setX509CACertificate(pemCert), signAndStoreCert will throw exception.
     SCMSecurityProtocolProtos.SCMGetCertResponseProto responseProto =
@@ -331,7 +331,7 @@ public class TestHddsSecureDatanodeInit {
     Duration gracePeriod = securityConfig.getRenewalGracePeriod();
     X509Certificate newCert =
         generateX509Cert(null, LocalDateTime.now().plus(gracePeriod), Duration.ofSeconds(CERT_LIFETIME));
-    String pemCert = CertificateCodec.getPEMEncodedString(newCert);
+    String pemCert = CertificateCodec.encode(newCert);
     SCMSecurityProtocolProtos.SCMGetCertResponseProto responseProto =
         SCMSecurityProtocolProtos.SCMGetCertResponseProto
             .newBuilder().setResponseCode(SCMSecurityProtocolProtos
@@ -366,7 +366,7 @@ public class TestHddsSecureDatanodeInit {
     // test the second time certificate rotation, generate a new cert
     newCert = generateX509Cert(null, null, Duration.ofSeconds(CERT_LIFETIME));
     rootCaList.remove(pemCert);
-    pemCert = CertificateCodec.getPEMEncodedString(newCert);
+    pemCert = CertificateCodec.encode(newCert);
     responseProto = SCMSecurityProtocolProtos.SCMGetCertResponseProto
         .newBuilder().setResponseCode(SCMSecurityProtocolProtos
             .SCMGetCertResponseProto.ResponseCode.success)
@@ -402,7 +402,7 @@ public class TestHddsSecureDatanodeInit {
     Duration gracePeriod = securityConfig.getRenewalGracePeriod();
     X509Certificate newCert =
         generateX509Cert(null, LocalDateTime.now().plus(gracePeriod), Duration.ofSeconds(CERT_LIFETIME));
-    String pemCert = CertificateCodec.getPEMEncodedString(newCert);
+    String pemCert = CertificateCodec.encode(newCert);
 
     SCMSecurityProtocolProtos.SCMGetCertResponseProto responseProto =
         SCMSecurityProtocolProtos.SCMGetCertResponseProto
@@ -432,7 +432,7 @@ public class TestHddsSecureDatanodeInit {
 
     // provide a new valid SCMGetCertResponseProto
     newCert = generateX509Cert(null, null, Duration.ofSeconds(CERT_LIFETIME));
-    pemCert = CertificateCodec.getPEMEncodedString(newCert);
+    pemCert = CertificateCodec.encode(newCert);
     responseProto = SCMSecurityProtocolProtos.SCMGetCertResponseProto
         .newBuilder().setResponseCode(SCMSecurityProtocolProtos
             .SCMGetCertResponseProto.ResponseCode.success)

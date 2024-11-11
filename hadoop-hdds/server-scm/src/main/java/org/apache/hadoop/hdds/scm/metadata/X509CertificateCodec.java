@@ -63,7 +63,7 @@ public final class X509CertificateCodec implements Codec<X509Certificate> {
   @Override
   public CodecBuffer toCodecBuffer(@Nonnull X509Certificate object,
       CodecBuffer.Allocator allocator) throws IOException {
-    return allocator.apply(-INITIAL_CAPACITY).put(ByteBuffer.wrap(CertificateCodec.getPEMEncodedString(object).getBytes(
+    return allocator.apply(-INITIAL_CAPACITY).put(ByteBuffer.wrap(CertificateCodec.encode(object).getBytes(
         StandardCharsets.UTF_8)));
   }
 

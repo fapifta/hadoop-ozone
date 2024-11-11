@@ -22,6 +22,7 @@ package org.apache.hadoop.ozone.om;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfoEx;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
@@ -41,7 +42,6 @@ import java.util.function.Function;
 import static java.util.Collections.emptyList;
 import static org.apache.hadoop.hdds.security.x509.CertificateTestUtils.aKeyPair;
 import static org.apache.hadoop.hdds.security.x509.CertificateTestUtils.createSelfSignedCert;
-import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec.getPEMEncodedString;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -107,9 +107,9 @@ public class TestServiceInfoProvider {
       conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
       certClient = mock(CertificateClient.class);
       cert1 = createSelfSignedCert(aKeyPair(conf), "1st", Duration.ofDays(1));
-      pem1 = getPEMEncodedString(cert1);
+      pem1 = CertificateCodec.encode(cert1);
       cert2 = createSelfSignedCert(aKeyPair(conf), "2nd", Duration.ofDays(2));
-      pem2 = getPEMEncodedString(cert2);
+      pem2 = CertificateCodec.encode(cert2);
       TrustedCertStorage trustedCertStorage = mock(TrustedCertStorage.class);
       when(trustedCertStorage.getLeafCertificates()).thenReturn(new HashSet<>(Arrays.asList(cert1, cert2)));
       provider =
@@ -141,7 +141,7 @@ public class TestServiceInfoProvider {
 
       X509Certificate cert3 =
           createSelfSignedCert(aKeyPair(conf), "cn", Duration.ofDays(3));
-      String pem3 = getPEMEncodedString(cert3);
+      String pem3 = CertificateCodec.encode(cert3);
       List<X509Certificate> certs = Arrays.asList(cert2, cert3);
       ArgumentCaptor<Function<List<X509Certificate>, CompletableFuture<Void>>>
           captor = ArgumentCaptor.forClass(Function.class);

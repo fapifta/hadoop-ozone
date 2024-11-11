@@ -52,7 +52,7 @@ public final class OldX509CertificateCodecForTesting
   @Override
   public byte[] toPersistedFormat(X509Certificate object) throws IOException {
     try {
-      return CertificateCodec.getPEMEncodedString(object)
+      return CertificateCodec.encode(object)
           .getBytes(StandardCharsets.UTF_8);
     } catch (SCMSecurityException exp) {
       throw new IOException(exp);

@@ -130,9 +130,9 @@ public class TestSubCAServer {
         SCMSecurityProtocolProtos.SCMGetCertResponseProto
             .newBuilder()
             .setResponseCode(SCMSecurityProtocolProtos.SCMGetCertResponseProto.ResponseCode.success)
-            .setX509Certificate(CertificateCodec.getPEMEncodedString(certificate))
-            .setX509CACertificate(CertificateCodec.getPEMEncodedString(caCertificate))
-            .setX509RootCACertificate(CertificateCodec.getPEMEncodedString(caCertificate))
+            .setX509Certificate(CertificateCodec.encode(certificate))
+            .setX509CACertificate(CertificateCodec.encode(caCertificate))
+            .setX509RootCACertificate(CertificateCodec.encode(caCertificate))
             .build();
     Mockito.when(translatorPB.getSCMCertChain(Mockito.any(), Mockito.any(), Mockito.anyBoolean()))
         .thenReturn(mockResponse);

@@ -218,9 +218,9 @@ public class RecoverSCMCertificate implements Callable<Void>, SubcommandWithPare
     CertPath certPath = addRootCertInPath(scmCertificate, rootCertificate);
     CertPath rootCertPath = getRootCertPath(rootCertificate);
     TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, SCMCertificateClient.COMPONENT_NAME);
-    String encodedCert = CertificateCodec.getPEMEncodedString(certPath);
+    String encodedCert = CertificateCodec.encode(certPath);
     trustedCertStorage.storeCertificate(encodedCert, CAType.NONE);
-    String encodedRootCert = CertificateCodec.getPEMEncodedString(rootCertPath);
+    String encodedRootCert = CertificateCodec.encode(rootCertPath);
     trustedCertStorage.storeCertificate(encodedRootCert, CAType.SUBORDINATE);
 
     trustedCertStorage.storeDefaultCertificate(encodedCert);

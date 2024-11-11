@@ -35,7 +35,7 @@ public class X509CertificateCodec implements Codec {
       throws InvalidProtocolBufferException {
     try {
       String certString =
-          CertificateCodec.getPEMEncodedString((X509Certificate) object);
+          CertificateCodec.encode((X509Certificate) object);
       // getBytes returns a new array
       return Proto2Utils.unsafeByteString(certString.getBytes(UTF_8));
     } catch (Exception ex) {

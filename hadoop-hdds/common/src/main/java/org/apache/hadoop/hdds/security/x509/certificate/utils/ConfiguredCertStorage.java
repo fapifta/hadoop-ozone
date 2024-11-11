@@ -94,7 +94,7 @@ public class ConfiguredCertStorage extends CertificateStorage {
       publicKey = readPublicKeyWithExternalData(
           externalPublicKeyLocation, keyCodec, certPath);
       keyCodec.writeKey(new KeyPair(publicKey, privateKey));
-      storeDefaultCertificate(CertificateCodec.getPEMEncodedString(certPath));
+      storeDefaultCertificate(CertificateCodec.encode(certPath));
       X509Certificate certificate = (X509Certificate) (certPath.getCertificates().get(0));
       return certificate.getSerialNumber().toString();
     } catch (IOException | CertificateException | NoSuchAlgorithmException | InvalidKeySpecException e) {

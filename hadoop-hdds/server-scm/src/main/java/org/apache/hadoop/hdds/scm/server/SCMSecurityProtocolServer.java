@@ -82,7 +82,7 @@ import static org.apache.hadoop.hdds.security.exception.SCMSecurityException.Err
 import static org.apache.hadoop.hdds.security.exception.SCMSecurityException.ErrorCode.GET_CA_CERT_FAILED;
 import static org.apache.hadoop.hdds.security.exception.SCMSecurityException.ErrorCode.GET_CERTIFICATE_FAILED;
 import static org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateApprover.ApprovalType.KERBEROS_TRUSTED;
-import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec.getPEMEncodedString;
+import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec.encode;
 
 /**
  * The protocol used to perform security related operations with SCM.
@@ -258,7 +258,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
     List<String> pemEncodedList = new ArrayList<>();
     Set<X509Certificate> certList = trustedCertStorage.getLeafCertificates();
     for (X509Certificate cert : certList) {
-      pemEncodedList.add(getPEMEncodedString(cert));
+      pemEncodedList.add(CertificateCodec.encode(cert));
     }
     return pemEncodedList;
   }
@@ -346,7 +346,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
           KERBEROS_TRUSTED, nodeType, getNextCertificateId());
     }
     try {
-      return getPEMEncodedString(future.get());
+      return encode(future.get());
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw generateException(e, nodeType);
@@ -393,7 +393,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
       X509Certificate certificate =
           scmCertificateServer.getCertificateById(certSerialId);
       if (certificate != null) {
-        return getPEMEncodedString(certificate);
+        return CertificateCodec.encode(certificate);
       }
     } catch (CertificateException e) {
       throw new SCMSecurityException("getCertificate operation failed. ", e,
@@ -413,7 +413,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
   public String getCACertificate() throws IOException {
     LOGGER.debug("Getting CA certificate.");
     try {
-      return getPEMEncodedString(
+      return encode(
           scmCertificateServer.getCaCertPath());
     } catch (CertificateException e) {
       throw new SCMSecurityException("getRootCertificate operation failed. ",
@@ -434,7 +434,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
     List<String> results = new ArrayList<>(certificates.size());
     for (X509Certificate cert : certificates) {
       try {
-        String certStr = getPEMEncodedString(cert);
+        String certStr = CertificateCodec.encode(cert);
         results.add(certStr);
       } catch (SCMSecurityException e) {
         throw new SCMSecurityException("listCertificate operation failed.", e, e.getErrorCode());
@@ -455,7 +455,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
     LOGGER.debug("Getting Root CA certificate.");
     if (rootCertificateServer != null) {
       try {
-        return CertificateCodec.getPEMEncodedString(
+        return CertificateCodec.encode(
             (X509Certificate) rootCertificateServer.getCaCertPath().getCertificates().get(0));
       } catch (CertificateException e) {
         LOGGER.error("Failed to get root CA certificate", e);
@@ -463,7 +463,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
       }
     }
 
-    return CertificateCodec.getPEMEncodedString(trustedCertStorage.getLatestRootCaCert());
+    return CertificateCodec.encode(trustedCertStorage.getLatestRootCaCert());
   }
 
   @Override
@@ -472,7 +472,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
     List<String> pemEncodedCerts = new ArrayList<>();
     for (X509Certificate cert : storageContainerManager.getCertificateStore()
         .removeAllExpiredCertificates()) {
-      pemEncodedCerts.add(CertificateCodec.getPEMEncodedString(cert));
+      pemEncodedCerts.add(CertificateCodec.encode(cert));
     }
     return pemEncodedCerts;
   }

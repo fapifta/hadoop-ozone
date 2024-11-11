@@ -135,7 +135,7 @@ public class TestDnCertificateClientInit {
 
     if (certPresent) {
       ConfiguredCertStorage certStorage = new ConfiguredCertStorage(securityConfig, DN_COMPONENT);
-      certStorage.storeDefaultCertificate(CertificateCodec.getPEMEncodedString(x509Certificate));
+      certStorage.storeDefaultCertificate(CertificateCodec.encode(x509Certificate));
     } else {
       FileUtils.deleteQuietly(Paths.get(
           securityConfig.getKeyLocation(DN_COMPONENT).toString(),

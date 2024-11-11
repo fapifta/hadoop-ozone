@@ -72,7 +72,7 @@ public class TestX509CertificateCodec {
     final int days = ThreadLocalRandom.current().nextInt(100) + 1;
     final X509Certificate x509 = KeyStoreTestUtil.generateCertificate(
         "CN=testRSA" + keySize, rsa, days, "SHA256withRSA");
-    System.out.println(CertificateCodec.getPEMEncodedString(x509));
+    System.out.println(CertificateCodec.encode(x509));
     CodecTestUtil.runTest(newCodec, x509, null, oldCodec);
   }
 }

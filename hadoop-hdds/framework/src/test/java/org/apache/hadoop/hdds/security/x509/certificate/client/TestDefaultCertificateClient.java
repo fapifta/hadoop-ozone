@@ -64,7 +64,6 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONN
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_NAMES;
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.FAILURE;
-import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec.getPEMEncodedString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -110,7 +109,7 @@ public class TestDefaultCertificateClient {
     Files.createDirectories(dnSecurityConfig.getKeyLocation(DN_COMPONENT));
     x509Certificate = generateX509Cert(null);
     certSerialId = x509Certificate.getSerialNumber().toString();
-    encodedCert = CertificateCodec.getPEMEncodedString(x509Certificate);
+    encodedCert = CertificateCodec.encode(x509Certificate);
     scmSecurityClient = mock(SCMSecurityProtocolClientSideTranslatorPB.class);
     getCertClient();
   }
@@ -186,7 +185,7 @@ public class TestDefaultCertificateClient {
   }
 
   private void storeCertificate(X509Certificate cert, CAType caType) throws IOException {
-    dnCertClient.getTrustedCertStorage().storeCertificate(getPEMEncodedString(cert), caType);
+    dnCertClient.getTrustedCertStorage().storeCertificate(CertificateCodec.encode(cert), caType);
   }
 
   private X509Certificate generateX509Cert(KeyPair keyPair) throws Exception {
@@ -471,7 +470,7 @@ public class TestDefaultCertificateClient {
     configuredCertStorage.storeDefaultCertificate(encodedCert);
 
     X509Certificate newCert = generateX509Cert(null);
-    String pemCert = CertificateCodec.getPEMEncodedString(newCert);
+    String pemCert = CertificateCodec.encode(newCert);
     SCMGetCertResponseProto responseProto =
         SCMGetCertResponseProto
             .newBuilder().setResponseCode(
@@ -521,7 +520,8 @@ public class TestDefaultCertificateClient {
 
     X509Certificate cert = KeyStoreTestUtil.generateCertificate(
         "CN=OzoneMaster", keyPair, 30, "SHA256withRSA");
-    dnCertClient.getTrustedCertStorage().storeCertificate(getPEMEncodedString(cert), CAType.NONE, newCertDir.toPath());
+    dnCertClient.getTrustedCertStorage()
+        .storeCertificate(CertificateCodec.encode(cert), CAType.NONE, newCertDir.toPath());
     // a success renew after auto cleanup new key and cert dir
     dnCertClient.renewAndStoreKeyAndCertificate(true);
   }
@@ -550,7 +550,7 @@ public class TestDefaultCertificateClient {
 
     ConfiguredCertStorage certStorage = new ConfiguredCertStorage(conf, compName);
     X509Certificate cert = generateX509Cert(null);
-    certStorage.storeDefaultCertificate(CertificateCodec.getPEMEncodedString(cert));
+    certStorage.storeDefaultCertificate(CertificateCodec.encode(cert));
 
     Logger logger = mock(Logger.class);
     String certId = cert.getSerialNumber().toString();

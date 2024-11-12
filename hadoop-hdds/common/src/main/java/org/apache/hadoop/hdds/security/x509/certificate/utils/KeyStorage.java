@@ -16,13 +16,14 @@
  * limitations under the License.
  *
  */
-package org.apache.hadoop.hdds.security.x509.keys;
+package org.apache.hadoop.hdds.security.x509.certificate.utils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdds.security.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

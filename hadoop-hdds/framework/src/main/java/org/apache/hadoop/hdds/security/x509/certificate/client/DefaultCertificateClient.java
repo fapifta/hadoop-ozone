@@ -69,7 +69,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
-import org.apache.hadoop.hdds.security.x509.keys.KeyStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.KeyStorage;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 
 import com.google.common.base.Preconditions;

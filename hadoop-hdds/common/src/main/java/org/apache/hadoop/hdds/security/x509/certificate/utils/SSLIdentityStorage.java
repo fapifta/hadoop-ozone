@@ -21,7 +21,6 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateNotification;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
-import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +48,7 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
   private static final Logger LOG = LoggerFactory.getLogger(SSLIdentityStorage.class);
 
   private String certId;
-  private KeyCodec keyCodec;
+  private KeyStorage keyStorage;
   private ReloadingX509KeyManager keyManager;
 
   public SSLIdentityStorage(SecurityConfig config, String componentName, String certId) {
@@ -72,9 +71,9 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
     return (X509Certificate) getCertPaths().get(0).getCertificates().get(0);
   }
 
-  private void initKeyCodec() {
-    if (keyCodec == null) {
-      keyCodec = new KeyCodec(getSecurityConfig(), getComponentName());
+  private void initKeyStorage() {
+    if (keyStorage == null) {
+      keyStorage = new KeyStorage(getSecurityConfig(), getComponentName());
     }
   }
 
@@ -94,8 +93,8 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
     if (OzoneSecurityUtil.checkIfFileExist(keyPath,
         getSecurityConfig().getPublicKeyFileName())) {
       try {
-        initKeyCodec();
-        publicKey = keyCodec.readPublicKey();
+        initKeyStorage();
+        publicKey = keyStorage.readPublicKey();
       } catch (InvalidKeySpecException | NoSuchAlgorithmException
                | IOException e) {
         getLogger().error("Error while getting public key.", e);
@@ -110,8 +109,8 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
     if (OzoneSecurityUtil.checkIfFileExist(keyPath,
         getSecurityConfig().getPrivateKeyFileName())) {
       try {
-        initKeyCodec();
-        privateKey = keyCodec.readPrivateKey();
+        initKeyStorage();
+        privateKey = keyStorage.readPrivateKey();
       } catch (InvalidKeySpecException | NoSuchAlgorithmException
                | IOException e) {
         getLogger().error("Error while getting private key.", e);
@@ -134,8 +133,8 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
   }
 
   public void storeKeyPair(KeyPair keyPair) throws IOException {
-    initKeyCodec();
-    keyCodec.writeKey(keyPair);
+    initKeyStorage();
+    keyStorage.storeKey(keyPair);
   }
 
   public synchronized ReloadingX509KeyManager getKeyManager() throws CertificateException {

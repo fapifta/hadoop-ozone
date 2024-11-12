@@ -29,8 +29,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIPro
 import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
-import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
-import org.apache.hadoop.hdds.security.x509.keys.KeyStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.KeyStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

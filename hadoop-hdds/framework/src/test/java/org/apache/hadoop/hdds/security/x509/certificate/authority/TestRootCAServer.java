@@ -29,9 +29,9 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.Defaul
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.KeyStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
-import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -81,10 +81,10 @@ public class TestRootCAServer {
     String componentName = Paths.get(SCM_CA_CERT_STORAGE_DIR, SCM_CA_PATH).toString();
 
     KeyPair keyPair = KeyStoreTestUtil.generateKeyPair("RSA");
-    KeyCodec keyPEMWriter = new KeyCodec(securityConfig,
+    KeyStorage keyStorage = new KeyStorage(securityConfig,
         componentName);
 
-    keyPEMWriter.writeKey(tempDir, keyPair, true);
+    keyStorage.storeKey(tempDir, keyPair, true);
     X509Certificate externalCert = generateExternalCert(keyPair);
 
     ConfiguredCertStorage certStorage = new ConfiguredCertStorage(securityConfig,
@@ -115,9 +115,9 @@ public class TestRootCAServer {
     String scmId = RandomStringUtils.randomAlphabetic(4);
     String clusterId = RandomStringUtils.randomAlphabetic(4);
     KeyPair keyPair = new HDDSKeyGenerator(securityConfig).generateKey();
-    KeyCodec keyPEMWriter = new KeyCodec(securityConfig, componentName);
+    KeyStorage keystorage = new KeyStorage(securityConfig, componentName);
 
-    keyPEMWriter.writeKey(testDir, keyPair, true);
+    keystorage.storeKey(testDir, keyPair, true);
     LocalDate beginDate = LocalDate.now().atStartOfDay().toLocalDate();
     LocalDate endDate =
         LocalDate.from(LocalDate.now().atStartOfDay().plusDays(10));

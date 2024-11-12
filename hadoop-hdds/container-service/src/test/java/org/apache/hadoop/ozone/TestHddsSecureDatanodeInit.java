@@ -44,8 +44,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStor
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
-import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
-import org.apache.hadoop.hdds.security.x509.keys.KeyStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.KeyStorage;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.hadoop.util.ServicePlugin;
@@ -271,7 +270,7 @@ public class TestHddsSecureDatanodeInit {
   @Test
   public void testSecureDnStartupCase5() throws Exception {
     // Case 5: If private key and certificate is present.
-    keyStorage.storePublicKey(publicKey);
+    keyStorage.storePrivateKey(privateKey);
     certStorage.storeDefaultCertificate(encodedCert);
     service.initializeCertificateClient(client);
     assertNotNull(client.getPrivateKey());

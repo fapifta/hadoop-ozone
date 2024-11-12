@@ -20,7 +20,6 @@ package org.apache.hadoop.hdds.security.x509.certificate.utils;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,7 +72,7 @@ public class ConfiguredCertStorage extends CertificateStorage {
     Path extPrivateKeyPath = Paths.get(conf.getExternalRootCaPrivateKeyPath());
     String externalPublicKeyLocation = conf.getExternalRootCaPublicKeyPath();
 
-    KeyCodec keyCodec = new KeyCodec(getSecurityConfig(), getComponentName());
+    KeyStorage keyStorage = new KeyStorage(getSecurityConfig(), getComponentName());
     try {
       Path extCertParent = extCertPath.getParent();
       Path extCertName = extCertPath.getFileName();
@@ -88,12 +87,12 @@ public class ConfiguredCertStorage extends CertificateStorage {
         throw new IOException("External private key path is not correct: " +
             extPrivateKeyPath);
       }
-      PrivateKey privateKey = keyCodec.readPrivateKey(extPrivateKeyParent,
+      PrivateKey privateKey = keyStorage.readPrivateKey(extPrivateKeyParent,
           extPrivateKeyFileName.toString());
       PublicKey publicKey;
       publicKey = readPublicKeyWithExternalData(
-          externalPublicKeyLocation, keyCodec, certPath);
-      keyCodec.writeKey(new KeyPair(publicKey, privateKey));
+          externalPublicKeyLocation, keyStorage, certPath);
+      keyStorage.storeKey(new KeyPair(publicKey, privateKey));
       storeDefaultCertificate(CertificateCodec.get().encode(certPath));
       X509Certificate certificate = (X509Certificate) (certPath.getCertificates().get(0));
       return certificate.getSerialNumber().toString();
@@ -104,7 +103,7 @@ public class ConfiguredCertStorage extends CertificateStorage {
   }
 
   private PublicKey readPublicKeyWithExternalData(
-      String externalPublicKeyLocation, KeyCodec keyCodec, CertPath certPath
+      String externalPublicKeyLocation, KeyStorage keyStorage, CertPath certPath
   ) throws CertificateException, NoSuchAlgorithmException, InvalidKeySpecException, IOException {
     PublicKey publicKey;
     if (externalPublicKeyLocation.isEmpty()) {
@@ -116,7 +115,7 @@ public class ConfiguredCertStorage extends CertificateStorage {
       if (publicKeyPathFileName == null || publicKeyParent == null) {
         throw new IOException("Public key path incorrect: " + publicKeyParent);
       }
-      publicKey = keyCodec.readPublicKey(
+      publicKey = keyStorage.readPublicKey(
           publicKeyParent, publicKeyPathFileName.toString());
     }
     return publicKey;

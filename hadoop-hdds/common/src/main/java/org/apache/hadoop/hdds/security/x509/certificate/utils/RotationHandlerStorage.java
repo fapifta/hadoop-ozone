@@ -22,7 +22,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
-import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,14 +97,14 @@ public class RotationHandlerStorage extends CertificateStorage {
 
   public KeyPair generateNewKeys(String rootCACertId) throws IOException {
     Path keyDir = getSecurityConfig().getKeyLocation(progressComponent);
-    KeyCodec keyCodec = new KeyCodec(getSecurityConfig(), keyDir);
+    KeyStorage keyStorage = new KeyStorage(getSecurityConfig(), keyDir);
     KeyPair newKeyPair = null;
     try {
       HDDSKeyGenerator keyGenerator =
           new HDDSKeyGenerator(getSecurityConfig());
       newKeyPair = keyGenerator.generateKey();
-      keyCodec.writePublicKey(newKeyPair.getPublic());
-      keyCodec.writePrivateKey(newKeyPair.getPrivate());
+      keyStorage.storePublicKey(newKeyPair.getPublic());
+      keyStorage.storePrivateKey(newKeyPair.getPrivate());
       getLogger().info("SubCARotationPrepareTask[rootCertId = {}] - " +
           "scm key generated.", rootCACertId);
     } catch (Exception e) {

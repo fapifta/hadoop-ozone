@@ -119,6 +119,10 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
     return privateKey;
   }
 
+  public KeyPair getKeyPair() {
+    return new KeyPair(getPublicKey(), getPrivateKey());
+  }
+
   private boolean isLeafCertIdEqual(CertPath certPath, String certSerial) {
     return ((X509Certificate) certPath.getCertificates().get(0)).getSerialNumber().toString().equals(certSerial);
   }

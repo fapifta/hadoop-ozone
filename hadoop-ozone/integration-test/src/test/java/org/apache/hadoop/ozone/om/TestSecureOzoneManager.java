@@ -70,6 +70,7 @@ class TestSecureOzoneManager {
   @TempDir
   private Path metaDir;
   private HddsProtos.OzoneManagerDetailsProto omInfo;
+  private SSLIdentityStorage sslIdentityStorage;
 
   @BeforeEach
   void init() throws Exception {
@@ -101,17 +102,17 @@ class TestSecureOzoneManager {
     // Case 1: When keypair as well as certificate is missing. Initial keypair
     // boot-up. Get certificate will fail when SCM is not running.
     SecurityConfig securityConfig = new SecurityConfig(conf);
-    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, OMCertificateClient.COMPONENT_NAME,
+    sslIdentityStorage = new SSLIdentityStorage(securityConfig, OMCertificateClient.COMPONENT_NAME,
         omStorage.getOmCertSerialId());
     TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, OMCertificateClient.COMPONENT_NAME);
     OMCertificateClient client =
         new OMCertificateClient(
             securityConfig, null, omStorage, omInfo, "", scmId, null, null, sslIdentityStorage, trustedCertStorage);
     assertEquals(CertificateClient.InitResponse.GETCERT, client.init());
-    privateKey = client.getPrivateKey();
-    publicKey = client.getPublicKey();
-    assertNotNull(client.getPrivateKey());
-    assertNotNull(client.getPublicKey());
+    privateKey = sslIdentityStorage.getPrivateKey();
+    publicKey = sslIdentityStorage.getPublicKey();
+    assertNotNull(sslIdentityStorage.getPrivateKey());
+    assertNotNull(sslIdentityStorage.getPublicKey());
     assertNull(client.getCertificate());
     client.close();
 
@@ -120,8 +121,8 @@ class TestSecureOzoneManager {
         new OMCertificateClient(
             securityConfig, null, omStorage, omInfo, "", scmId, null, null, sslIdentityStorage, trustedCertStorage);
     assertEquals(CertificateClient.InitResponse.GETCERT, client.init());
-    assertNotNull(client.getPrivateKey());
-    assertNotNull(client.getPublicKey());
+    assertNotNull(sslIdentityStorage.getPrivateKey());
+    assertNotNull(sslIdentityStorage.getPublicKey());
     assertNull(client.getCertificate());
     client.close();
 
@@ -132,8 +133,8 @@ class TestSecureOzoneManager {
     FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
     assertEquals(CertificateClient.InitResponse.GETCERT, client.init());
-    assertNotNull(client.getPrivateKey());
-    assertNotNull(client.getPublicKey());
+    assertNotNull(sslIdentityStorage.getPrivateKey());
+    assertNotNull(sslIdentityStorage.getPublicKey());
     assertNull(client.getCertificate());
     client.close();
 
@@ -145,8 +146,8 @@ class TestSecureOzoneManager {
     FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPrivateKeyFileName()).toFile());
     assertEquals(CertificateClient.InitResponse.GETCERT, client.init());
-    assertNotNull(client.getPrivateKey());
-    assertNotNull(client.getPublicKey());
+    assertNotNull(sslIdentityStorage.getPrivateKey());
+    assertNotNull(sslIdentityStorage.getPublicKey());
     assertNull(client.getCertificate());
     client.close();
 
@@ -166,8 +167,8 @@ class TestSecureOzoneManager {
         new OMCertificateClient(
             securityConfig, null, omStorage, omInfo, "", scmId, null, null, sslIdentityStorage, trustedCertStorage);
     assertEquals(CertificateClient.InitResponse.FAILURE, client.init());
-    assertNull(client.getPrivateKey());
-    assertNull(client.getPublicKey());
+    assertNull(sslIdentityStorage.getPrivateKey());
+    assertNull(sslIdentityStorage.getPublicKey());
     assertNotNull(client.getCertificate());
     client.close();
 
@@ -179,8 +180,8 @@ class TestSecureOzoneManager {
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
     keyStorage.storePrivateKey(privateKey);
     assertEquals(CertificateClient.InitResponse.SUCCESS, client.init());
-    assertNotNull(client.getPrivateKey());
-    assertNotNull(client.getPublicKey());
+    assertNotNull(sslIdentityStorage.getPrivateKey());
+    assertNotNull(sslIdentityStorage.getPublicKey());
     assertNotNull(client.getCertificate());
     client.close();
 
@@ -189,8 +190,8 @@ class TestSecureOzoneManager {
         new OMCertificateClient(
             securityConfig, null, omStorage, omInfo, "", scmId, null, null, sslIdentityStorage, trustedCertStorage);
     assertEquals(CertificateClient.InitResponse.SUCCESS, client.init());
-    assertNotNull(client.getPrivateKey());
-    assertNotNull(client.getPublicKey());
+    assertNotNull(sslIdentityStorage.getPrivateKey());
+    assertNotNull(sslIdentityStorage.getPublicKey());
     assertNotNull(client.getCertificate());
     client.close();
   }

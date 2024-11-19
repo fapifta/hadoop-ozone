@@ -192,12 +192,10 @@ public class CertificateClientTestImpl implements CertificateClient {
     }
   }
 
-  @Override
   public PrivateKey getPrivateKey() {
     return keyPair.getPrivate();
   }
 
-  @Override
   public PublicKey getPublicKey() {
     return keyPair.getPublic();
   }

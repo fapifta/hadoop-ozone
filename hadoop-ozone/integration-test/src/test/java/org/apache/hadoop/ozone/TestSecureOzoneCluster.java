@@ -910,8 +910,8 @@ final class TestSecureOzoneCluster {
       om = OzoneManager.createOm(conf);
 
       assertNotNull(om.getCertificateClient());
-      assertNotNull(om.getCertificateClient().getPublicKey());
-      assertNotNull(om.getCertificateClient().getPrivateKey());
+      assertNotNull(om.getSslIdentityStorage().getPublicKey());
+      assertNotNull(om.getSslIdentityStorage().getPrivateKey());
       assertNotNull(om.getCertificateClient().getCertificate());
       assertThat(omLogs.getOutput())
           .contains("Init response: GETCERT")
@@ -1179,7 +1179,7 @@ final class TestSecureOzoneCluster {
 
       // save first cert
       final int certificateLifetime = 20; // seconds
-      KeyPair newKeyPair = new KeyPair(client.getPublicKey(), client.getPrivateKey());
+      KeyPair newKeyPair = sslIdentityStorage.getKeyPair();
       X509Certificate newCert =
           generateSelfSignedX509Cert(securityConfig, newKeyPair, null, Duration.ofSeconds(certificateLifetime));
       String certId = newCert.getSerialNumber().toString();
@@ -1333,8 +1333,8 @@ final class TestSecureOzoneCluster {
       X509Certificate scmCert = scmCertClient.getCertificate();
       TrustedCertStorage trustedCertStorage = new TrustedCertStorage(
           scmCertClient.getSecurityConfig(), scmCertClient.getComponentName());
-      X509Certificate cert = signX509Cert(securityConfig, keyPair, new KeyPair(scmCertClient.getPublicKey(),
-          scmCertClient.getPrivateKey()), scmCert, "om_cert", clusterId);
+      X509Certificate cert = signX509Cert(securityConfig, keyPair, scm.getSslIdentityStorage().getKeyPair(), scmCert,
+          "om_cert", clusterId);
       String certId = cert.getSerialNumber().toString();
       configuredCertStorage.storeDefaultCertificate(CertificateCodec.get().encode(cert));
       configuredCertStorage.storeCertificate(CertificateCodec.get().encode(scmCert), CAType.SUBORDINATE);
@@ -1439,7 +1439,7 @@ final class TestSecureOzoneCluster {
     assertThat(cert.getIssuerDN().toString()).contains(clusterId);
 
     // Verify that certificate matches the public key.
-    assertEquals(cert.getPublicKey(), om.getCertificateClient().getPublicKey());
+    assertEquals(cert.getPublicKey(), om.getSslIdentityStorage().getPublicKey());
   }
 
   private void initializeOmStorage(OMStorage omStorage) throws IOException {

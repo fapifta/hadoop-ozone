@@ -70,6 +70,7 @@ public class TestDnCertificateClientInit {
   private KeyStorage dnKeyStorage;
   private X509Certificate x509Certificate;
   private static final String DN_COMPONENT = DNCertificateClient.COMPONENT_NAME;
+  private SSLIdentityStorage sslIdentityStorage;
 
   private static Stream<Arguments> parameters() {
     return Stream.of(
@@ -94,7 +95,7 @@ public class TestDnCertificateClientInit {
     x509Certificate = getX509Certificate();
     certSerialId = x509Certificate.getSerialNumber().toString();
     DatanodeDetails dn = MockDatanodeDetails.randomDatanodeDetails();
-    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, DN_COMPONENT, certSerialId);
+    sslIdentityStorage = new SSLIdentityStorage(securityConfig, DN_COMPONENT, certSerialId);
     TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, DN_COMPONENT);
     dnCertificateClient =
         new DNCertificateClient(
@@ -124,7 +125,7 @@ public class TestDnCertificateClientInit {
     }
 
     if (pubKeyPresent) {
-      if (dnCertificateClient.getPublicKey() == null) {
+      if (sslIdentityStorage.getPublicKey() == null) {
         dnKeyStorage.storePublicKey(keyPair.getPublic());
       }
     } else {

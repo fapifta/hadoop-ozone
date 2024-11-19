@@ -582,8 +582,7 @@ public class OzoneDelegationTokenSecretManager
           "Can't add persisted delegation token to a running SecretManager.");
     }
 
-    byte[] password = createPassword(identifier.getBytes(),
-        getCertClient().getPrivateKey());
+    byte[] password = createPassword(identifier.getBytes(), getSslIdentityStorage().getPrivateKey());
     if (identifier.getSequenceNumber() > getDelegationTokenSeqNum()) {
       setDelegationTokenSeqNum(identifier.getSequenceNumber());
     }

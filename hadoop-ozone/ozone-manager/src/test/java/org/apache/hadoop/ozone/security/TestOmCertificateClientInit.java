@@ -72,6 +72,7 @@ public class TestOmCertificateClientInit {
   private KeyStorage omKeyCodec;
   private X509Certificate x509Certificate;
   private static final String OM_COMPONENT = OMCertificateClient.COMPONENT_NAME;
+  private SSLIdentityStorage sslIdentityStorage;
 
   private static Stream<Arguments> parameters() {
     return Stream.of(
@@ -101,7 +102,7 @@ public class TestOmCertificateClientInit {
     when(storage.getOmId()).thenReturn(UUID.randomUUID().toString());
     HddsProtos.OzoneManagerDetailsProto omInfo =
         OzoneManager.getOmDetailsProto(config, storage.getOmId());
-    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, OMCertificateClient.COMPONENT_NAME,
+    sslIdentityStorage = new SSLIdentityStorage(securityConfig, OMCertificateClient.COMPONENT_NAME,
         storage.getOmCertSerialId());
     TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, OMCertificateClient.COMPONENT_NAME);
     omCertificateClient =
@@ -131,7 +132,7 @@ public class TestOmCertificateClientInit {
     }
 
     if (pubKeyPresent) {
-      if (omCertificateClient.getPublicKey() == null) {
+      if (sslIdentityStorage.getPublicKey() == null) {
         omKeyCodec.storePublicKey(keyPair.getPublic());
       }
     } else {

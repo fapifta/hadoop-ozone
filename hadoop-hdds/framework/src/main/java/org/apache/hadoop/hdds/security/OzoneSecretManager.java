@@ -279,5 +279,9 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
   public void setSslIdentityStorage(SSLIdentityStorage sslIdentityStorage) {
     this.sslIdentityStorage = sslIdentityStorage;
   }
+
+  public SSLIdentityStorage getSslIdentityStorage() {
+    return sslIdentityStorage;
+  }
 }
 

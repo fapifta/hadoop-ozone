@@ -94,6 +94,7 @@ public class TestDefaultCertificateClient {
   private SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient;
   private static final String DN_COMPONENT = DNCertificateClient.COMPONENT_NAME;
   private KeyStorage dnKeyStorage;
+  private SSLIdentityStorage sslIdentityStorage;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -119,7 +120,7 @@ public class TestDefaultCertificateClient {
     if (dnCertClient != null) {
       dnCertClient.close();
     }
-    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(dnSecurityConfig, DN_COMPONENT, certSerialId);
+    sslIdentityStorage = new SSLIdentityStorage(dnSecurityConfig, DN_COMPONENT, certSerialId);
     TrustedCertStorage trustedCertStorage = new TrustedCertStorage(dnSecurityConfig, DN_COMPONENT);
     dnCertClient = new DNCertificateClient(dnSecurityConfig, scmSecurityClient,
         MockDatanodeDetails.randomDatanodeDetails(), certSerialId, certId -> {
@@ -140,17 +141,17 @@ public class TestDefaultCertificateClient {
   @Test
   public void testKeyOperations() throws Exception {
     cleanupOldKeyPair();
-    PrivateKey pvtKey = dnCertClient.getPrivateKey();
-    PublicKey publicKey = dnCertClient.getPublicKey();
+    PrivateKey pvtKey = sslIdentityStorage.getPrivateKey();
+    PublicKey publicKey = sslIdentityStorage.getPublicKey();
     assertNull(publicKey);
     assertNull(pvtKey);
 
     KeyPair keyPair = generateKeyPairFiles();
-    pvtKey = dnCertClient.getPrivateKey();
+    pvtKey = sslIdentityStorage.getPrivateKey();
     assertNotNull(pvtKey);
     assertEquals(pvtKey, keyPair.getPrivate());
 
-    publicKey = dnCertClient.getPublicKey();
+    publicKey = sslIdentityStorage.getPublicKey();
     assertNotNull(publicKey);
     assertEquals(publicKey, keyPair.getPublic());
   }
@@ -226,7 +227,7 @@ public class TestDefaultCertificateClient {
     Signature rsaSignature =
         Signature.getInstance(dnSecurityConfig.getSignatureAlgo(),
             dnSecurityConfig.getProvider());
-    rsaSignature.initVerify(dnCertClient.getPublicKey());
+    rsaSignature.initVerify(sslIdentityStorage.getPublicKey());
     rsaSignature.update(data);
     assertTrue(rsaSignature.verify(hash));
   }
@@ -553,10 +554,10 @@ public class TestDefaultCertificateClient {
 
     Logger logger = mock(Logger.class);
     String certId = cert.getSerialNumber().toString();
-    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(conf, compName, certId);
+    SSLIdentityStorage identityStorage = new SSLIdentityStorage(conf, compName, certId);
     TrustedCertStorage trustedCertStorage = new TrustedCertStorage(conf, compName);
     DefaultCertificateClient client = new DefaultCertificateClient(
-        conf, null, logger, certId, compName, "", null, null, sslIdentityStorage, trustedCertStorage
+        conf, null, logger, certId, compName, "", null, null, identityStorage, trustedCertStorage
     ) {
 
       @Override

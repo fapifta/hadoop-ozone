@@ -22,8 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.security.KeyPair;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateFactory;
@@ -80,7 +78,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.Mockito;
 
 /**
  * Test class for {@link OzoneDelegationTokenSecretManager}.
@@ -111,10 +108,6 @@ public class TestOzoneDelegationTokenSecretManager {
     securityConfig = new SecurityConfig(conf);
     certificateClient = setupCertificateClient();
     certificateClient.init();
-    sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
-    when(sslIdentityStorage.getPublicKey()).thenReturn(certificateClient.getPublicKey());
-    when(sslIdentityStorage.getPrivateKey()).thenReturn(certificateClient.getPrivateKey());
-    when(sslIdentityStorage.getLeafCertificate()).thenReturn(certificateClient.getCertificate());
     expiryTime = Time.monotonicNow() + 60 * 60 * 24;
     serviceRpcAdd = new Text("localhost");
     final Map<String, S3SecretValue> s3Secrets = new HashMap<>();
@@ -166,28 +159,18 @@ public class TestOzoneDelegationTokenSecretManager {
     when(omStorage.getOmCertSerialId()).thenReturn(singleCert.getSerialNumber().toString());
     when(omStorage.getClusterID()).thenReturn("test");
     when(omStorage.getOmId()).thenReturn(UUID.randomUUID().toString());
-    SSLIdentityStorage identityStorage = new SSLIdentityStorage(securityConfig, OMCertificateClient.COMPONENT_NAME,
+    sslIdentityStorage = new SSLIdentityStorage(securityConfig, OMCertificateClient.COMPONENT_NAME,
         omStorage.getOmCertSerialId());
     TrustedCertStorage trustedStorage = new TrustedCertStorage(securityConfig, OMCertificateClient.COMPONENT_NAME);
     OMCertificateClient omCertificateClient = new OMCertificateClient(
-        securityConfig, null, omStorage, null, "", null, null, null, identityStorage, trustedStorage) {
+        securityConfig, null, omStorage, null, "", null, null, null, sslIdentityStorage, trustedStorage) {
 
       @Override
       public X509Certificate getCertificate() {
         return singleCert;
       }
-
-      @Override
-      public PrivateKey getPrivateKey() {
-        return keyPair.getPrivate();
-      }
-
-      @Override
-      public PublicKey getPublicKey() {
-        return keyPair.getPublic();
-      }
     };
-
+    sslIdentityStorage.storeKeyPair(keyPair);
     trustedStorage.storeCertificate(CertificateCodec.get().encode(certPath), CAType.ROOT);
     return omCertificateClient;
   }
@@ -482,7 +465,7 @@ public class TestOzoneDelegationTokenSecretManager {
     Signature rsaSignature =
         Signature.getInstance(securityConfig.getSignatureAlgo(),
             securityConfig.getProvider());
-    rsaSignature.initVerify(certificateClient.getPublicKey());
+    rsaSignature.initVerify(sslIdentityStorage.getPublicKey());
     rsaSignature.update(identifier);
     assertTrue(rsaSignature.verify(hash));
   }

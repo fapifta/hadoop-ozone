@@ -600,6 +600,11 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
     return dnCertClient;
   }
 
+  public SSLIdentityStorage getSslIdentityStorage() {
+    return sslIdentityStorage;
+  }
+
+
   @VisibleForTesting
   public void setCertificateClient(CertificateClient client)
       throws IOException {

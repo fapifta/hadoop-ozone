@@ -4234,6 +4234,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return certClient;
   }
 
+  public SSLIdentityStorage getSslIdentityStorage() {
+    return sslIdentityStorage;
+  }
+
+
   public String getComponent() {
     return omComponent;
   }

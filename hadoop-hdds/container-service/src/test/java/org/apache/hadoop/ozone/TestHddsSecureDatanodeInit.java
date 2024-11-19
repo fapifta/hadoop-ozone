@@ -40,7 +40,6 @@ import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslator
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
@@ -89,7 +88,7 @@ public class TestHddsSecureDatanodeInit {
   private static GenericTestUtils.LogCapturer dnLogs;
   private static SecurityConfig securityConfig;
   private static KeyStorage keyStorage;
-  private static ConfiguredCertStorage certStorage;
+  private static SSLIdentityStorage certStorage;
   private static X509Certificate cert;
   private static String encodedCert;
   private static final String DN_COMPONENT = DNCertificateClient.COMPONENT_NAME;
@@ -134,11 +133,11 @@ public class TestHddsSecureDatanodeInit {
     });
     dnLogs = GenericTestUtils.LogCapturer.captureLogs(
         ((DNCertificateClient) service.getCertificateClient()).getLogger());
-    certStorage = new ConfiguredCertStorage(securityConfig, DN_COMPONENT);
     keyStorage = new KeyStorage(securityConfig, DN_COMPONENT);
     dnLogs.clearOutput();
-    privateKey = service.getCertificateClient().getPrivateKey();
-    publicKey = service.getCertificateClient().getPublicKey();
+    certStorage = service.getSslIdentityStorage();
+    privateKey = certStorage.getPrivateKey();
+    publicKey = certStorage.getPublicKey();
 
     cert = generateX509Cert(new KeyPair(publicKey, privateKey),
         null, Duration.ofSeconds(CERT_LIFETIME));
@@ -182,8 +181,8 @@ public class TestHddsSecureDatanodeInit {
     assertThrows(Exception.class,
         () -> service.initializeCertificateClient(client));
 
-    assertNotNull(client.getPrivateKey());
-    assertNotNull(client.getPublicKey());
+    assertNotNull(certStorage.getPrivateKey());
+    assertNotNull(certStorage.getPublicKey());
     assertNull(client.getCertificate());
     assertThat(dnLogs.getOutput()).contains("Init response: GETCERT");
   }
@@ -197,8 +196,8 @@ public class TestHddsSecureDatanodeInit {
         () -> service.initializeCertificateClient(client));
     assertThat(rteException.getMessage())
         .contains("DN security initialization failed");
-    assertNull(client.getPrivateKey());
-    assertNull(client.getPublicKey());
+    assertNull(certStorage.getPrivateKey());
+    assertNull(certStorage.getPublicKey());
     assertNotNull(client.getCertificate());
     assertThat(dnLogs.getOutput())
         .contains("Init response: FAILURE");
@@ -211,7 +210,7 @@ public class TestHddsSecureDatanodeInit {
     assertThrows(Exception.class,
         () -> service.initializeCertificateClient(client));
 
-    assertNotNull(client.getPublicKey());
+    assertNotNull(certStorage.getPublicKey());
     assertThat(dnLogs.getOutput()).contains("Init response: GETCERT");
   }
 
@@ -225,8 +224,8 @@ public class TestHddsSecureDatanodeInit {
         () -> service.initializeCertificateClient(client));
     assertThat(rteException.getMessage())
         .contains("DN security initialization failed");
-    assertNull(client.getPrivateKey());
-    assertNotNull(client.getPublicKey());
+    assertNull(certStorage.getPrivateKey());
+    assertNotNull(certStorage.getPublicKey());
     assertNotNull(client.getCertificate());
     assertThat(dnLogs.getOutput())
         .contains("Init response: FAILURE");
@@ -251,8 +250,8 @@ public class TestHddsSecureDatanodeInit {
     when(scmClient.getDataNodeCertificateChain(any(), anyString()))
         .thenReturn(responseProto);
     service.initializeCertificateClient(client);
-    assertNotNull(client.getPrivateKey());
-    assertNotNull(client.getPublicKey());
+    assertNotNull(certStorage.getPrivateKey());
+    assertNotNull(certStorage.getPublicKey());
     assertNotNull(client.getCertificate());
     assertThat(dnLogs.getOutput())
         .contains("Init response: GETCERT");
@@ -268,8 +267,8 @@ public class TestHddsSecureDatanodeInit {
     keyStorage.storePrivateKey(privateKey);
     certStorage.storeDefaultCertificate(encodedCert);
     service.initializeCertificateClient(client);
-    assertNotNull(client.getPrivateKey());
-    assertNotNull(client.getPublicKey());
+    assertNotNull(certStorage.getPrivateKey());
+    assertNotNull(certStorage.getPublicKey());
     assertNotNull(client.getCertificate());
     assertThat(dnLogs.getOutput())
         .contains("Init response: SUCCESS");
@@ -282,8 +281,8 @@ public class TestHddsSecureDatanodeInit {
     keyStorage.storePrivateKey(privateKey);
     assertThrows(Exception.class,
         () -> service.initializeCertificateClient(client));
-    assertNotNull(client.getPrivateKey());
-    assertNotNull(client.getPublicKey());
+    assertNotNull(certStorage.getPrivateKey());
+    assertNotNull(certStorage.getPublicKey());
     assertNull(client.getCertificate());
     assertThat(dnLogs.getOutput())
         .contains("Init response: GETCERT");
@@ -297,8 +296,8 @@ public class TestHddsSecureDatanodeInit {
     certStorage.storeDefaultCertificate(encodedCert);
 
     service.initializeCertificateClient(client);
-    assertNotNull(client.getPrivateKey());
-    assertNotNull(client.getPublicKey());
+    assertNotNull(certStorage.getPrivateKey());
+    assertNotNull(certStorage.getPublicKey());
     assertNotNull(client.getCertificate());
     assertThat(dnLogs.getOutput())
         .contains("Init response: SUCCESS");
@@ -353,8 +352,8 @@ public class TestHddsSecureDatanodeInit {
       String newCertId = client.getCertificate().getSerialNumber().toString();
       return newCertId.equals(certId);
     }, 1000, CERT_LIFETIME * 1000);
-    PrivateKey privateKey1 = client.getPrivateKey();
-    PublicKey publicKey1 = client.getPublicKey();
+    PrivateKey privateKey1 = certStorage.getPrivateKey();
+    PublicKey publicKey1 = certStorage.getPublicKey();
     TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, DN_COMPONENT);
     String caCertId1 = trustedCertStorage.getLatestRootCaCert().getSerialNumber().toString();
 
@@ -380,8 +379,8 @@ public class TestHddsSecureDatanodeInit {
       String newCertId = client.getCertificate().getSerialNumber().toString();
       return newCertId.equals(certId2);
     }, 1000, CERT_LIFETIME * 1000);
-    assertNotEquals(privateKey1, client.getPrivateKey());
-    assertNotEquals(publicKey1, client.getPublicKey());
+    assertNotEquals(privateKey1, certStorage.getPrivateKey());
+    assertNotEquals(publicKey1, certStorage.getPublicKey());
     assertNotEquals(caCertId1, trustedCertStorage.getLatestRootCaCert().getSerialNumber().toString());
   }
 

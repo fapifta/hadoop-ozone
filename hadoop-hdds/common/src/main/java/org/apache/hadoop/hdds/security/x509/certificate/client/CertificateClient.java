@@ -27,8 +27,6 @@ import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -48,22 +46,6 @@ public interface CertificateClient extends Closeable {
   String getComponentName();
 
   SecurityConfig getSecurityConfig();
-
-  /**
-   * Returns the private key of the specified component if it exists on the
-   * local system.
-   *
-   * @return private key or Null if there is no data.
-   */
-  PrivateKey getPrivateKey();
-
-  /**
-   * Returns the public key of the specified component if it exists on the local
-   * system.
-   *
-   * @return public key or Null if there is no data.
-   */
-  PublicKey getPublicKey();
 
   /**
    * Returns the certificate used by the specified component if it exists

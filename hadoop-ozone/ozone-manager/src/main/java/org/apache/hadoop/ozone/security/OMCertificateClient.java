@@ -37,7 +37,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.security.KeyPair;
 import java.util.function.Consumer;
 
 
@@ -103,7 +102,7 @@ public class OMCertificateClient extends DefaultCertificateClient {
     }
 
     builder.setCA(false)
-        .setKey(new KeyPair(getPublicKey(), getPrivateKey()))
+        .setKey(getSslIdentityStorage().getKeyPair())
         .setConfiguration(getSecurityConfig())
         .setScmID(scmID)
         .setClusterID(clusterID)

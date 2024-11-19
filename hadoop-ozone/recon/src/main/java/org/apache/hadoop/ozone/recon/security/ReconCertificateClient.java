@@ -34,7 +34,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.security.KeyPair;
 import java.util.function.Consumer;
 
 import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CSR_ERROR;
@@ -73,7 +72,7 @@ public class ReconCertificateClient  extends DefaultCertificateClient {
           .getShortUserName() + "@" + hostname;
 
       builder.setCA(false)
-          .setKey(new KeyPair(getPublicKey(), getPrivateKey()))
+          .setKey(getSslIdentityStorage().getKeyPair())
           .setConfiguration(getSecurityConfig())
           .setSubject(subject);
 

@@ -37,7 +37,6 @@ import java.security.Signature;
 import java.security.SignatureException;
 import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
-import java.security.spec.InvalidKeySpecException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -68,7 +67,6 @@ import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.KeyStorage;
-import org.apache.hadoop.ozone.OzoneSecurityUtil;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -100,8 +98,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private final Logger logger;
   private final SecurityConfig securityConfig;
   private final KeyStorage keyStorage;
-  private PrivateKey privateKey;
-  private PublicKey publicKey;
   private String certSerialId;
   private String component;
   private final String threadNamePrefix;
@@ -197,53 +193,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     }
   }
 
-  /**
-   * Returns the private key of the specified  if it exists on the local
-   * system.
-   *
-   * @return private key or Null if there is no data.
-   */
-  public synchronized PrivateKey getPrivateKey() {
-    if (privateKey != null) {
-      return privateKey;
-    }
-
-    Path keyPath = securityConfig.getKeyLocation(component);
-    if (OzoneSecurityUtil.checkIfFileExist(keyPath,
-        securityConfig.getPrivateKeyFileName())) {
-      try {
-        privateKey = keyStorage.readPrivateKey();
-      } catch (InvalidKeySpecException | NoSuchAlgorithmException
-          | IOException e) {
-        getLogger().error("Error while getting private key.", e);
-      }
-    }
-    return privateKey;
-  }
-
-  /**
-   * Returns the public key of the specified if it exists on the local system.
-   *
-   * @return public key or Null if there is no data.
-   */
-  public synchronized PublicKey getPublicKey() {
-    if (publicKey != null) {
-      return publicKey;
-    }
-
-    Path keyPath = securityConfig.getKeyLocation(component);
-    if (OzoneSecurityUtil.checkIfFileExist(keyPath,
-        securityConfig.getPublicKeyFileName())) {
-      try {
-        publicKey = keyStorage.readPublicKey();
-      } catch (InvalidKeySpecException | NoSuchAlgorithmException
-          | IOException e) {
-        getLogger().error("Error while getting public key.", e);
-      }
-    }
-    return publicKey;
-  }
-
   @Override
   public X509Certificate getCertificate() {
     CertPath currentCertPath = getCertPath();
@@ -272,7 +221,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       Signature sign = Signature.getInstance(securityConfig.getSignatureAlgo(),
           securityConfig.getProvider());
 
-      sign.initSign(getPrivateKey());
+      sign.initSign(sslIdentityStorage.getPrivateKey());
       sign.update(data);
 
       return sign.sign();
@@ -403,8 +352,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   @VisibleForTesting
   public synchronized InitResponse init() throws IOException {
     X509Certificate certificate = getCertificate();
-    PrivateKey pvtKey = getPrivateKey();
-    PublicKey pubKey = getPublicKey();
+    PrivateKey pvtKey = sslIdentityStorage.getPrivateKey();
+    PublicKey pubKey = sslIdentityStorage.getPublicKey();
     //The logic here: if we don't find a certificate, just throw away keys and ask for a new certificate
     //If there is a certificate, try finding keys/restoring public key. If keys are there or can be restored, then
     // success, otherwise failure.
@@ -496,7 +445,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    * */
   protected boolean validateKeyPairAndCertificate() throws
       CertificateException {
-    if (validateKeyPair(getPublicKey())) {
+    if (validateKeyPair(sslIdentityStorage.getPublicKey())) {
       getLogger().info("Keypair validated.");
       // TODO: Certificates cryptographic validity can be checked as well.
       if (validateKeyPair(getCertificate().getPublicKey())) {
@@ -523,7 +472,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
       if (validateKeyPair(pubKey)) {
         keyStorage.storePublicKey(pubKey);
-        publicKey = pubKey;
       } else {
         getLogger().error("Can't recover public key " +
             "corresponding to private key.");
@@ -563,9 +511,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
             "for certificate storage.", BOOTSTRAP_ERROR);
       }
     }
-    KeyPair keyPair = createKeyPair(keyStorage);
-    privateKey = keyPair.getPrivate();
-    publicKey = keyPair.getPublic();
+    createKeyPair(keyStorage);
   }
 
   protected KeyPair createKeyPair(KeyStorage storage) throws CertificateException {
@@ -840,13 +786,9 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   public synchronized void reloadKeyAndCertificate(String newCertId) {
-    privateKey = null;
-    publicKey = null;
-
     String oldCaCertId = updateCertSerialId(newCertId);
     getLogger().info("Reset and reloaded key and all certificates for new " +
         "certificate {}.", newCertId);
-
     notifyNotificationReceivers(oldCaCertId, newCertId);
   }
 
@@ -894,6 +836,11 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   protected TrustedCertStorage getTrustedCertStorage() {
     return trustedCertStorage;
   }
+
+  protected SSLIdentityStorage getSslIdentityStorage() {
+    return sslIdentityStorage;
+  }
+
 
   protected boolean shouldStartCertificateRenewerService() {
     return true;
@@ -1009,8 +956,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   public void assertValidKeysAndCertificate() throws OzoneSecurityException {
     try {
-      Objects.requireNonNull(getPublicKey());
-      Objects.requireNonNull(getPrivateKey());
+      Objects.requireNonNull(sslIdentityStorage.getPublicKey());
+      Objects.requireNonNull(sslIdentityStorage.getPrivateKey());
       Objects.requireNonNull(getCertificate());
     } catch (Exception e) {
       throw new OzoneSecurityException("Error reading keypair & certificate", e,

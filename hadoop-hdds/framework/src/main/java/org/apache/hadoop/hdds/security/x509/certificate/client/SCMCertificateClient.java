@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Set;
@@ -112,7 +111,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
         .setClusterID(cId)
         // Set CA to true, as this will be used to sign certs for OM/DN.
         .setCA(true)
-        .setKey(new KeyPair(getPublicKey(), getPrivateKey()));
+        .setKey(getSslIdentityStorage().getKeyPair());
   }
 
   @Override

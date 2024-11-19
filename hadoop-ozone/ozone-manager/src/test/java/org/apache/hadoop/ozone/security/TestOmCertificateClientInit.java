@@ -77,7 +77,7 @@ public class TestOmCertificateClientInit {
     return Stream.of(
         arguments(false, false, false, GETCERT),
         arguments(false, false, true, FAILURE),
-        arguments(false, true, false, FAILURE),
+        arguments(false, true, false, GETCERT),
         arguments(true, false, false, GETCERT),
         arguments(false, true, true, FAILURE),
         arguments(true, true, false, GETCERT),

@@ -64,6 +64,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONN
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_NAMES;
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.FAILURE;
+import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.GETCERT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -121,7 +122,8 @@ public class TestDefaultCertificateClient {
     SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(dnSecurityConfig, DN_COMPONENT, certSerialId);
     TrustedCertStorage trustedCertStorage = new TrustedCertStorage(dnSecurityConfig, DN_COMPONENT);
     dnCertClient = new DNCertificateClient(dnSecurityConfig, scmSecurityClient,
-        MockDatanodeDetails.randomDatanodeDetails(), certSerialId, null,
+        MockDatanodeDetails.randomDatanodeDetails(), certSerialId, certId -> {
+    },
         () -> System.exit(1), sslIdentityStorage, trustedCertStorage);
   }
 
@@ -395,8 +397,10 @@ public class TestDefaultCertificateClient {
     dnKeyStorage.storePrivateKey(keyPair.getPrivate());
     dnKeyStorage.storePublicKey(keyPair1.getPublic());
     // Check for DN.
-    assertEquals(FAILURE, dnCertClient.init());
-    assertThat(dnClientLog.getOutput()).contains("Keypair validation failed");
+    assertEquals(GETCERT, dnCertClient.init());
+    //when the certificate is missing, keys are regenerated
+    assertNotEquals(keyPair.getPrivate(), dnKeyStorage.readPrivateKey());
+    assertNotEquals(keyPair1.getPublic(), dnKeyStorage.readPublicKey());
     dnClientLog.clearOutput();
 
     // Case 2. Expect failure when certificate is generated from different
@@ -408,9 +412,9 @@ public class TestDefaultCertificateClient {
 
     ConfiguredCertStorage configuredCertStorage = new ConfiguredCertStorage(dnSecurityConfig, DN_COMPONENT);
     configuredCertStorage.storeDefaultCertificate(encodedCert);
+    assertThrows(RuntimeException.class, () -> dnCertClient.initWithRecovery());
     // Check for DN.
-    assertEquals(FAILURE, dnCertClient.init());
-    assertThat(dnClientLog.getOutput()).contains("Keypair validation failed");
+    //assertThat(dnClientLog.getOutput()).contains("Keypair validation failed");
     dnClientLog.clearOutput();
 
     // Case 3. Expect failure when certificate is generated from different
@@ -424,10 +428,7 @@ public class TestDefaultCertificateClient {
     dnKeyStorage.storePublicKey(keyPair.getPublic());
 
     // Check for DN.
-    assertEquals(FAILURE, dnCertClient.init());
-    assertThat(dnClientLog.getOutput())
-        .contains("Stored certificate is generated with different");
-    dnClientLog.clearOutput();
+    assertThrows(RuntimeException.class, () -> dnCertClient.initWithRecovery());
 
     // Case 4. Failure when public key recovery fails.
     getCertClient();

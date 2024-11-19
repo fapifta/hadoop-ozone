@@ -39,6 +39,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,6 +53,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.security.exception.OzoneSecurityException;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.DefaultApprover;
@@ -69,6 +71,7 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_DEFAULT_DURATION_D
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_MAX_DURATION;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_MAX_DURATION_DEFAULT;
 import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
+import static org.apache.hadoop.hdds.security.exception.OzoneSecurityException.ResultCodes.OM_PUBLIC_PRIVATE_KEY_FILE_NOT_EXIST;
 import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CRYPTO_SIGNATURE_VERIFICATION_ERROR;
 
 /**
@@ -398,6 +401,18 @@ public class CertificateClientTestImpl implements CertificateClient {
   public void close() throws IOException {
     if (executorService != null) {
       executorService.shutdown();
+    }
+  }
+
+  @Override
+  public void assertValidKeysAndCertificate() throws OzoneSecurityException {
+    try {
+      Objects.requireNonNull(getPublicKey());
+      Objects.requireNonNull(getPrivateKey());
+      Objects.requireNonNull(getCertificate());
+    } catch (Exception e) {
+      throw new OzoneSecurityException("Error reading keypair & certificate", e,
+          OM_PUBLIC_PRIVATE_KEY_FILE_NOT_EXIST);
     }
   }
 }

@@ -208,16 +208,11 @@ public class TestHddsSecureDatanodeInit {
   public void testSecureDnStartupCase2() throws Exception {
     // Case 2: When private key and certificate is missing.
     keyStorage.storePublicKey(publicKey);
-    RuntimeException rteException = assertThrows(
-        RuntimeException.class,
+    assertThrows(Exception.class,
         () -> service.initializeCertificateClient(client));
-    assertThat(rteException.getMessage())
-        .contains("DN security initialization failed");
-    assertNull(client.getPrivateKey());
+
     assertNotNull(client.getPublicKey());
-    assertNull(client.getCertificate());
-    assertThat(dnLogs.getOutput())
-        .contains("Init response: FAILURE");
+    assertThat(dnLogs.getOutput()).contains("Init response: GETCERT");
   }
 
   @Test

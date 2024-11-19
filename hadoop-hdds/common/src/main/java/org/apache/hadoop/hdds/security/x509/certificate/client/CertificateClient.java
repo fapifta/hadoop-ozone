@@ -31,11 +31,8 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-
-import static org.apache.hadoop.hdds.security.exception.OzoneSecurityException.ResultCodes.OM_PUBLIC_PRIVATE_KEY_FILE_NOT_EXIST;
 
 /**
  * Certificate client provides and interface to certificate operations that
@@ -99,16 +96,7 @@ public interface CertificateClient extends Closeable {
    */
   CertificateSignRequest.Builder configureCSRBuilder() throws SCMSecurityException;
 
-  default void assertValidKeysAndCertificate() throws OzoneSecurityException {
-    try {
-      Objects.requireNonNull(getPublicKey());
-      Objects.requireNonNull(getPrivateKey());
-      Objects.requireNonNull(getCertificate());
-    } catch (Exception e) {
-      throw new OzoneSecurityException("Error reading keypair & certificate", e,
-          OM_PUBLIC_PRIVATE_KEY_FILE_NOT_EXIST);
-    }
-  }
+  void assertValidKeysAndCertificate() throws OzoneSecurityException;
 
   /**
    * Register a receiver that will be called after the certificate renewed.

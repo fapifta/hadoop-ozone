@@ -144,8 +144,8 @@ class TestSecureOzoneManager {
     KeyStorage keyStorage = new KeyStorage(securityConfig, COMPONENT);
     FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPrivateKeyFileName()).toFile());
-    assertEquals(CertificateClient.InitResponse.FAILURE, client.init());
-    assertNull(client.getPrivateKey());
+    assertEquals(CertificateClient.InitResponse.GETCERT, client.init());
+    assertNotNull(client.getPrivateKey());
     assertNotNull(client.getPublicKey());
     assertNull(client.getCertificate());
     client.close();
@@ -153,6 +153,8 @@ class TestSecureOzoneManager {
     // Case 5: When only certificate is present.
     FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
+        .toString(), securityConfig.getPrivateKeyFileName()).toFile());
     ConfiguredCertStorage certStorage =
         new ConfiguredCertStorage(securityConfig, COMPONENT);
     X509Certificate x509Certificate = KeyStoreTestUtil.generateCertificate(

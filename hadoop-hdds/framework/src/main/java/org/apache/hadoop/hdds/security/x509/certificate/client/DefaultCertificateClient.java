@@ -27,7 +27,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.InvalidKeyException;
-import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -38,9 +37,7 @@ import java.security.Signature;
 import java.security.SignatureException;
 import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
-import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.RSAPublicKeySpec;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -62,6 +59,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.security.SecurityConfig;
+import org.apache.hadoop.hdds.security.exception.OzoneSecurityException;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
@@ -77,6 +75,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BACKUP_KEY_CERT_DIR_NAME_SUFFIX;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX;
+import static org.apache.hadoop.hdds.security.exception.OzoneSecurityException.ResultCodes.OM_PUBLIC_PRIVATE_KEY_FILE_NOT_EXIST;
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.FAILURE;
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.GETCERT;
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.SUCCESS;
@@ -204,7 +203,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    *
    * @return private key or Null if there is no data.
    */
-  @Override
   public synchronized PrivateKey getPrivateKey() {
     if (privateKey != null) {
       return privateKey;
@@ -228,7 +226,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    *
    * @return public key or Null if there is no data.
    */
-  @Override
   public synchronized PublicKey getPublicKey() {
     if (publicKey != null) {
       return publicKey;
@@ -354,32 +351,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   /**
-   * Defines 8 cases of initialization.
-   * Each case specifies objects found.
-   * 0. NONE                  Keypair as well as certificate not found.
-   * 1. CERT                  Certificate found but keypair missing.
-   * 2. PUBLIC_KEY            Public key found but private key and
-   *                          certificate is missing.
-   * 3. PUBLICKEY_CERT        Only public key and certificate is present.
-   * 4. PRIVATE_KEY           Only private key is present.
-   * 5. PRIVATEKEY_CERT       Only private key and certificate is present.
-   * 6. PUBLICKEY_PRIVATEKEY  indicates private and public key were read
-   *                          successfully from configured location but
-   *                          Certificate.
-   * 7. ALL                   Keypair as well as certificate is present.
-   * */
-  protected enum InitCase {
-    NONE,
-    CERT,
-    PUBLIC_KEY,
-    PUBLICKEY_CERT,
-    PRIVATE_KEY,
-    PRIVATEKEY_CERT,
-    PUBLICKEY_PRIVATEKEY,
-    ALL
-  }
-
-  /**
    *
    * Initializes client by performing following actions.
    * 1. Create key dir if not created already.
@@ -431,31 +402,33 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   @VisibleForTesting
   public synchronized InitResponse init() throws IOException {
-    int initCase = 0;
+    X509Certificate certificate = getCertificate();
     PrivateKey pvtKey = getPrivateKey();
     PublicKey pubKey = getPublicKey();
-    X509Certificate certificate = getCertificate();
-    if (pvtKey != null) {
-      initCase = initCase | 1 << 2;
+    //The logic here: if we don't find a certificate, just throw away keys and ask for a new certificate
+    //If there is a certificate, try finding keys/restoring public key. If keys are there or can be restored, then
+    // success, otherwise failure.
+    if (certificate == null || isSingularLeafCert(getCertPath())) {
+      deleteKeys();
+      bootstrapClientKeys();
+      return GETCERT;
     }
+    if (pvtKey == null) {
+      return FAILURE;
+    }
+    //Cert and private key are present
     if (pubKey != null) {
-      initCase = initCase | 1 << 1;
+      return SUCCESS;
     }
-    if (certificate != null) {
-      /*
-      If we have a singular certificate in the file system that is not a root CA then this is before the
-      certificate bundles were supported. In this case we have to fetch certificates again
-      */
-      if (!isSingularLeafCert(getCertPath())) {
-        initCase = initCase | 1;
-      }
+    if (recoverPublicKey()) {
+      return SUCCESS;
     }
+    return FAILURE;
+  }
 
-    getLogger().info("Certificate client init case: {}", initCase);
-    Preconditions.checkArgument(initCase < InitCase.values().length, "Not a " +
-        "valid case.");
-    InitCase init = InitCase.values()[initCase];
-    return handleCase(init);
+  private void deleteKeys() throws IOException {
+    File currentKeyDir = new File(getSecurityConfig().getKeyLocation(component).toString());
+    FileUtils.deleteDirectory(currentKeyDir);
   }
 
   private boolean isSingularLeafCert(CertPath seeIfCertPath) {
@@ -477,70 +450,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   /**
-   * Default handling of each {@link InitCase}.
-   */
-  protected InitResponse handleCase(InitCase init)
-      throws CertificateException {
-    switch (init) {
-    case NONE:
-      getLogger().info("Creating keypair for client as keypair and " +
-          "certificate not found.");
-      bootstrapClientKeys();
-      return GETCERT;
-    case CERT:
-      getLogger().error("Private key not found, while certificate is still" +
-          " present. Delete keypair and try again.");
-      return FAILURE;
-    case PUBLIC_KEY:
-      getLogger().error("Found public key but private key and certificate " +
-          "missing.");
-      return FAILURE;
-    case PRIVATE_KEY:
-      getLogger().info("Found private key but public key and certificate " +
-          "is missing.");
-      if (recoverPublicKeyFromPrivateKey()) {
-        return GETCERT;
-      } else {
-        return FAILURE;
-      }
-    case PUBLICKEY_CERT:
-      getLogger().error("Found public key and certificate but private " +
-          "key is missing.");
-      return FAILURE;
-    case PRIVATEKEY_CERT:
-      getLogger().info("Found private key and certificate but public key" +
-          " missing.");
-      if (recoverPublicKey()) {
-        return SUCCESS;
-      } else {
-        getLogger().error("Public key recovery failed.");
-        return FAILURE;
-      }
-    case PUBLICKEY_PRIVATEKEY:
-      getLogger().info("Found private and public key but certificate is" +
-          " missing.");
-      if (validateKeyPair(getPublicKey())) {
-        return GETCERT;
-      } else {
-        getLogger().info("Keypair validation failed.");
-        return FAILURE;
-      }
-    case ALL:
-      getLogger().info("Found certificate file along with KeyPair.");
-      if (validateKeyPairAndCertificate()) {
-        return SUCCESS;
-      } else {
-        return FAILURE;
-      }
-    default:
-      getLogger().error("Unexpected case: {} (private/public/cert)",
-          Integer.toBinaryString(init.ordinal()));
-      return FAILURE;
-    }
-  }
-
-
-  /**
    * Recover the state if needed.
    * */
   protected void recoverStateIfNeeded(InitResponse state) throws IOException {
@@ -548,7 +457,11 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     getLogger().info("Init response: {}", state);
     switch (state) {
     case SUCCESS:
-      getLogger().info("Initialization successful, case:{}.", state);
+      if (validateKeyPairAndCertificate()) {
+        getLogger().info("Initialization successful, case:{}.", state);
+      } else {
+        throw new RuntimeException(upperCaseComponent + " security initialization failed.");
+      }
       break;
     case GETCERT:
       Path certLocation = securityConfig.getCertificateLocation(getComponentName());
@@ -567,6 +480,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       }
       getLogger().info("Successfully stored {} signed certificate, case:{}.",
           upperCaseComponent, state);
+      validateKeyPairAndCertificate();
       break;
     case FAILURE:
     default:
@@ -620,39 +534,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
           "public key.", e, BOOTSTRAP_ERROR);
     }
     return true;
-  }
-
-  /**
-   * Tries to recover public key from private key. Also validates recovered
-   * public key.
-   * */
-  protected boolean recoverPublicKeyFromPrivateKey()
-      throws CertificateException {
-    PrivateKey priKey = getPrivateKey();
-    try {
-      if (priKey != null && priKey instanceof RSAPrivateCrtKey) {
-        // if it's RSA private key
-        RSAPrivateCrtKey rsaCrtKey = (RSAPrivateCrtKey) priKey;
-        RSAPublicKeySpec rsaPublicKeySpec = new RSAPublicKeySpec(
-            rsaCrtKey.getModulus(), rsaCrtKey.getPublicExponent());
-        PublicKey pubKey = KeyFactory.getInstance(securityConfig.getKeyAlgo())
-            .generatePublic(rsaPublicKeySpec);
-        if (validateKeyPair(pubKey)) {
-          keyStorage.storePublicKey(pubKey);
-          publicKey = pubKey;
-          getLogger().info("Public key is recovered from the private key.");
-          return true;
-        }
-      }
-    } catch (InvalidKeySpecException | NoSuchAlgorithmException |
-             IOException e) {
-      throw new CertificateException("Error while trying to recover " +
-          "public key.", e, BOOTSTRAP_ERROR);
-    }
-
-    getLogger().error("Can't recover public key " +
-        "corresponding to private key.");
-    return false;
   }
 
   /**
@@ -1123,6 +1004,17 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         // cleanup backup directory
         cleanBackupDir();
       }
+    }
+  }
+
+  public void assertValidKeysAndCertificate() throws OzoneSecurityException {
+    try {
+      Objects.requireNonNull(getPublicKey());
+      Objects.requireNonNull(getPrivateKey());
+      Objects.requireNonNull(getCertificate());
+    } catch (Exception e) {
+      throw new OzoneSecurityException("Error reading keypair & certificate", e,
+          OM_PUBLIC_PRIVATE_KEY_FILE_NOT_EXIST);
     }
   }
 }

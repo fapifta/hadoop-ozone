@@ -92,9 +92,6 @@ import org.slf4j.Logger;
  */
 public abstract class DefaultCertificateClient implements CertificateClient {
 
-  private static final String CERT_FILE_EXTENSION = ".crt";
-  public static final String CERT_FILE_NAME_FORMAT = "%s" + CERT_FILE_EXTENSION;
-
   private final Logger logger;
   private final SecurityConfig securityConfig;
   private final KeyStorage keyStorage;

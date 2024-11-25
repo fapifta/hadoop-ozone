@@ -87,6 +87,7 @@ import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.client.ScmTopologyClient;
 import org.apache.hadoop.hdds.scm.ha.SCMHAUtils;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
+import org.apache.hadoop.hdds.security.x509.certificate.client.SSLIdentityService;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
@@ -1483,7 +1484,16 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
                 throw new RuntimeException("Failed to set new certificate ID");
               }
             }, null, identityStorage, trustedStorage);
-    certClient.initWithRecovery();
+    SSLIdentityService sslIdentityService = new SSLIdentityService(identityStorage, certClient, scmSecurityClient,
+        trustedStorage, certId -> {
+      try {
+        omStore.setOmCertSerialId(certId);
+      } catch (IOException e) {
+        LOG.error("Failed to set new certificate ID", e);
+        throw new RuntimeException("Failed to set new certificate ID");
+      }
+    }, true, null, omStore.getOmCertSerialId(), HddsUtils.threadNamePrefix(omStore.getOmNodeId()));
+    sslIdentityService.initWithRecovery();
   }
 
   private void initializeRatisDirs(OzoneConfiguration conf) throws IOException {

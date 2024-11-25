@@ -55,6 +55,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
@@ -97,6 +98,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -1006,7 +1008,8 @@ public class TestContainerCommandsEC {
     when(sslIdentityStorage.getPrivateKey()).thenReturn(certClient.getPrivateKey());
     when(sslIdentityStorage.getLeafCertificate()).thenReturn(certClient.getCertificate());
     trustedCertStorage = Mockito.mock(TrustedCertStorage.class);
-    when(trustedCertStorage.getLeafCertificates()).thenReturn(certClient.getAllRootCaCerts());
+    when(trustedCertStorage.getLeafCertificates()).thenReturn(
+        new HashSet<>(OzoneSecurityUtil.convertToX509(certClient.getAllRootCaCertificates())));
     cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(NUM_DN)
         .setCertificateClient(certClient)
         .setSSLIdentityStorage(sslIdentityStorage)

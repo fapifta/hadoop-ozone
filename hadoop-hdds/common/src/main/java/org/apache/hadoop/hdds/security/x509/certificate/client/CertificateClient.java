@@ -69,12 +69,16 @@ public interface CertificateClient extends Closeable {
   boolean verifySignature(byte[] data, byte[] signature,
       X509Certificate cert) throws CertificateException;
 
+  String signCertificate(CertificateSignRequest csr) throws CertificateException;
+
+  List<String> getAllRootCaCertificates() throws IOException;
+
   /**
    * Returns a CertificateSignRequest Builder object, that can be used to configure the sign request
    * which we use to get  a signed certificate from our CA server implementation.
    *
    * @return CertificateSignRequest.Builder a {@link CertificateSignRequest}
-   *           based on which the certificate may be issued to this client.
+   * based on which the certificate may be issued to this client.
    */
   CertificateSignRequest.Builder configureCSRBuilder() throws SCMSecurityException;
 

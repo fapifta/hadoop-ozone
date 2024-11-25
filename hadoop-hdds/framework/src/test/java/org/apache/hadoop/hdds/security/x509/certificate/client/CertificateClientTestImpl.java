@@ -58,7 +58,9 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.DefaultApprover;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultProfile;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateUtil;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
@@ -87,7 +89,7 @@ public class CertificateClientTestImpl implements CertificateClient {
   private X509Certificate x509Certificate;
   private KeyPair rootKeyPair;
   private X509Certificate rootCert;
-  private Set<X509Certificate> rootCerts;
+  private List<String> rootCerts;
 
   private HDDSKeyGenerator keyGen;
   private DefaultApprover approver;
@@ -107,7 +109,7 @@ public class CertificateClientTestImpl implements CertificateClient {
     this.configurationSource = conf;
     certificateMap = new ConcurrentHashMap<>();
     securityConfig = new SecurityConfig(conf);
-    rootCerts = new HashSet<>();
+    rootCerts = new ArrayList<>();
     keyGen = new HDDSKeyGenerator(securityConfig);
     keyPair = keyGen.generateKey();
     rootKeyPair = keyGen.generateKey();
@@ -128,7 +130,7 @@ public class CertificateClientTestImpl implements CertificateClient {
         .makeCA()
         .build();
     certificateMap.put(rootCert.getSerialNumber().toString(), rootCert);
-    rootCerts.add(rootCert);
+    rootCerts.add(CertificateCodec.get().encode(rootCert));
 
     // Generate normal certificate, signed by RootCA certificate
     approver = new DefaultApprover(new DefaultProfile(), securityConfig);
@@ -158,7 +160,8 @@ public class CertificateClientTestImpl implements CertificateClient {
         x509Certificate);
 
     certificateStorage = Mockito.mock(TrustedCertStorage.class);
-    Mockito.when(certificateStorage.getKeyStore()).thenReturn(getKeyStoreForTrustedCertificates(getAllRootCaCerts()));
+    Mockito.when(certificateStorage.getKeyStore()).thenReturn(getKeyStoreForTrustedCertificates(
+        getAllRootCaCertificates()));
     if (conf.get(OZONE_METADATA_DIRS) == null) {
       sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
       Mockito.when(sslIdentityStorage.getComponentName()).thenReturn(getComponentName());
@@ -241,6 +244,11 @@ public class CertificateClientTestImpl implements CertificateClient {
   }
 
   @Override
+  public String signCertificate(CertificateSignRequest csr) throws CertificateException {
+    return null;
+  }
+
+  @Override
   public CertificateSignRequest.Builder configureCSRBuilder() throws SCMSecurityException {
     return new CertificateSignRequest.Builder();
   }
@@ -263,7 +271,8 @@ public class CertificateClientTestImpl implements CertificateClient {
     return rootCert;
   }
 
-  public Set<X509Certificate> getAllRootCaCerts() {
+  @Override
+  public List<String> getAllRootCaCertificates() {
     return rootCerts;
   }
 
@@ -283,7 +292,7 @@ public class CertificateClientTestImpl implements CertificateClient {
         .makeCA(BigInteger.ONE.add(BigInteger.ONE))
         .build();
     certificateMap.put(rootCert.getSerialNumber().toString(), rootCert);
-    rootCerts.add(rootCert);
+    rootCerts.add(CertificateCodec.get().encode(rootCert));
   }
 
   public void renewKey() throws Exception {
@@ -315,7 +324,8 @@ public class CertificateClientTestImpl implements CertificateClient {
     certificateMap.put(x509Certificate.getSerialNumber().toString(),
         x509Certificate);
     if (configurationSource.get(OZONE_METADATA_DIRS) == null) {
-      Mockito.when(certificateStorage.getKeyStore()).thenReturn(getKeyStoreForTrustedCertificates(getAllRootCaCerts()));
+      Mockito.when(certificateStorage.getKeyStore()).thenReturn(getKeyStoreForTrustedCertificates(
+          getAllRootCaCertificates()));
       Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
           getKeyStoreForSSLIdentity(getPrivateKey(), getCertPath()));
     } else {
@@ -326,7 +336,8 @@ public class CertificateClientTestImpl implements CertificateClient {
       sslIdentityStorage.storeKeyPair(keyPair);
       sslIdentityStorage.storeCertificate(x509Certificate);
     }
-    Mockito.when(certificateStorage.getKeyStore()).thenReturn(getKeyStoreForTrustedCertificates(getAllRootCaCerts()));
+    Mockito.when(certificateStorage.getKeyStore()).thenReturn(getKeyStoreForTrustedCertificates(
+        getAllRootCaCertificates()));
     // notify notification receivers
     notificationReceivers.forEach(r -> r.notifyCertificateRenewed(
         oldCert.getSerialNumber().toString(),
@@ -348,15 +359,16 @@ public class CertificateClientTestImpl implements CertificateClient {
     }
   }
 
-  public KeyStore getKeyStoreForTrustedCertificates(Set<X509Certificate> newRootCaCerts)
+  public KeyStore getKeyStoreForTrustedCertificates(List<String> newRootCaCerts)
       throws java.security.cert.CertificateException, KeyStoreException, IOException, NoSuchAlgorithmException {
     KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     keyStore.load(null, null);
     newRootCaCerts.forEach(certificate -> {
       try {
+        X509Certificate cert = (X509Certificate) CertificateUtil.decode(certificate).getCertificates().get(0);
         keyStore.setCertificateEntry(
-            certificate.getSerialNumber().toString(), certificate);
-      } catch (KeyStoreException e) {
+            cert.getSerialNumber().toString(), cert);
+      } catch (KeyStoreException | IOException e) {
         throw new RuntimeException(e);
       }
     });

@@ -42,6 +42,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.validator.routines.DomainValidator;
 import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.DefaultConfigManager;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -71,6 +72,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.Defaul
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.client.SSLIdentityService;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
@@ -877,7 +879,7 @@ final class TestSecureOzoneCluster {
   @Test
   void testSecureOmReInit() throws Exception {
     LogCapturer omLogs =
-        LogCapturer.captureLogs(OMCertificateClient.LOG);
+        LogCapturer.captureLogs(SSLIdentityService.LOG);
     omLogs.clearOutput();
 
     initSCM();
@@ -933,7 +935,7 @@ final class TestSecureOzoneCluster {
   @Test
   void testSecureOmInitSuccess() throws Exception {
     LogCapturer omLogs =
-        LogCapturer.captureLogs(OMCertificateClient.LOG);
+        LogCapturer.captureLogs(SSLIdentityService.LOG);
     omLogs.clearOutput();
     initSCM();
     try {
@@ -1063,7 +1065,7 @@ final class TestSecureOzoneCluster {
    */
   @Test
   void testCertificateRotationRecoverableFailure() throws Exception {
-    LogCapturer omLogs = LogCapturer.captureLogs(OMCertificateClient.LOG);
+    LogCapturer omLogs = LogCapturer.captureLogs(SSLIdentityService.LOG);
     OMStorage omStorage = new OMStorage(conf);
     omStorage.setClusterId(clusterId);
     omStorage.setOmId(omId);
@@ -1110,9 +1112,12 @@ final class TestSecureOzoneCluster {
     try (OMCertificateClient client =
              new OMCertificateClient(
                  securityConfig, scmClient, omStorage, omInfo, "", scmId, null, null, sslIdentityStorage,
-                 trustedCertStorage)
+                 trustedCertStorage);
+         SSLIdentityService sslIdentityService = new SSLIdentityService(sslIdentityStorage, client, scmClient,
+             trustedCertStorage, null, true, null, omStorage.getOmCertSerialId(),
+             HddsUtils.threadNamePrefix(omStorage.getOmNodeId()))
     ) {
-      client.init();
+      sslIdentityService.initWithRecovery();
 
 
       // check that new cert ID should not equal to current cert ID
@@ -1173,9 +1178,12 @@ final class TestSecureOzoneCluster {
     TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, OMCertificateClient.COMPONENT_NAME);
     try (OMCertificateClient client =
              new OMCertificateClient(securityConfig, null, omStorage, omInfo, "", scmId, null, null,
-                 sslIdentityStorage, trustedCertStorage)
+                 sslIdentityStorage, trustedCertStorage);
+         SSLIdentityService sslIdentityService = new SSLIdentityService(sslIdentityStorage, client, null,
+             trustedCertStorage, null, true, null, omStorage.getOmCertSerialId(),
+             HddsUtils.threadNamePrefix(omStorage.getOmNodeId()))
     ) {
-      client.init();
+      sslIdentityService.init();
 
       // save first cert
       final int certificateLifetime = 20; // seconds

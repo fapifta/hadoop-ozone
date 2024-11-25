@@ -77,7 +77,7 @@ public class TestSSLConnectionWithReload {
         caClient.getCertPath())).when(sslIdentityStorage).getKeyStore();
     trustedCertStorage = new TrustedCertStorage(secConf, "");
     trustedCertStorage = Mockito.spy(trustedCertStorage);
-    Mockito.doReturn(caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCerts()))
+    Mockito.doReturn(caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCertificates()))
         .when(trustedCertStorage).getKeyStore();
   }
 

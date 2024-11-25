@@ -19,9 +19,11 @@
 package org.apache.hadoop.ozone.security;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.security.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.client.SSLIdentityService;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
@@ -49,10 +51,9 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
-import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse;
-import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.FAILURE;
-import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.GETCERT;
-import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.SUCCESS;
+import static org.apache.hadoop.hdds.security.x509.certificate.client.SSLIdentityService.InitResponse.FAILURE;
+import static org.apache.hadoop.hdds.security.x509.certificate.client.SSLIdentityService.InitResponse.GETCERT;
+import static org.apache.hadoop.hdds.security.x509.certificate.client.SSLIdentityService.InitResponse.SUCCESS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -73,6 +74,7 @@ public class TestOmCertificateClientInit {
   private X509Certificate x509Certificate;
   private static final String OM_COMPONENT = OMCertificateClient.COMPONENT_NAME;
   private SSLIdentityStorage sslIdentityStorage;
+  private SSLIdentityService sslIdentityService;
 
   private static Stream<Arguments> parameters() {
     return Stream.of(
@@ -108,6 +110,9 @@ public class TestOmCertificateClientInit {
     omCertificateClient =
         new OMCertificateClient(
             securityConfig, null, storage, omInfo, "", null, null, null, sslIdentityStorage, trustedCertStorage);
+    sslIdentityService = new SSLIdentityService(sslIdentityStorage, omCertificateClient, null,
+        trustedCertStorage, null, true, null, storage.getOmCertSerialId(),
+        HddsUtils.threadNamePrefix(storage.getOmId()));
     omKeyCodec = new KeyStorage(securityConfig, OM_COMPONENT);
 
     Files.createDirectories(securityConfig.getKeyLocation(OM_COMPONENT));
@@ -122,7 +127,7 @@ public class TestOmCertificateClientInit {
   @ParameterizedTest
   @MethodSource("parameters")
   public void testInitOzoneManager(boolean pvtKeyPresent, boolean pubKeyPresent,
-      boolean certPresent, InitResponse expectedResult) throws Exception {
+      boolean certPresent, SSLIdentityService.InitResponse expectedResult) throws Exception {
     if (pvtKeyPresent) {
       omKeyCodec.storePrivateKey(keyPair.getPrivate());
     } else {
@@ -150,7 +155,7 @@ public class TestOmCertificateClientInit {
           securityConfig.getKeyLocation(OM_COMPONENT).toString(),
           securityConfig.getCertificateFileName()).toFile());
     }
-    InitResponse response = omCertificateClient.init();
+    SSLIdentityService.InitResponse response = sslIdentityService.init();
 
     if (pvtKeyPresent && pubKeyPresent && !certPresent) {
       assertEquals(GETCERT, response);

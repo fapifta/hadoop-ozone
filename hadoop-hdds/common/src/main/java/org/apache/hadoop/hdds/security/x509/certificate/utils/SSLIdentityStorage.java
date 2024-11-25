@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdds.security.x509.certificate.utils;
-
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.ssl.ReloadingX509KeyManager;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateNotification;
@@ -158,4 +157,6 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
       keyManager.notifyCertificateRenewed(oldCertId, newCertId);
     }
   }
+
+
 }

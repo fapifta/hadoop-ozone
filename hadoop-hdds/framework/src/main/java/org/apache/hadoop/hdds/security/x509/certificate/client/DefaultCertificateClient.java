@@ -803,8 +803,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   protected abstract SCMGetCertResponseProto sign(CertificateSignRequest request) throws IOException;
 
-  public String signCertificate(CertificateSignRequest csr)
-      throws CertificateException {
+  public String signCertificate(CertificateSignRequest csr) throws CertificateException {
     try {
       return sign(csr).getX509Certificate();
     } catch (IOException e) {
@@ -814,9 +813,13 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     }
   }
 
-  private void getAndStoreAllRootCAs(Path certificatePath)
-      throws IOException {
-    List<String> rootCAPems = scmSecurityClient.getAllRootCaCertificates();
+  @Override
+  public List<String> getAllRootCaCertificates() throws IOException {
+    return scmSecurityClient.getAllRootCaCertificates();
+  }
+
+  private void getAndStoreAllRootCAs(Path certificatePath) throws IOException {
+    List<String> rootCAPems = getAllRootCaCertificates();
     for (String rootCAPem : rootCAPems) {
       trustedCertStorage.storeCertificate(rootCAPem, CAType.ROOT, certificatePath);
     }

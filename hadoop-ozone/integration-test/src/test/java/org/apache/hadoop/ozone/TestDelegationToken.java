@@ -123,10 +123,11 @@ public final class TestDelegationToken {
 
   @TempDir
   private Path folder;
+  @TempDir
+  private File workDir;
 
   private MiniKdc miniKdc;
   private OzoneConfiguration conf;
-  private File workDir;
   private File scmKeytab;
   private File spnegoKeytab;
   private File omKeyTab;
@@ -169,8 +170,6 @@ public final class TestDelegationToken {
       conf.set(OZONE_METADATA_DIRS, metaDirPath.toString());
       conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
       conf.set(HADOOP_SECURITY_AUTHENTICATION, KERBEROS.name());
-
-      workDir = GenericTestUtils.getTestDir(getClass().getSimpleName());
 
       startMiniKdc();
       setSecureConfig();

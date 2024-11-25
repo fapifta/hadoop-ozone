@@ -76,7 +76,6 @@ public class TestContainerStateMachineFlushDelay {
   private ObjectStore objectStore;
   private String volumeName;
   private String bucketName;
-  private String path;
   private int chunkSize;
   private int flushSize;
   private int maxFlushSize;
@@ -95,10 +94,11 @@ public class TestContainerStateMachineFlushDelay {
     maxFlushSize = 2 * flushSize;
     blockSize = 2 * maxFlushSize;
     keyString = UUID.randomUUID().toString();
-    path = GenericTestUtils
+    String path = GenericTestUtils
         .getTempPath(TestContainerStateMachineFlushDelay.class.getSimpleName());
     File baseDir = new File(path);
     baseDir.mkdirs();
+
     conf.set(OZONE_METADATA_DIRS, path);
     conf.setBoolean(HDDS_BLOCK_TOKEN_ENABLED, true);
     //  conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);

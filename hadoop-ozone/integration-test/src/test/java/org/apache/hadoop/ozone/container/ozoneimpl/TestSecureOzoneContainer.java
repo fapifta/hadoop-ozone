@@ -41,7 +41,6 @@ import org.apache.hadoop.ozone.container.common.utils.StorageVolumeUtil;
 import org.apache.hadoop.ozone.container.common.volume.MutableVolumeSet;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ratis.util.ExitUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,6 +80,8 @@ class TestSecureOzoneContainer {
 
   @TempDir
   private Path tempFolder;
+  @TempDir
+  private Path ozoneMetaPath;
 
   private OzoneConfiguration conf;
   private SecretKeyClient secretKeyClient;
@@ -105,9 +106,7 @@ class TestSecureOzoneContainer {
   @BeforeEach
   void setup() throws Exception {
     conf = new OzoneConfiguration();
-    String ozoneMetaPath =
-        GenericTestUtils.getTempPath("ozoneMeta");
-    conf.set(OZONE_METADATA_DIRS, ozoneMetaPath);
+    conf.set(OZONE_METADATA_DIRS, ozoneMetaPath.toString());
     secretKeyClient = new SecretKeyTestClient();
     secretManager = new ContainerTokenSecretManager(
         TimeUnit.DAYS.toMillis(1), secretKeyClient);
@@ -129,8 +128,7 @@ class TestSecureOzoneContainer {
       Pipeline pipeline = MockPipeline.createSingleNodePipeline();
       conf.set(HDDS_DATANODE_DIR_KEY, tempFolder.toString());
       conf.setInt(OzoneConfigKeys.HDDS_CONTAINER_IPC_PORT, pipeline
-          .getFirstNode().getPort(DatanodeDetails.Port.Name.STANDALONE)
-          .getValue());
+          .getFirstNode().getStandalonePort().getValue());
       conf.setBoolean(OzoneConfigKeys.HDDS_CONTAINER_IPC_RANDOM_PORT, false);
 
       DatanodeDetails dn = MockDatanodeDetails.randomDatanodeDetails();

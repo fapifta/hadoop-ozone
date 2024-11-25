@@ -44,6 +44,7 @@ import org.apache.hadoop.ozone.recon.spi.ReconContainerMetadataManager;
 import org.apache.hadoop.ozone.recon.spi.ReconNamespaceSummaryManager;
 import org.apache.hadoop.ozone.recon.spi.StorageContainerServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.impl.ReconDBProvider;
+import org.apache.hadoop.ozone.recon.upgrade.ReconLayoutVersionManager;
 import org.apache.hadoop.ozone.util.OzoneNetUtils;
 import org.apache.hadoop.ozone.util.OzoneVersionInfo;
 import org.apache.hadoop.ozone.util.ShutdownHookManager;
@@ -109,6 +110,7 @@ public class ReconServer extends GenericCli {
             ReconServer.class, originalArgs, LOG, configuration);
     ConfigurationProvider.setConfiguration(configuration);
 
+
     injector = Guice.createInjector(new ReconControllerModule(),
         new ReconRestServletModule(configuration),
         new ReconSchemaGenerationModule());
@@ -140,8 +142,11 @@ public class ReconServer extends GenericCli {
       this.reconNamespaceSummaryManager =
           injector.getInstance(ReconNamespaceSummaryManager.class);
 
+      ReconContext reconContext = injector.getInstance(ReconContext.class);
+
       ReconSchemaManager reconSchemaManager =
           injector.getInstance(ReconSchemaManager.class);
+
       LOG.info("Creating Recon Schema.");
       reconSchemaManager.createReconSchema();
       LOG.debug("Recon schema creation done.");
@@ -156,6 +161,17 @@ public class ReconServer extends GenericCli {
 
       this.reconTaskStatusMetrics =
           injector.getInstance(ReconTaskStatusMetrics.class);
+
+      // Handle Recon Schema Versioning
+      ReconSchemaVersionTableManager versionTableManager =
+          injector.getInstance(ReconSchemaVersionTableManager.class);
+
+      ReconLayoutVersionManager layoutVersionManager =
+          new ReconLayoutVersionManager(versionTableManager, reconContext);
+      // Run the upgrade framework to finalize layout features if needed
+      ReconStorageContainerManagerFacade reconStorageContainerManagerFacade =
+          (ReconStorageContainerManagerFacade) this.getReconStorageContainerManager();
+      layoutVersionManager.finalizeLayoutFeatures(reconStorageContainerManagerFacade);
 
       LOG.info("Initializing support of Recon Features...");
       FeatureProvider.initFeatureSupport(configuration);

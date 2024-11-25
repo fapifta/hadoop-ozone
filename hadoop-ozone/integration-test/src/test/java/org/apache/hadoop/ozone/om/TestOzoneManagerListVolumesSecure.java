@@ -52,6 +52,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.client.SecretKeyTestClient;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.protocolPB.OmTransportFactory;
@@ -210,6 +211,7 @@ public class TestOzoneManagerListVolumesSecure {
     when(sslIdentityStorage.getLeafCertificate()).thenReturn(certificateClient.getCertificate());
     om.setCertClient(certificateClient);
     om.setSslIdentityStorage(sslIdentityStorage);
+    om.setSecretKeyClient(new SecretKeyTestClient());
     om.start();
 
     // Get OM client

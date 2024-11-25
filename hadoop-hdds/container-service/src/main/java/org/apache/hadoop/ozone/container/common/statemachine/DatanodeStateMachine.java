@@ -40,7 +40,6 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.security.symmetric.SecretKeyClient;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.upgrade.HDDSLayoutVersionManager;
@@ -137,14 +136,11 @@ public class DatanodeStateMachine implements Closeable {
    * Constructs a datanode state machine.
    * @param datanodeDetails - DatanodeDetails used to identify a datanode
    * @param conf - Configuration.
-   * @param certClient - Datanode Certificate client, required if security is
-   *                     enabled
    */
   @SuppressWarnings("checkstyle:ParameterNumber")
   public DatanodeStateMachine(HddsDatanodeService hddsDatanodeService,
       DatanodeDetails datanodeDetails,
       ConfigurationSource conf,
-      CertificateClient certClient,
       SSLIdentityStorage sslIdentityStorage,
       TrustedCertStorage trustedCertStorage,
       SecretKeyClient secretKeyClient,
@@ -279,7 +275,7 @@ public class DatanodeStateMachine implements Closeable {
   @VisibleForTesting
   public DatanodeStateMachine(DatanodeDetails datanodeDetails,
                               ConfigurationSource conf) throws IOException {
-    this(null, datanodeDetails, conf, null, null, null, null, null,
+    this(null, datanodeDetails, conf, null, null, null, null,
         new ReconfigurationHandler("DN", (OzoneConfiguration) conf, op -> {
         }));
   }

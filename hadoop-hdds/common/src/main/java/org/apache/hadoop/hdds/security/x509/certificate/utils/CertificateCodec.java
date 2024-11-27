@@ -25,6 +25,7 @@ import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
@@ -91,6 +92,10 @@ public final class CertificateCodec {
       throw new SCMSecurityException("PEM Encoding failed for certificate." +
           certificate.getSubjectDN().toString(), e, PEM_ENCODE_FAILED);
     }
+  }
+
+  public CertPath decode(String encodedCert) throws IOException {
+    return decode(new ByteArrayInputStream(encodedCert.getBytes(CertificateCodec.DEFAULT_CHARSET)));
   }
 
   public CertPath decode(InputStream inputStream) throws IOException {

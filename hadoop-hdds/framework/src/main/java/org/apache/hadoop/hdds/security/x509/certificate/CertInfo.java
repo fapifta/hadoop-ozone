@@ -20,7 +20,6 @@ package org.apache.hadoop.hdds.security.x509.certificate;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.CertInfoProto;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateUtil;
 import org.apache.hadoop.hdds.utils.db.Codec;
 import org.apache.hadoop.hdds.utils.db.DelegatedCodec;
 import org.apache.hadoop.hdds.utils.db.Proto2Codec;
@@ -144,7 +143,7 @@ public final class CertInfo implements Comparable<CertInfo>, Serializable {
 
     public Builder setX509Certificate(String x509Certificate) throws IOException {
       return setX509Certificate(
-          (X509Certificate) CertificateUtil.decode(x509Certificate).getCertificates().get(0));
+          (X509Certificate) CertificateCodec.get().decode(x509Certificate).getCertificates().get(0));
     }
 
     public Builder setTimestamp(long timestamp) {

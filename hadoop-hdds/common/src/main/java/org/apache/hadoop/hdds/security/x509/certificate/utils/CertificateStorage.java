@@ -175,7 +175,7 @@ public abstract class CertificateStorage {
   }
 
   public String storeCertificate(String pemEncodedCert, CAType caType, Path path) throws IOException {
-    CertPath certificatePath = CertificateUtil.decode(pemEncodedCert);
+    CertPath certificatePath = CertificateCodec.get().decode(pemEncodedCert);
     X509Certificate cert = (X509Certificate) certificatePath.getCertificates().get(0);
     String certId = cert.getSerialNumber().toString();
     String certName = String.format(CERT_FILE_NAME_FORMAT, caType.getFileNamePrefix() + certId);

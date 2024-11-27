@@ -33,7 +33,7 @@ import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateUtil;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.server.JsonUtils;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Help.Visibility;
@@ -103,7 +103,7 @@ public class ListSubcommand extends ScmCertSubcommand {
       for (String certPemStr : certPemList) {
         try {
           X509Certificate cert =
-              (X509Certificate) CertificateUtil.decode(certPemStr).getCertificates().get(0);
+              (X509Certificate) CertificateCodec.get().decode(certPemStr).getCertificates().get(0);
           certList.add(new Certificate(cert));
         } catch (IOException ex) {
           err.println("Failed to parse certificate.");

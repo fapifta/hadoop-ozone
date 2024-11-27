@@ -24,7 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateUtil;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 
@@ -52,7 +52,7 @@ class InfoSubcommand extends ScmCertSubcommand {
     // Print container report info.
     System.out.printf("Certificate id: %s%n", serialId);
     try {
-      X509Certificate cert = (X509Certificate) CertificateUtil.decode(certPemStr).getCertificates().get(0);
+      X509Certificate cert = (X509Certificate) CertificateCodec.get().decode(certPemStr).getCertificates().get(0);
       System.out.println(cert);
     } catch (IOException ex) {
       System.err.println("Failed to get certificate id " + serialId);

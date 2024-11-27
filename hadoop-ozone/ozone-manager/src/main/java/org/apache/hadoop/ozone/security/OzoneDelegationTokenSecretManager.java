@@ -45,8 +45,8 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DefaultCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateStorage;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateUtil;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.io.Text;
@@ -551,7 +551,7 @@ public class OzoneDelegationTokenSecretManager
       String pemEncodedCert = scmClient.getCertificate(certId);
       storage.storeCertificate(pemEncodedCert, CAType.NONE, certificateClient.getSecurityConfig()
           .getCertificateLocation(certificateClient.getComponentName()));
-      CertPath certPath = CertificateUtil.decode(pemEncodedCert);
+      CertPath certPath = CertificateCodec.get().decode(pemEncodedCert);
       return (X509Certificate) certPath.getCertificates().get(0);
     } catch (Exception e) {
       LOG.error("Error while getting Certificate with " +

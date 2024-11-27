@@ -48,7 +48,7 @@ public class TestReloadingX509TrustManager {
     caClient = new CertificateClientTestImpl(conf);
     trustedCertStorage = Mockito.mock(TrustedCertStorage.class);
     Mockito.when(trustedCertStorage.getKeyStore()).thenReturn(
-        caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCerts()));
+        caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCertificates()));
   }
 
   @Test
@@ -61,7 +61,7 @@ public class TestReloadingX509TrustManager {
     caClient.renewKey();
 
     Mockito.when(trustedCertStorage.getKeyStore()).thenReturn(
-        caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCerts()));
+        caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCertificates()));
     tm.notifyCertificateRenewed("", caClient.getCertSerialId());
     X509Certificate cert2 = caClient.getRootCACertificate();
     assertNotEquals(cert1, cert2);

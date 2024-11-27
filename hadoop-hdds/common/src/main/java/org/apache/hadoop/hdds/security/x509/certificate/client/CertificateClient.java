@@ -39,6 +39,18 @@ import java.util.function.Function;
 public interface CertificateClient extends Closeable {
 
   /**
+   * Requests a signing for the given CSR from the SCM.
+   *
+   * @return the encoded certificate path signed, with the leaf certificate being the currently signed one.
+   */
+  String signCertificate(CertificateSignRequest csr) throws CertificateException;
+
+  /**
+   * Requests all root ca certificates from SCM.
+   */
+  List<String> getAllRootCaCertificates() throws IOException;
+
+  /**
    * Return component name of this certificate client.
    *
    * @return component name

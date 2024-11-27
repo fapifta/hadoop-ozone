@@ -152,7 +152,7 @@ public class TestOzoneContainerWithTLS {
     Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
         caClient.getKeyStoreForSSLIdentity(caClient.getPrivateKey(), caClient.getCertPath()));
     Mockito.when(trustedCertStorage.getKeyStore()).thenReturn(
-        caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCerts()));
+        caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCertificates()));
     keyClient = new SecretKeyTestClient();
     secretManager = new ContainerTokenSecretManager(1000, keyClient);
 
@@ -230,7 +230,7 @@ public class TestOzoneContainerWithTLS {
       Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
           caClient.getKeyStoreForSSLIdentity(caClient.getPrivateKey(), caClient.getCertPath()));
       Mockito.when(trustedCertStorage.getKeyStore()).thenReturn(
-          caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCerts()));
+          caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCertificates()));
       sslIdentityStorage.notifyCertificateRenewed("", caClient.getCertSerialId());
       trustedCertStorage.notifyCertificateRenewed("", caClient.getCertSerialId());
       containers.add(createAndCloseContainer(client, containerTokenEnabled));
@@ -299,7 +299,7 @@ public class TestOzoneContainerWithTLS {
       Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
           caClient.getKeyStoreForSSLIdentity(caClient.getPrivateKey(), caClient.getCertPath()));
       Mockito.when(trustedCertStorage.getKeyStore()).thenReturn(
-          caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCerts()));
+          caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCertificates()));
       sslIdentityStorage.notifyCertificateRenewed("", caClient.getCertSerialId());
       trustedCertStorage.notifyCertificateRenewed("", caClient.getCertSerialId());
 

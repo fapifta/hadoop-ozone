@@ -812,10 +812,16 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   private void getAndStoreAllRootCAs(Path certificatePath)
       throws IOException {
-    List<String> rootCAPems = scmSecurityClient.getAllRootCaCertificates();
+    List<String> rootCAPems = getAllRootCaCertificates();
     for (String rootCAPem : rootCAPems) {
       trustedCertStorage.storeCertificate(rootCAPem, CAType.ROOT, certificatePath);
     }
+  }
+
+  @Override
+  public List<String> getAllRootCaCertificates() throws IOException {
+    List<String> rootCAPems = scmSecurityClient.getAllRootCaCertificates();
+    return rootCAPems;
   }
 
   public SCMSecurityProtocolClientSideTranslatorPB getScmSecureClient() {

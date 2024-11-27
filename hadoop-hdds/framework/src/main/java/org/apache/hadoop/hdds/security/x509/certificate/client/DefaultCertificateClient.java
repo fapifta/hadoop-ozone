@@ -135,15 +135,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     updateCertSerialId(certSerialId);
   }
 
-  /**
-   * Load all certificates from configured location.
-   * */
-  private synchronized void loadAllCertificates() {
-    Path path = securityConfig.getCertificateLocation(component);
-    if (!path.toFile().exists() || certSerialId == null) {
-      return;
-    }
-    sslIdentityStorage.setCertId(certSerialId);
+  private void startServices() {
     if (shouldStartCertificateRenewerService()) {
       if (securityConfig.isAutoCARotationEnabled()) {
         startRootCaRotationPoller();
@@ -797,7 +789,11 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     certSerialId = newCertSerialId;
     getLogger().info("Certificate serial ID set to {}", certSerialId);
     sslIdentityStorage.setCertId(certSerialId);
-    loadAllCertificates();
+    Path path = securityConfig.getCertificateLocation(component);
+    if (!path.toFile().exists()) {
+      return certSerialId;
+    }
+    startServices();
     return certSerialId;
   }
 
@@ -877,7 +873,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         }),
         // The Java mills resolution is 1ms, add 1ms to avoid task scheduled
         // ahead of time.
-        timeBeforeGracePeriod + 1, interval, TimeUnit.MILLISECONDS);
+        // Use 5 seconds of grace duration to let certificateClient initialization finish
+        timeBeforeGracePeriod + 5000, interval, TimeUnit.MILLISECONDS);
     getLogger().info("CertificateRenewerService for {} is started with " +
             "first delay {} ms and interval {} ms.", component,
         timeBeforeGracePeriod, interval);
@@ -907,11 +904,15 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       //  4. refresh in memory certificate ID and reload all new certificates
       synchronized (DefaultCertificateClient.class) {
         X509Certificate currentCert = getCertificate();
+        if (currentCert == null) {
+          getLogger().info("Current certificate is not initialized yet. Returning from CertificateRenewalService.");
+          return;
+        }
         Duration timeLeft = timeBeforeExpiryGracePeriod(currentCert);
 
         if (!forceRenewal && !timeLeft.isZero()) {
           getLogger().info("Current certificate {} hasn't entered the " +
-              "renew grace period. Remaining period is {}. ",
+                  "renew grace period. Remaining period is {}. ",
               currentCert.getSerialNumber().toString(), timeLeft);
           return;
         }

@@ -253,10 +253,6 @@ public class CertificateClientTestImpl implements CertificateClient {
   }
 
   @Override
-  public void initWithRecovery() throws IOException {
-  }
-
-  @Override
   public String getComponentName() {
     return this.getClass().getSimpleName();
   }

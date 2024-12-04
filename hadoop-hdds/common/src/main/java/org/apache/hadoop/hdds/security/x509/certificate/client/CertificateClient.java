@@ -108,25 +108,4 @@ public interface CertificateClient extends Closeable {
    */
   void registerRootCARotationListener(
       Function<List<X509Certificate>, CompletableFuture<Void>> listener);
-
-  /**
-   * Initialize certificate client.
-   *
-   * */
-  void initWithRecovery() throws IOException;
-
-  /**
-   * Represents initialization response of client.
-   * 1. SUCCESS: Means client is initialized successfully and all required
-   *              files are in expected state.
-   * 2. FAILURE: Initialization failed due to some unrecoverable error.
-   * 3. GETCERT: Bootstrap of keypair is successful but certificate is not
-   *             found. Client should request SCM signed certificate.
-   *
-   */
-  enum InitResponse {
-    SUCCESS,
-    FAILURE,
-    GETCERT
-  }
 }

@@ -21,7 +21,6 @@ package org.apache.hadoop.hdds.security.x509.certificate.client;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -30,9 +29,6 @@ import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.cert.CertPath;
@@ -52,7 +48,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto;
@@ -69,14 +64,10 @@ import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.KeyStorage;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang3.RandomStringUtils;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BACKUP_KEY_CERT_DIR_NAME_SUFFIX;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX;
 import static org.apache.hadoop.hdds.security.exception.OzoneSecurityException.ResultCodes.OM_PUBLIC_PRIVATE_KEY_FILE_NOT_EXIST;
-import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.FAILURE;
-import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.GETCERT;
-import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.SUCCESS;
 import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.BOOTSTRAP_ERROR;
 import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CRYPTO_SIGNATURE_VERIFICATION_ERROR;
 import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CRYPTO_SIGN_ERROR;
@@ -133,6 +124,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     notificationReceivers.add(sslIdentityStorage);
     notificationReceivers.add(trustedCertStorage);
     updateCertSerialId(certSerialId);
+    startServices();
   }
 
   private void startServices() {
@@ -140,16 +132,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       if (securityConfig.isAutoCARotationEnabled()) {
         startRootCaRotationPoller();
       }
-      List<CertPath> certPaths = sslIdentityStorage.getCertPaths();
-      if (!certPaths.isEmpty() && executorService == null) {
-        startCertificateRenewerService();
-      } else {
-        if (executorService != null) {
-          getLogger().debug("CertificateRenewerService is already started.");
-        } else {
-          getLogger().warn("Component certificate was not loaded.");
-        }
-      }
+      startCertificateRenewerService();
     } else {
       getLogger().info("CertificateRenewerService and root ca rotation " +
           "polling is disabled for {}", component);
@@ -249,31 +232,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   /**
-   * Verifies a digital Signature, given the signature and the certificate of
-   * the signer.
-   *
-   * @param data - Data in byte array.
-   * @param signature - Byte Array containing the signature.
-   * @param pubKey - Certificate of the Signer.
-   * @return true if verified, false if not.
-   */
-  private boolean verifySignature(byte[] data, byte[] signature,
-      PublicKey pubKey) throws CertificateException {
-    try {
-      Signature sign = Signature.getInstance(securityConfig.getSignatureAlgo(),
-          securityConfig.getProvider());
-      sign.initVerify(pubKey);
-      sign.update(data);
-      return sign.verify(signature);
-    } catch (NoSuchAlgorithmException | NoSuchProviderException
-        | InvalidKeyException | SignatureException e) {
-      getLogger().error("Error while signing the stream", e);
-      throw new CertificateException("Error while signing the stream", e,
-          CRYPTO_SIGNATURE_VERIFICATION_ERROR);
-    }
-  }
-
-  /**
    * Returns a CSR builder that can be used to creates a Certificate signing
    * request.
    *
@@ -288,219 +246,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         .setDigitalSignature(true);
   }
 
-  /**
-   *
-   * Initializes client by performing following actions.
-   * 1. Create key dir if not created already.
-   * 2. Generates and stores a keypair.
-   * 3. Try to recover public key if private key and certificate is present
-   *    but public key is missing.
-   * 4. Try to refetch certificate if public key and private key are present
-   *    but certificate is missing.
-   * 5. Try to recover public key from private key(RSA only) if private key
-   *    is present but public key and certificate are missing, and refetch
-   *    certificate.
-   *
-   * Truth table:
-   * <pre>
-   * {@code
-   *  +--------------+---------------+--------------+---------------------+
-   *  | Private Key  | Public Keys   | Certificate  |   Result            |
-   *  +--------------+---------------+--------------+---------------------+
-   *  | False  (0)   | False   (0)   | False  (0)   |   GETCERT->SUCCESS  |
-   *  | False  (0)   | False   (0)   | True   (1)   |   FAILURE           |
-   *  | False  (0)   | True    (1)   | False  (0)   |   FAILURE           |
-   *  | False  (0)   | True    (1)   | True   (1)   |   FAILURE           |
-   *  | True   (1)   | False   (0)   | False  (0)   |   GETCERT->SUCCESS  |
-   *  | True   (1)   | False   (0)   | True   (1)   |   SUCCESS           |
-   *  | True   (1)   | True    (1)   | False  (0)   |   GETCERT->SUCCESS  |
-   *  | True   (1)   | True    (1)   | True   (1)   |   SUCCESS           |
-   *  +--------------+-----------------+--------------+----------------+
-   * }
-   * </pre>
-   * Success in following cases:
-   * 1. If keypair as well certificate is available.
-   * 2. If private key and certificate is available and public key is
-   *    recovered successfully.
-   * 3. If private key and public key are present while certificate is
-   *    missing, certificate is refetched successfully.
-   * 4. If private key is present while public key and certificate are missing,
-   *    public key is recovered and certificate is refetched successfully.
-   *
-   * Throw exception in following cases:
-   * 1. If private key is missing.
-   * 2. If private key or certificate is present, public key is missing,
-   *    and cannot recover public key from private key or certificate
-   * 3. If refetch certificate fails.
-   */
-  @Override
-  public synchronized void initWithRecovery() throws IOException {
-    recoverStateIfNeeded(init());
-  }
-
-  @VisibleForTesting
-  public synchronized InitResponse init() throws IOException {
-    X509Certificate certificate = getCertificate();
-    PrivateKey pvtKey = sslIdentityStorage.getPrivateKey();
-    PublicKey pubKey = sslIdentityStorage.getPublicKey();
-    //The logic here: if we don't find a certificate, just throw away keys and ask for a new certificate
-    //If there is a certificate, try finding keys/restoring public key. If keys are there or can be restored, then
-    // success, otherwise failure.
-    if (certificate == null || isSingularLeafCert(getCertPath())) {
-      deleteKeys();
-      bootstrapClientKeys();
-      return GETCERT;
-    }
-    if (pvtKey == null) {
-      return FAILURE;
-    }
-    //Cert and private key are present
-    if (pubKey != null) {
-      return SUCCESS;
-    }
-    if (recoverPublicKey()) {
-      return SUCCESS;
-    }
-    return FAILURE;
-  }
-
-  private void deleteKeys() throws IOException {
-    File currentKeyDir = new File(getSecurityConfig().getKeyLocation(component).toString());
-    FileUtils.deleteDirectory(currentKeyDir);
-  }
-
-  private boolean isSingularLeafCert(CertPath seeIfCertPath) {
-    boolean isSingularLeafCert = seeIfCertPath != null && seeIfCertPath.getCertificates().size() == 1 &&
-        !isSelfSignedCertificate((X509Certificate) seeIfCertPath.getCertificates().get(0));
-    if (isSingularLeafCert) {
-      getLogger().info("Found singular cert path with id: {}, proceeding to reinit certificates.",
-          ((X509Certificate) seeIfCertPath.getCertificates().get(0)).getSerialNumber());
-    }
-    return isSingularLeafCert;
-  }
-
-  public static boolean isSelfSignedCertificate(X509Certificate cert) {
-    return cert.getIssuerX500Principal().equals(cert.getSubjectX500Principal());
-  }
-
   private X509Certificate firstCertificateFrom(CertPath certificatePath) {
     return (X509Certificate) certificatePath.getCertificates().get(0);
-  }
-
-  /**
-   * Recover the state if needed.
-   * */
-  protected void recoverStateIfNeeded(InitResponse state) throws IOException {
-    String upperCaseComponent = component.toUpperCase();
-    getLogger().info("Init response: {}", state);
-    switch (state) {
-    case SUCCESS:
-      if (validateKeyPairAndCertificate()) {
-        getLogger().info("Initialization successful, case:{}.", state);
-      } else {
-        throw new RuntimeException(upperCaseComponent + " security initialization failed.");
-      }
-      break;
-    case GETCERT:
-      Path certLocation = securityConfig.getCertificateLocation(getComponentName());
-      String signedCertPath = signCertificate(configureCSRBuilder().build());
-      // Return the default certificate ID
-      String certId = sslIdentityStorage.storeCertificate(signedCertPath, CAType.NONE, certLocation);
-      updateCertSerialId(certId);
-      getAndStoreAllRootCAs(certLocation);
-      if (certIdSaveCallback != null) {
-        certIdSaveCallback.accept(certId);
-      } else {
-        throw new RuntimeException(upperCaseComponent + " doesn't have " +
-            "the certIdSaveCallback set. The new " +
-            "certificate ID " + certId + " cannot be persisted to " +
-            "the VERSION file");
-      }
-      getLogger().info("Successfully stored {} signed certificate, case:{}.",
-          upperCaseComponent, state);
-      validateKeyPairAndCertificate();
-      break;
-    case FAILURE:
-    default:
-      getLogger().error("{} security initialization failed. " +
-          "Init response: {}", upperCaseComponent, state);
-      throw new RuntimeException(upperCaseComponent +
-          " security initialization failed.");
-    }
-  }
-
-  /**
-   * Validate keypair and certificate.
-   * */
-  protected boolean validateKeyPairAndCertificate() throws
-      CertificateException {
-    if (validateKeyPair(sslIdentityStorage.getPublicKey())) {
-      getLogger().info("Keypair validated.");
-      // TODO: Certificates cryptographic validity can be checked as well.
-      if (validateKeyPair(getCertificate().getPublicKey())) {
-        getLogger().info("Keypair validated with certificate.");
-      } else {
-        getLogger().error("Stored certificate is generated with different " +
-            "private key.");
-        return false;
-      }
-    } else {
-      getLogger().error("Keypair validation failed.");
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * Tries to recover public key from certificate. Also validates recovered
-   * public key.
-   * */
-  protected boolean recoverPublicKey() throws CertificateException {
-    PublicKey pubKey = getCertificate().getPublicKey();
-    try {
-
-      if (validateKeyPair(pubKey)) {
-        keyStorage.storePublicKey(pubKey);
-      } else {
-        getLogger().error("Can't recover public key " +
-            "corresponding to private key.");
-        return false;
-      }
-    } catch (IOException e) {
-      throw new CertificateException("Error while trying to recover " +
-          "public key.", e, BOOTSTRAP_ERROR);
-    }
-    return true;
-  }
-
-  /**
-   * Validates public and private key of certificate client.
-   *
-   * @param pubKey
-   * */
-  protected boolean validateKeyPair(PublicKey pubKey)
-      throws CertificateException {
-    byte[] challenge =
-        RandomStringUtils.random(1000, 0, 0, false, false, null,
-            new SecureRandom()).getBytes(StandardCharsets.UTF_8);
-    return verifySignature(challenge, signData(challenge), pubKey);
-  }
-
-  /**
-   * Bootstrap the client by creating keypair and storing it in configured
-   * location.
-   * */
-  protected void bootstrapClientKeys() throws CertificateException {
-    Path keyPath = securityConfig.getKeyLocation(component);
-    if (Files.notExists(keyPath)) {
-      try {
-        Files.createDirectories(keyPath);
-      } catch (IOException e) {
-        throw new CertificateException("Error while creating directories " +
-            "for certificate storage.", BOOTSTRAP_ERROR);
-      }
-    }
-    createKeyPair(keyStorage);
   }
 
   protected KeyPair createKeyPair(KeyStorage storage) throws CertificateException {
@@ -789,7 +536,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     certSerialId = newCertSerialId;
     getLogger().info("Certificate serial ID set to {}", certSerialId);
     sslIdentityStorage.setCertId(certSerialId);
-    startServices();
     return certSerialId;
   }
 
@@ -848,20 +594,12 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     }
     CertificateRenewerService renewerService =
         new CertificateRenewerService(
-            true, rootCaRotationPoller::setCertificateRenewalError);
+            true, rootCaRotationPoller::setCertificateRenewalError, false);
     return CompletableFuture.runAsync(renewerService, executorService);
   }
 
   public synchronized void startCertificateRenewerService() {
-    Preconditions.checkNotNull(getCertificate(),
-        "Component certificate should not be empty");
     // Schedule task to refresh certificate before it expires
-    Duration gracePeriod = securityConfig.getRenewalGracePeriod();
-    long timeBeforeGracePeriod =
-        timeBeforeExpiryGracePeriod(getCertificate()).toMillis();
-    // At least three chances to renew the certificate before it expires
-    long interval =
-        Math.min(gracePeriod.toMillis() / 3, TimeUnit.DAYS.toMillis(1));
     if (executorService == null) {
       executorService = Executors.newScheduledThreadPool(1,
           new ThreadFactoryBuilder()
@@ -869,16 +607,9 @@ public abstract class DefaultCertificateClient implements CertificateClient {
                   + "-CertificateRenewerService")
               .setDaemon(true).build());
     }
-    this.executorService.scheduleAtFixedRate(
-        new CertificateRenewerService(false, () -> {
-        }),
-        // The Java mills resolution is 1ms, add 1ms to avoid task scheduled
-        // ahead of time.
-        // Use 5 seconds of grace duration to let certificateClient initialization finish
-        timeBeforeGracePeriod + 5000, interval, TimeUnit.MILLISECONDS);
-    getLogger().info("CertificateRenewerService for {} is started with " +
-            "first delay {} ms and interval {} ms.", component,
-        timeBeforeGracePeriod, interval);
+    executorService.schedule(new CertificateRenewerService(false, () -> {
+    }, true), 1000, TimeUnit.MILLISECONDS);
+    getLogger().info("Scheduling CertificateRenewerService to run in 1 s");
   }
 
   /**
@@ -887,11 +618,14 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   public class CertificateRenewerService implements Runnable {
     private boolean forceRenewal;
     private Runnable rotationErrorCallback;
+    private boolean isReschedule;
+    private long waitForInit = 1;
 
     public CertificateRenewerService(boolean forceRenewal,
-        Runnable rotationErrorCallback) {
+        Runnable rotationErrorCallback, boolean isReschedule) {
       this.forceRenewal = forceRenewal;
       this.rotationErrorCallback = rotationErrorCallback;
+      this.isReschedule = isReschedule;
     }
 
     @Override
@@ -907,6 +641,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         X509Certificate currentCert = getCertificate();
         if (currentCert == null) {
           getLogger().info("Current certificate is not initialized yet. Returning from CertificateRenewalService.");
+          reScheduleIfNeeded();
           return;
         }
         Duration timeLeft = timeBeforeExpiryGracePeriod(currentCert);
@@ -915,6 +650,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
           getLogger().info("Current certificate {} hasn't entered the " +
                   "renew grace period. Remaining period is {}. ",
               currentCert.getSerialNumber().toString(), timeLeft);
+          reScheduleIfNeeded();
           return;
         }
         String newCertId;
@@ -937,6 +673,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
           }
           getLogger().error("Failed to renew and store key and cert." +
               " Keep using existing certificates.", e);
+          reScheduleIfNeeded();
           return;
         }
 
@@ -949,7 +686,36 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         reloadKeyAndCertificate(newCertId);
         // cleanup backup directory
         cleanBackupDir();
+        reScheduleIfNeeded();
       }
+    }
+
+    private void reScheduleIfNeeded() {
+      if (!isReschedule) {
+        return;
+      }
+      X509Certificate certificate = getCertificate();
+      long delay = getScheduleDelay(certificate);
+      synchronized (DefaultCertificateClient.this) {
+        executorService.schedule(new CertificateRenewerService(forceRenewal, rotationErrorCallback, isReschedule),
+            delay, TimeUnit.MILLISECONDS);
+      }
+      getLogger().info("CertificateRenewerService is rescheduled in {} ms", delay);
+    }
+
+    private long getScheduleDelay(X509Certificate certificate) {
+      if (certificate == null) {
+        return TimeUnit.SECONDS.toMillis(waitForInit);
+      }
+      long delay = timeBeforeExpiryGracePeriod(certificate).toMillis();
+      // if we are already in grace duration, then reschedule this task to run again in the grace duration
+      if (delay <= 0) {
+        Duration gracePeriod = securityConfig.getRenewalGracePeriod();
+        return Math.min(gracePeriod.toMillis() / 4, TimeUnit.DAYS.toMillis(1));
+      }
+      // The Java mills resolution is 1ms, add 1ms to avoid task scheduled
+      // ahead of time.
+      return delay + 1;
     }
   }
 

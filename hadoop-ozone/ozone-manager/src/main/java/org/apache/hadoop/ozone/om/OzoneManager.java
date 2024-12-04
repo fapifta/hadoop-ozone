@@ -480,6 +480,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   private boolean fsSnapshotEnabled;
 
+  private String omHostName;
+
   /**
    * OM Startup mode.
    */
@@ -740,6 +742,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
 
     bucketUtilizationMetrics = BucketUtilizationMetrics.create(metadataManager);
+    omHostName = HddsUtils.getHostName(conf);
   }
 
   public boolean isStopped() {
@@ -3162,6 +3165,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public String getRocksDbDirectory() {
     return String.valueOf(OMStorage.getOmDbDir(configuration));
+  }
+
+  @Override
+  public String getHostname() {
+    return omHostName;
   }
 
   @VisibleForTesting

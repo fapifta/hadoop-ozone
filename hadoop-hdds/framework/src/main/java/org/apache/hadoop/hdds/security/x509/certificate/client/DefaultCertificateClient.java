@@ -848,20 +848,12 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     }
     CertificateRenewerService renewerService =
         new CertificateRenewerService(
-            true, rootCaRotationPoller::setCertificateRenewalError);
+            true, rootCaRotationPoller::setCertificateRenewalError, false);
     return CompletableFuture.runAsync(renewerService, executorService);
   }
 
   public synchronized void startCertificateRenewerService() {
-    Preconditions.checkNotNull(getCertificate(),
-        "Component certificate should not be empty");
     // Schedule task to refresh certificate before it expires
-    Duration gracePeriod = securityConfig.getRenewalGracePeriod();
-    long timeBeforeGracePeriod =
-        timeBeforeExpiryGracePeriod(getCertificate()).toMillis();
-    // At least three chances to renew the certificate before it expires
-    long interval =
-        Math.min(gracePeriod.toMillis() / 3, TimeUnit.DAYS.toMillis(1));
     if (executorService == null) {
       executorService = Executors.newScheduledThreadPool(1,
           new ThreadFactoryBuilder()
@@ -869,16 +861,9 @@ public abstract class DefaultCertificateClient implements CertificateClient {
                   + "-CertificateRenewerService")
               .setDaemon(true).build());
     }
-    this.executorService.scheduleAtFixedRate(
-        new CertificateRenewerService(false, () -> {
-        }),
-        // The Java mills resolution is 1ms, add 1ms to avoid task scheduled
-        // ahead of time.
-        // Use 5 seconds of grace duration to let certificateClient initialization finish
-        timeBeforeGracePeriod + 5000, interval, TimeUnit.MILLISECONDS);
-    getLogger().info("CertificateRenewerService for {} is started with " +
-            "first delay {} ms and interval {} ms.", component,
-        timeBeforeGracePeriod, interval);
+    executorService.schedule(new CertificateRenewerService(false, () -> {
+    }, true), 1000, TimeUnit.MILLISECONDS);
+    getLogger().info("Scheduling CertificateRenewerService to run in 1 s");
   }
 
   /**
@@ -887,11 +872,14 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   public class CertificateRenewerService implements Runnable {
     private boolean forceRenewal;
     private Runnable rotationErrorCallback;
+    private boolean isReschedule;
+    private long waitForInit = 1;
 
     public CertificateRenewerService(boolean forceRenewal,
-        Runnable rotationErrorCallback) {
+        Runnable rotationErrorCallback, boolean isReschedule) {
       this.forceRenewal = forceRenewal;
       this.rotationErrorCallback = rotationErrorCallback;
+      this.isReschedule = isReschedule;
     }
 
     @Override
@@ -907,6 +895,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         X509Certificate currentCert = getCertificate();
         if (currentCert == null) {
           getLogger().info("Current certificate is not initialized yet. Returning from CertificateRenewalService.");
+          reScheduleIfNeeded();
           return;
         }
         Duration timeLeft = timeBeforeExpiryGracePeriod(currentCert);
@@ -915,6 +904,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
           getLogger().info("Current certificate {} hasn't entered the " +
                   "renew grace period. Remaining period is {}. ",
               currentCert.getSerialNumber().toString(), timeLeft);
+          reScheduleIfNeeded();
           return;
         }
         String newCertId;
@@ -937,6 +927,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
           }
           getLogger().error("Failed to renew and store key and cert." +
               " Keep using existing certificates.", e);
+          reScheduleIfNeeded();
           return;
         }
 
@@ -950,6 +941,34 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         // cleanup backup directory
         cleanBackupDir();
       }
+    }
+
+    private void reScheduleIfNeeded() {
+      if (!isReschedule) {
+        return;
+      }
+      X509Certificate certificate = getCertificate();
+      long delay = getScheduleDelay(certificate);
+      synchronized (DefaultCertificateClient.class) {
+        executorService.schedule(new CertificateRenewerService(forceRenewal, rotationErrorCallback, isReschedule),
+            delay, TimeUnit.MILLISECONDS);
+      }
+      getLogger().info("CertificateRenewerService is rescheduled in {} ms", delay);
+    }
+
+    private long getScheduleDelay(X509Certificate certificate) {
+      if (certificate == null) {
+        return TimeUnit.SECONDS.toMillis(waitForInit);
+      }
+      long delay = timeBeforeExpiryGracePeriod(certificate).toMillis();
+      // if we are already in grace duration, then reschedule this task to run again in the grace duration
+      if (delay <= 0) {
+        Duration gracePeriod = securityConfig.getRenewalGracePeriod();
+        return Math.min(gracePeriod.toMillis() / 4, TimeUnit.DAYS.toMillis(1));
+      }
+      // The Java mills resolution is 1ms, add 1ms to avoid task scheduled
+      // ahead of time.
+      return delay + 1;
     }
   }
 

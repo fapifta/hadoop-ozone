@@ -114,7 +114,7 @@ public class TestOzoneDelegationTokenSecretManager {
     conf = createNewTestPath();
     securityConfig = new SecurityConfig(conf);
     certificateClient = setupCertificateClient();
-    certificateClient.init();
+    sslIdentityStorage.init();
     secretKeyClient = new SecretKeyTestClient();
     expiryTime = Time.monotonicNow() + 60 * 60 * 24;
     serviceRpcAdd = new Text("localhost");

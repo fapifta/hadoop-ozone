@@ -877,7 +877,7 @@ final class TestSecureOzoneCluster {
   @Test
   void testSecureOmReInit() throws Exception {
     LogCapturer omLogs =
-        LogCapturer.captureLogs(OMCertificateClient.LOG);
+        LogCapturer.captureLogs(SSLIdentityStorage.LOG);
     omLogs.clearOutput();
 
     initSCM();
@@ -933,7 +933,7 @@ final class TestSecureOzoneCluster {
   @Test
   void testSecureOmInitSuccess() throws Exception {
     LogCapturer omLogs =
-        LogCapturer.captureLogs(OMCertificateClient.LOG);
+        LogCapturer.captureLogs(SSLIdentityStorage.LOG);
     omLogs.clearOutput();
     initSCM();
     try {
@@ -1024,7 +1024,7 @@ final class TestSecureOzoneCluster {
         omStorage.getOmCertSerialId());
     try (OMCertificateClient client = new OMCertificateClient(
         securityConfig, scmClient, omStorage, omInfo, "", scmId, null, null, sslIdentityStorage, trustedCertStorage)) {
-      client.init();
+      sslIdentityStorage.init();
 
       // create Ozone Manager instance, it will start the monitor task
       conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "localhost");
@@ -1112,7 +1112,7 @@ final class TestSecureOzoneCluster {
                  securityConfig, scmClient, omStorage, omInfo, "", scmId, null, null, sslIdentityStorage,
                  trustedCertStorage)
     ) {
-      client.init();
+      sslIdentityStorage.init();
 
 
       // check that new cert ID should not equal to current cert ID
@@ -1175,7 +1175,7 @@ final class TestSecureOzoneCluster {
              new OMCertificateClient(securityConfig, null, omStorage, omInfo, "", scmId, null, null,
                  sslIdentityStorage, trustedCertStorage)
     ) {
-      client.init();
+      sslIdentityStorage.init();
 
       // save first cert
       final int certificateLifetime = 20; // seconds

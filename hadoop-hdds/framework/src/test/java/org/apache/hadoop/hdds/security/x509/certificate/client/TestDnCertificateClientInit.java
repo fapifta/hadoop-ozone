@@ -47,10 +47,6 @@ import java.security.cert.X509Certificate;
 import java.util.stream.Stream;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
-import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse;
-import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.FAILURE;
-import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.GETCERT;
-import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.SUCCESS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -74,14 +70,14 @@ public class TestDnCertificateClientInit {
 
   private static Stream<Arguments> parameters() {
     return Stream.of(
-        arguments(false, false, false, GETCERT),
-        arguments(false, false, true, FAILURE),
-        arguments(false, true, false, GETCERT),
-        arguments(true, false, false, GETCERT),
-        arguments(false, true, true, FAILURE),
-        arguments(true, true, false, GETCERT),
-        arguments(true, false, true, SUCCESS),
-        arguments(true, true, true, SUCCESS)
+        arguments(false, false, false, SSLIdentityStorage.InitResponse.GETCERT),
+        arguments(false, false, true, SSLIdentityStorage.InitResponse.FAILURE),
+        arguments(false, true, false, SSLIdentityStorage.InitResponse.GETCERT),
+        arguments(true, false, false, SSLIdentityStorage.InitResponse.GETCERT),
+        arguments(false, true, true, SSLIdentityStorage.InitResponse.FAILURE),
+        arguments(true, true, false, SSLIdentityStorage.InitResponse.GETCERT),
+        arguments(true, false, true, SSLIdentityStorage.InitResponse.SUCCESS),
+        arguments(true, true, true, SSLIdentityStorage.InitResponse.SUCCESS)
     );
   }
 
@@ -115,7 +111,7 @@ public class TestDnCertificateClientInit {
   @ParameterizedTest
   @MethodSource("parameters")
   public void testInitDatanode(boolean pvtKeyPresent, boolean pubKeyPresent,
-      boolean certPresent, InitResponse expectedResult) throws Exception {
+      boolean certPresent, SSLIdentityStorage.InitResponse expectedResult) throws Exception {
     if (pvtKeyPresent) {
       dnKeyStorage.storePrivateKey(keyPair.getPrivate());
     } else {
@@ -142,11 +138,11 @@ public class TestDnCertificateClientInit {
           securityConfig.getKeyLocation(DN_COMPONENT).toString(),
           securityConfig.getCertificateFileName()).toFile());
     }
-    InitResponse response = dnCertificateClient.init();
+    SSLIdentityStorage.InitResponse response = sslIdentityStorage.init();
 
     assertEquals(expectedResult, response);
 
-    if (!response.equals(FAILURE)) {
+    if (!response.equals(SSLIdentityStorage.InitResponse.FAILURE)) {
       assertTrue(OzoneSecurityUtil.checkIfFileExist(
           securityConfig.getKeyLocation(DN_COMPONENT),
           securityConfig.getPrivateKeyFileName()));

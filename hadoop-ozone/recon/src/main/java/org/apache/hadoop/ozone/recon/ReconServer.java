@@ -215,7 +215,7 @@ public class ReconServer extends GenericCli {
     trustedCertStorage = new TrustedCertStorage(secConf, ReconCertificateClient.COMPONENT_NAME);
     certClient = new ReconCertificateClient(secConf, scmSecurityClient,
         reconStorage, this::saveNewCertId, this::terminateRecon, sslIdentityStorage, trustedCertStorage);
-    certClient.initWithRecovery();
+    sslIdentityStorage.initWithRecovery(certClient);
   }
 
   public void saveNewCertId(String newCertId) {

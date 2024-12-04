@@ -63,8 +63,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_NAMES;
-import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.FAILURE;
-import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.GETCERT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -383,7 +381,7 @@ public class TestDefaultCertificateClient {
   @Test
   public void testInitCertAndKeypairValidationFailures() throws Exception {
     GenericTestUtils.LogCapturer dnClientLog = GenericTestUtils.LogCapturer
-        .captureLogs(dnCertClient.getLogger());
+        .captureLogs(sslIdentityStorage.getLogger());
     KeyPair keyPair = keyGenerator.generateKey();
     KeyPair keyPair1 = keyGenerator.generateKey();
     dnClientLog.clearOutput();
@@ -398,7 +396,7 @@ public class TestDefaultCertificateClient {
     dnKeyStorage.storePrivateKey(keyPair.getPrivate());
     dnKeyStorage.storePublicKey(keyPair1.getPublic());
     // Check for DN.
-    assertEquals(GETCERT, dnCertClient.init());
+    assertEquals(SSLIdentityStorage.InitResponse.GETCERT, sslIdentityStorage.init());
     //when the certificate is missing, keys are regenerated
     assertNotEquals(keyPair.getPrivate(), dnKeyStorage.readPrivateKey());
     assertNotEquals(keyPair1.getPublic(), dnKeyStorage.readPublicKey());
@@ -413,7 +411,7 @@ public class TestDefaultCertificateClient {
 
     ConfiguredCertStorage configuredCertStorage = new ConfiguredCertStorage(dnSecurityConfig, DN_COMPONENT);
     configuredCertStorage.storeDefaultCertificate(encodedCert);
-    assertThrows(RuntimeException.class, () -> dnCertClient.initWithRecovery());
+    assertThrows(RuntimeException.class, () -> sslIdentityStorage.initWithRecovery(dnCertClient));
     // Check for DN.
     //assertThat(dnClientLog.getOutput()).contains("Keypair validation failed");
     dnClientLog.clearOutput();
@@ -429,7 +427,7 @@ public class TestDefaultCertificateClient {
     dnKeyStorage.storePublicKey(keyPair.getPublic());
 
     // Check for DN.
-    assertThrows(RuntimeException.class, () -> dnCertClient.initWithRecovery());
+    assertThrows(RuntimeException.class, () -> sslIdentityStorage.initWithRecovery(dnCertClient));
 
     // Case 4. Failure when public key recovery fails.
     getCertClient();
@@ -438,7 +436,7 @@ public class TestDefaultCertificateClient {
         dnSecurityConfig.getPublicKeyFileName()).toFile());
 
     // Check for DN.
-    assertEquals(FAILURE, dnCertClient.init());
+    assertEquals(SSLIdentityStorage.InitResponse.FAILURE, sslIdentityStorage.init());
     assertThat(dnClientLog.getOutput()).contains("Can't recover public key");
   }
 

@@ -279,7 +279,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
 
       if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
         sslIdentityStorage = new SSLIdentityStorage(secConf, DNCertificateClient.COMPONENT_NAME,
-            datanodeDetails.getCertSerialId());
+            datanodeDetails.getCertSerialId(), this::saveNewCertId);
         trustedCertStorage = new TrustedCertStorage(secConf, DNCertificateClient.COMPONENT_NAME);
         dnCertClient = initializeCertificateClient(dnCertClient);
 
@@ -400,7 +400,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
     LOG.info("Initializing secure Datanode.");
     if (sslIdentityStorage == null) {
       sslIdentityStorage = new SSLIdentityStorage(secConf, DNCertificateClient.COMPONENT_NAME,
-          datanodeDetails.getCertSerialId());
+          datanodeDetails.getCertSerialId(), this::saveNewCertId);
     }
     if (trustedCertStorage == null) {
       trustedCertStorage = new TrustedCertStorage(secConf, DNCertificateClient.COMPONENT_NAME);
@@ -413,7 +413,8 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
           this::terminateDatanode, sslIdentityStorage, trustedCertStorage);
       certClient = dnCertClient;
     }
-    certClient.initWithRecovery();
+    sslIdentityStorage.setCertId(certClient.getCertSerialId());
+    sslIdentityStorage.initWithRecovery(certClient);
     return certClient;
   }
 

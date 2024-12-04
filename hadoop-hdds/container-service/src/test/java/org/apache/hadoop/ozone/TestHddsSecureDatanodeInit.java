@@ -131,8 +131,7 @@ public class TestHddsSecureDatanodeInit {
       service.initializeCertificateClient(service.getCertificateClient());
       return null;
     });
-    dnLogs = GenericTestUtils.LogCapturer.captureLogs(
-        ((DNCertificateClient) service.getCertificateClient()).getLogger());
+    dnLogs = GenericTestUtils.LogCapturer.captureLogs((service.getSslIdentityStorage()).getLogger());
     keyStorage = new KeyStorage(securityConfig, DN_COMPONENT);
     dnLogs.clearOutput();
     certStorage = service.getSslIdentityStorage();
@@ -161,11 +160,10 @@ public class TestHddsSecureDatanodeInit {
         securityConfig.getCertificateFileName()).toFile());
     dnLogs.clearOutput();
     String certSerialId = cert.getSerialNumber().toString();
-    SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(securityConfig, DN_COMPONENT, certSerialId);
     TrustedCertStorage trustedCertStorage = new TrustedCertStorage(securityConfig, DN_COMPONENT);
     client = new DNCertificateClient(securityConfig, scmClient, datanodeDetails,
         certSerialId, id -> {
-    }, null, sslIdentityStorage, trustedCertStorage);
+    }, null, certStorage, trustedCertStorage);
   }
 
   @AfterEach
@@ -194,8 +192,7 @@ public class TestHddsSecureDatanodeInit {
     RuntimeException rteException = assertThrows(
         RuntimeException.class,
         () -> service.initializeCertificateClient(client));
-    assertThat(rteException.getMessage())
-        .contains("DN security initialization failed");
+    assertThat(rteException.getMessage()).contains("DN security initialization failed");
     assertNull(certStorage.getPrivateKey());
     assertNull(certStorage.getPublicKey());
     assertNotNull(client.getCertificate());
@@ -279,8 +276,7 @@ public class TestHddsSecureDatanodeInit {
     // Case 6: If key pair already exist than response should be GETCERT.
     keyStorage.storePublicKey(publicKey);
     keyStorage.storePrivateKey(privateKey);
-    assertThrows(Exception.class,
-        () -> service.initializeCertificateClient(client));
+    assertThrows(Exception.class, () -> service.initializeCertificateClient(client));
     assertNotNull(certStorage.getPrivateKey());
     assertNotNull(certStorage.getPublicKey());
     assertNull(client.getCertificate());

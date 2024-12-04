@@ -789,10 +789,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     certSerialId = newCertSerialId;
     getLogger().info("Certificate serial ID set to {}", certSerialId);
     sslIdentityStorage.setCertId(certSerialId);
-    Path path = securityConfig.getCertificateLocation(component);
-    if (!path.toFile().exists()) {
-      return certSerialId;
-    }
     startServices();
     return certSerialId;
   }
@@ -866,7 +862,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     // At least three chances to renew the certificate before it expires
     long interval =
         Math.min(gracePeriod.toMillis() / 3, TimeUnit.DAYS.toMillis(1));
-
     if (executorService == null) {
       executorService = Executors.newScheduledThreadPool(1,
           new ThreadFactoryBuilder()

@@ -1470,7 +1470,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     SecurityConfig config = new SecurityConfig(conf);
     SSLIdentityStorage identityStorage = new SSLIdentityStorage(config, OMCertificateClient.COMPONENT_NAME,
-        omStore.getOmCertSerialId());
+        omStore.getOmCertSerialId(), certId -> {
+      try {
+        omStore.setOmCertSerialId(certId);
+      } catch (IOException e) {
+        LOG.error("Failed to set new certificate ID", e);
+        throw new RuntimeException("Failed to set new certificate ID");
+      }
+    });
     TrustedCertStorage trustedStorage = new TrustedCertStorage(config, OMCertificateClient.COMPONENT_NAME);
     OMCertificateClient certClient =
         new OMCertificateClient(
@@ -1484,7 +1491,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
                 throw new RuntimeException("Failed to set new certificate ID");
               }
             }, null, identityStorage, trustedStorage);
-    certClient.initWithRecovery();
+    identityStorage.initWithRecovery(certClient);
   }
 
   private void initializeRatisDirs(OzoneConfiguration conf) throws IOException {

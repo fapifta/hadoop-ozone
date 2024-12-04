@@ -22,7 +22,6 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
@@ -108,7 +107,7 @@ class TestSecureOzoneManager {
     OMCertificateClient client =
         new OMCertificateClient(
             securityConfig, null, omStorage, omInfo, "", scmId, null, null, sslIdentityStorage, trustedCertStorage);
-    assertEquals(CertificateClient.InitResponse.GETCERT, client.init());
+    assertEquals(SSLIdentityStorage.InitResponse.GETCERT, sslIdentityStorage.init());
     privateKey = sslIdentityStorage.getPrivateKey();
     publicKey = sslIdentityStorage.getPublicKey();
     assertNotNull(sslIdentityStorage.getPrivateKey());
@@ -120,7 +119,7 @@ class TestSecureOzoneManager {
     client =
         new OMCertificateClient(
             securityConfig, null, omStorage, omInfo, "", scmId, null, null, sslIdentityStorage, trustedCertStorage);
-    assertEquals(CertificateClient.InitResponse.GETCERT, client.init());
+    assertEquals(SSLIdentityStorage.InitResponse.GETCERT, sslIdentityStorage.init());
     assertNotNull(sslIdentityStorage.getPrivateKey());
     assertNotNull(sslIdentityStorage.getPublicKey());
     assertNull(client.getCertificate());
@@ -132,7 +131,7 @@ class TestSecureOzoneManager {
             securityConfig, null, omStorage, omInfo, "", null, null, null, sslIdentityStorage, trustedCertStorage);
     FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
-    assertEquals(CertificateClient.InitResponse.GETCERT, client.init());
+    assertEquals(SSLIdentityStorage.InitResponse.GETCERT, sslIdentityStorage.init());
     assertNotNull(sslIdentityStorage.getPrivateKey());
     assertNotNull(sslIdentityStorage.getPublicKey());
     assertNull(client.getCertificate());
@@ -145,7 +144,7 @@ class TestSecureOzoneManager {
     KeyStorage keyStorage = new KeyStorage(securityConfig, COMPONENT);
     FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPrivateKeyFileName()).toFile());
-    assertEquals(CertificateClient.InitResponse.GETCERT, client.init());
+    assertEquals(SSLIdentityStorage.InitResponse.GETCERT, sslIdentityStorage.init());
     assertNotNull(sslIdentityStorage.getPrivateKey());
     assertNotNull(sslIdentityStorage.getPublicKey());
     assertNull(client.getCertificate());
@@ -166,7 +165,7 @@ class TestSecureOzoneManager {
     client =
         new OMCertificateClient(
             securityConfig, null, omStorage, omInfo, "", scmId, null, null, sslIdentityStorage, trustedCertStorage);
-    assertEquals(CertificateClient.InitResponse.FAILURE, client.init());
+    assertEquals(SSLIdentityStorage.InitResponse.FAILURE, sslIdentityStorage.init());
     assertNull(sslIdentityStorage.getPrivateKey());
     assertNull(sslIdentityStorage.getPublicKey());
     assertNotNull(client.getCertificate());
@@ -179,7 +178,7 @@ class TestSecureOzoneManager {
     FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMPONENT)
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
     keyStorage.storePrivateKey(privateKey);
-    assertEquals(CertificateClient.InitResponse.SUCCESS, client.init());
+    assertEquals(SSLIdentityStorage.InitResponse.SUCCESS, sslIdentityStorage.init());
     assertNotNull(sslIdentityStorage.getPrivateKey());
     assertNotNull(sslIdentityStorage.getPublicKey());
     assertNotNull(client.getCertificate());
@@ -189,7 +188,7 @@ class TestSecureOzoneManager {
     client =
         new OMCertificateClient(
             securityConfig, null, omStorage, omInfo, "", scmId, null, null, sslIdentityStorage, trustedCertStorage);
-    assertEquals(CertificateClient.InitResponse.SUCCESS, client.init());
+    assertEquals(SSLIdentityStorage.InitResponse.SUCCESS, sslIdentityStorage.init());
     assertNotNull(sslIdentityStorage.getPrivateKey());
     assertNotNull(sslIdentityStorage.getPublicKey());
     assertNotNull(client.getCertificate());

@@ -50,13 +50,6 @@ public interface CertificateClient extends Closeable {
   List<String> getAllRootCaCertificates() throws IOException;
 
   /**
-   * Return component name of this certificate client.
-   *
-   * @return component name
-   */
-  String getComponentName();
-
-  /**
    * Returns the certificate used by the specified component if it exists
    * on the local system.
    *

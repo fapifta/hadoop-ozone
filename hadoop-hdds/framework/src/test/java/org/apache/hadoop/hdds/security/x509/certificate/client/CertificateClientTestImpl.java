@@ -252,7 +252,6 @@ public class CertificateClientTestImpl implements CertificateClient {
     return new CertificateSignRequest.Builder();
   }
 
-  @Override
   public String getComponentName() {
     return this.getClass().getSimpleName();
   }

@@ -87,7 +87,7 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
     this.secConfig = securityConfig;
 
     this.newSubCAPath = secConfig.getLocation(
-        scmCertClient.getComponentName()).toString()
+        SCMCertificateClient.COMPONENT_NAME).toString()
         + HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX;
   }
 
@@ -134,9 +134,9 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
 
     // switch sub CA key and certs directory on disk
     File currentSubCaDir = new File(secConfig.getLocation(
-        scmCertClient.getComponentName()).toString());
+        SCMCertificateClient.COMPONENT_NAME).toString());
     File backupSubCaDir = new File(secConfig.getLocation(
-        scmCertClient.getComponentName() +
+        SCMCertificateClient.COMPONENT_NAME +
             HDDS_BACKUP_KEY_CERT_DIR_NAME_SUFFIX).toString());
     File newSubCaDir = new File(newSubCAPath);
 
@@ -194,8 +194,7 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
 
     // cleanup backup directory
     File backupSubCaDir = new File(secConfig.getLocation(
-        scmCertClient.getComponentName() +
-            HDDS_BACKUP_KEY_CERT_DIR_NAME_SUFFIX).toString());
+        SCMCertificateClient.COMPONENT_NAME + HDDS_BACKUP_KEY_CERT_DIR_NAME_SUFFIX).toString());
     try {
       FileUtils.deleteDirectory(backupSubCaDir);
       LOG.info("Backup subca dir deleted: {}", backupSubCaDir);

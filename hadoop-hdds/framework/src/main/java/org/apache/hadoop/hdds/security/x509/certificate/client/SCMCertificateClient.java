@@ -138,8 +138,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
     if (executorService == null) {
       executorService = Executors.newSingleThreadExecutor(
           new ThreadFactoryBuilder()
-              .setNameFormat(threadNamePrefix() + getComponentName()
-                  + "-refreshCACertificates")
+              .setNameFormat(threadNamePrefix() + COMPONENT_NAME + "-refreshCACertificates")
               .setDaemon(true).build());
     }
     executorService.execute(new RefreshCACertificates(getScmSecureClient()));
@@ -180,7 +179,7 @@ public class SCMCertificateClient extends DefaultCertificateClient {
               cert.getSerialNumber().toString());
           getTrustedCertStorage().storeCertificate(
               CertificateCodec.get().encode(cert), CAType.SUBORDINATE,
-              getSecurityConfig().getCertificateLocation(getComponentName()));
+              getSecurityConfig().getCertificateLocation(COMPONENT_NAME));
         }
         String scmCertId = getCertSerialId();
         notifyNotificationReceivers(scmCertId, scmCertId);

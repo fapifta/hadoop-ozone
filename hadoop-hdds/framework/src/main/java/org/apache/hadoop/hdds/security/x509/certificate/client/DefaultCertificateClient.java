@@ -269,7 +269,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     return logger;
   }
 
-  public String getComponentName() {
+  protected String getComponentName() {
     return component;
   }
 

@@ -488,17 +488,17 @@ public class TestDefaultCertificateClient {
         .toString(), newCertId);
 
     File newKeyDir = new File(dnSecurityConfig.getKeyLocation(
-        dnCertClient.getComponentName()).toString() +
-            HddsConfigKeys.HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX);
+        DNCertificateClient.COMPONENT_NAME).toString() +
+        HddsConfigKeys.HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX);
     File newCertDir = new File(dnSecurityConfig.getCertificateLocation(
-        dnCertClient.getComponentName()).toString() +
-            HddsConfigKeys.HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX);
+        DNCertificateClient.COMPONENT_NAME).toString() +
+        HddsConfigKeys.HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX);
     File backupKeyDir = new File(dnSecurityConfig.getKeyLocation(
-        dnCertClient.getComponentName()).toString() +
-            HddsConfigKeys.HDDS_BACKUP_KEY_CERT_DIR_NAME_SUFFIX);
+        DNCertificateClient.COMPONENT_NAME).toString() +
+        HddsConfigKeys.HDDS_BACKUP_KEY_CERT_DIR_NAME_SUFFIX);
     File backupCertDir = new File(dnSecurityConfig.getCertificateLocation(
-        dnCertClient.getComponentName()).toString() +
-            HddsConfigKeys.HDDS_BACKUP_KEY_CERT_DIR_NAME_SUFFIX);
+        DNCertificateClient.COMPONENT_NAME).toString() +
+        HddsConfigKeys.HDDS_BACKUP_KEY_CERT_DIR_NAME_SUFFIX);
 
     // backup directories exist
     assertTrue(backupKeyDir.exists());

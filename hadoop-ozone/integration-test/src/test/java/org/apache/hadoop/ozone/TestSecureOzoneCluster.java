@@ -364,7 +364,7 @@ final class TestSecureOzoneCluster {
     assertEquals(scmId, scmInfo.getScmId());
     SCMCertificateClient scmCertificateClient = (SCMCertificateClient) scm.getScmCertificateClient();
     SSLIdentityStorage sslIdentityStorage =
-        new SSLIdentityStorage(new SecurityConfig(conf), scmCertificateClient.getComponentName(),
+        new SSLIdentityStorage(new SecurityConfig(conf), SCMCertificateClient.COMPONENT_NAME,
             scmCertificateClient.getCertSerialId());
     assertEquals(2, sslIdentityStorage.getCertPaths().get(0).getCertificates().size());
   }
@@ -947,7 +947,7 @@ final class TestSecureOzoneCluster {
       CertificateClient omCertClient = om.getCertificateClient();
       assertNotNull(omCertClient);
       SSLIdentityStorage sslIdentityStorage = new SSLIdentityStorage(new SecurityConfig(conf),
-          omCertClient.getComponentName(), omCertClient.getCertSerialId());
+          OMCertificateClient.COMPONENT_NAME, omCertClient.getCertSerialId());
       assertNotNull(sslIdentityStorage.getPublicKey());
       assertNotNull(sslIdentityStorage.getPrivateKey());
 
@@ -1329,7 +1329,7 @@ final class TestSecureOzoneCluster {
       ConfiguredCertStorage configuredCertStorage = new ConfiguredCertStorage(omSecurityConfig, "om");
       X509Certificate scmCert = scmCertClient.getCertificate();
       TrustedCertStorage trustedCertStorage = new TrustedCertStorage(scmSecurityConfig,
-          scmCertClient.getComponentName());
+          SCMCertificateClient.COMPONENT_NAME);
       X509Certificate cert = signX509Cert(omSecurityConfig, keyPair, scm.getSslIdentityStorage().getKeyPair(), scmCert,
           "om_cert", clusterId);
       String certId = cert.getSerialNumber().toString();

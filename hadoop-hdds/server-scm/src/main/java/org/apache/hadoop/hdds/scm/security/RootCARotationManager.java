@@ -531,8 +531,7 @@ public class RootCARotationManager extends StatefulService {
             return;
           }
           RotationHandlerStorage rotationHandlerStorage =
-              new RotationHandlerStorage(secConf, scmCertClient.getComponentName(),
-                  scm::shutDown);
+              new RotationHandlerStorage(secConf, SCMCertificateClient.COMPONENT_NAME, scm::shutDown);
           rotationHandlerStorage.initNextDirs();
           String progressComponent = SCMCertificateClient.COMPONENT_NAME +
               HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX +

@@ -257,11 +257,6 @@ public class CertificateClientTestImpl implements CertificateClient {
     return this.getClass().getSimpleName();
   }
 
-  @Override
-  public SecurityConfig getSecurityConfig() {
-    return securityConfig;
-  }
-
   public X509Certificate getRootCACertificate() {
     return rootCert;
   }

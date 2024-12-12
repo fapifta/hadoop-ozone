@@ -41,7 +41,6 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.symmetric.ManagedSecretKey;
 import org.apache.hadoop.hdds.security.symmetric.SecretKeyClient;
-import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DefaultCertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
@@ -511,7 +510,7 @@ public class OzoneDelegationTokenSecretManager
         if (getCertClient() instanceof DefaultCertificateClient) {
           DefaultCertificateClient certClient = (DefaultCertificateClient) getCertClient();
           signerCert = getCertificateFromScm(certClient.getScmSecureClient(), identifier.getOmCertSerialId(),
-              allCertStorage, certClient);
+              allCertStorage);
         }
       }
     } catch (CertificateException e) {
@@ -542,15 +541,14 @@ public class OzoneDelegationTokenSecretManager
   }
 
   private X509Certificate getCertificateFromScm(SCMSecurityProtocolClientSideTranslatorPB scmClient, String certId,
-      CertificateStorage storage, CertificateClient certificateClient)
+      CertificateStorage storage)
       throws CertificateException {
 
     LOG.info("Getting certificate with certSerialId:{}.",
         certId);
     try {
       String pemEncodedCert = scmClient.getCertificate(certId);
-      storage.storeCertificate(pemEncodedCert, CAType.NONE, certificateClient.getSecurityConfig()
-          .getCertificateLocation(certificateClient.getComponentName()));
+      storage.storeDefaultCertificate(pemEncodedCert);
       CertPath certPath = CertificateCodec.get().decode(pemEncodedCert);
       return (X509Certificate) certPath.getCertificates().get(0);
     } catch (Exception e) {

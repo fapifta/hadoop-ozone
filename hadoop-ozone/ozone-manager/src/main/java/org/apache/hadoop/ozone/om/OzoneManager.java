@@ -1172,7 +1172,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
     certClient = newClient;
     if (trustedCertStorage == null) {
-      trustedCertStorage = new TrustedCertStorage(certClient.getSecurityConfig(), certClient.getComponentName());
+      trustedCertStorage = new TrustedCertStorage(secConfig, certClient.getComponentName());
     }
     serviceInfo = new ServiceInfoProvider(secConfig, this, certClient, trustedCertStorage);
   }

@@ -78,13 +78,13 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
    * @param scm the storage container manager
    */
   public RootCARotationHandlerImpl(StorageContainerManager scm,
-      RootCARotationManager manager) {
+      RootCARotationManager manager, SecurityConfig securityConfig) {
     this.scm = scm;
     this.rotationManager = manager;
     this.scmCertClient = (SCMCertificateClient) scm.getScmCertificateClient();
     this.trustedCertStorage = scm.getTrustedCertStorage();
     this.sslIdentityStorage = scm.getSslIdentityStorage();
-    this.secConfig = scmCertClient.getSecurityConfig();
+    this.secConfig = securityConfig;
 
     this.newSubCAPath = secConfig.getLocation(
         scmCertClient.getComponentName()).toString()
@@ -251,6 +251,7 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
     private StorageContainerManager scm;
     private SCMRatisServer ratisServer;
     private RootCARotationManager rootCARotationManager;
+    private SecurityConfig securityConfig;
 
     public Builder setRatisServer(
         final SCMRatisServer scmRatisServer) {
@@ -270,9 +271,14 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
       return this;
     }
 
+    public Builder setSecurityConfig(final SecurityConfig secConfig) {
+      securityConfig = secConfig;
+      return this;
+    }
+
     public RootCARotationHandler build() {
       final RootCARotationHandler impl =
-          new RootCARotationHandlerImpl(scm, rootCARotationManager);
+          new RootCARotationHandlerImpl(scm, rootCARotationManager, securityConfig);
 
       final SCMHAInvocationHandler invocationHandler
           = new SCMHAInvocationHandler(CERT_ROTATE, impl, ratisServer);

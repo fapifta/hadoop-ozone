@@ -528,7 +528,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     notifyNotificationReceivers(oldCaCertId, newCertId);
   }
 
-  public SecurityConfig getSecurityConfig() {
+  protected SecurityConfig getSecurityConfig() {
     return securityConfig;
   }
 

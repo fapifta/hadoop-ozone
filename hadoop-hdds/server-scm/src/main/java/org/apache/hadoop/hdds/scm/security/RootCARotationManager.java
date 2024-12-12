@@ -162,6 +162,7 @@ public class RootCARotationManager extends StatefulService {
         .setRatisServer(scm.getScmHAManager().getRatisServer())
         .setStorageContainerManager(scm)
         .setRootCARotationManager(this)
+        .setSecurityConfig(secConf)
         .build();
     scm.getSCMServiceManager().register(this);
     metrics = RootCARotationMetrics.create();
@@ -473,14 +474,11 @@ public class RootCARotationManager extends StatefulService {
     try {
       scm.getSecurityProtocolServer().setRootCertificateServer(null);
 
-      FileUtils.deleteDirectory(new File(scmCertClient.getSecurityConfig()
-          .getLocation(newCAComponent).toString()));
-      LOG.info("In-progress root CA directory {} is deleted for '{}'",
-          scmCertClient.getSecurityConfig().getLocation(newCAComponent),
-          reason);
+      FileUtils.deleteDirectory(new File(secConf.getLocation(newCAComponent).toString()));
+      LOG.info("In-progress root CA directory {} is deleted for '{}'", secConf.getLocation(newCAComponent), reason);
     } catch (IOException ex) {
       LOG.error("Error when deleting in-progress root CA directory {} for {}",
-          scmCertClient.getSecurityConfig().getLocation(newCAComponent), reason,
+          secConf.getLocation(newCAComponent), reason,
           ex);
     }
     isProcessing.set(false);
@@ -533,16 +531,14 @@ public class RootCARotationManager extends StatefulService {
             return;
           }
           RotationHandlerStorage rotationHandlerStorage =
-              new RotationHandlerStorage(scmCertClient.getSecurityConfig(), scmCertClient.getComponentName(),
+              new RotationHandlerStorage(secConf, scmCertClient.getComponentName(),
                   scm::shutDown);
           rotationHandlerStorage.initNextDirs();
-          SecurityConfig securityConfig =
-              scmCertClient.getSecurityConfig();
           String progressComponent = SCMCertificateClient.COMPONENT_NAME +
               HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX +
               HDDS_NEW_KEY_CERT_DIR_NAME_PROGRESS_SUFFIX;
           final String newSubCAProgressPath =
-              securityConfig.getLocation(progressComponent).toString();
+              secConf.getLocation(progressComponent).toString();
 
           File newProgressDir = new File(newSubCAProgressPath);
           rotationHandlerStorage.initNextDirs();

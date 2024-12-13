@@ -57,7 +57,7 @@ public class ConfiguredCertStorage extends CertificateStorage {
   }
 
   @Override
-  Predicate<CertPath> getCertificateFilter() {
+  Predicate<OzoneCertPath> getCertificateFilter() {
     return certPath -> true;
   }
 
@@ -80,7 +80,7 @@ public class ConfiguredCertStorage extends CertificateStorage {
         throw new IOException("External cert path is not correct: " +
             extCertPath);
       }
-      CertPath certPath = getCertPath(extCertParent, extCertName.toString());
+      OzoneCertPath certPath = getCertPath(extCertParent, extCertName.toString());
       Path extPrivateKeyParent = extPrivateKeyPath.getParent();
       Path extPrivateKeyFileName = extPrivateKeyPath.getFileName();
       if (extPrivateKeyParent == null || extPrivateKeyFileName == null) {
@@ -94,7 +94,7 @@ public class ConfiguredCertStorage extends CertificateStorage {
           externalPublicKeyLocation, keyStorage, certPath);
       keyStorage.storeKey(new KeyPair(publicKey, privateKey));
       storeDefaultCertificate(CertificateCodec.get().encode(certPath));
-      X509Certificate certificate = (X509Certificate) (certPath.getCertificates().get(0));
+      X509Certificate certificate = certPath.getLeafCert();
       return certificate.getSerialNumber().toString();
     } catch (IOException | CertificateException | NoSuchAlgorithmException | InvalidKeySpecException e) {
       LOG.error("External root CA certificate initialization failed", e);
@@ -103,11 +103,11 @@ public class ConfiguredCertStorage extends CertificateStorage {
   }
 
   private PublicKey readPublicKeyWithExternalData(
-      String externalPublicKeyLocation, KeyStorage keyStorage, CertPath certPath
+      String externalPublicKeyLocation, KeyStorage keyStorage, OzoneCertPath certPath
   ) throws CertificateException, NoSuchAlgorithmException, InvalidKeySpecException, IOException {
     PublicKey publicKey;
     if (externalPublicKeyLocation.isEmpty()) {
-      publicKey = certPath.getCertificates().get(0).getPublicKey();
+      publicKey = certPath.getLeafCert().getPublicKey();
     } else {
       Path publicKeyPath = Paths.get(externalPublicKeyLocation);
       Path publicKeyPathFileName = publicKeyPath.getFileName();
@@ -134,7 +134,8 @@ public class ConfiguredCertStorage extends CertificateStorage {
    * generates a new certificate path starting with the new certificate
    * followed by all certificates in the specified path.
    */
-  public static CertPath prependCertToCertPath(X509Certificate certificate, CertPath path) throws CertificateException {
+  public static CertPath prependCertToCertPath(X509Certificate certificate, OzoneCertPath path)
+      throws CertificateException {
     List<? extends Certificate> certificates = path.getCertificates();
     ArrayList<X509Certificate> updatedList = new ArrayList<>();
     updatedList.add(certificate);

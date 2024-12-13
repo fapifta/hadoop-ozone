@@ -19,35 +19,30 @@
 
 package org.apache.hadoop.hdds.security.x509.certificate.utils;
 
-import org.apache.hadoop.hdds.security.SecurityConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.function.Predicate;
+import java.security.cert.CertPath;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
+import java.util.List;
 
 /**
- * Certificate storage for reading in all certificates.
+ * Wrapper class for CertPath to avoid repeatedly calling the body of getLeafCert.
  */
-public class AllCertStorage extends CertificateStorage {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(AllCertStorage.class);
+public class OzoneCertPath {
 
-  public AllCertStorage(SecurityConfig securityConfig, String componentName) {
-    super(securityConfig, componentName);
+  private final CertPath certPath;
+
+  public OzoneCertPath(CertPath certificatePath) {
+    this.certPath = certificatePath;
   }
 
-  @Override
-  public Logger getLogger() {
-    return LOG;
+  public List<? extends Certificate> getCertificates() {
+    return certPath.getCertificates();
   }
 
-  /**
-   * Returns true for all certificates.
-   *
-   * @return true for all certificates
-   */
-  @Override
-  public Predicate<OzoneCertPath> getCertificateFilter() {
-    return certPath -> true;
+  public X509Certificate getLeafCert() {
+    if (certPath != null) {
+      return (X509Certificate) certPath.getCertificates().get(0);
+    }
+    return null;
   }
 }

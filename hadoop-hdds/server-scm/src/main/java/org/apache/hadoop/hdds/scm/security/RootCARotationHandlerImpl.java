@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.scm.ha.SCMRatisServer;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.OzoneCertPath;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.slf4j.Logger;
@@ -38,7 +39,6 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SignatureException;
-import java.security.cert.CertPath;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -206,11 +206,11 @@ public class RootCARotationHandlerImpl implements RootCARotationHandler {
     newSubCACertId.set(null);
   }
 
-  private boolean isLastCertSignedBy(List<CertPath> certPaths, X509Certificate signerCert) {
+  private boolean isLastCertSignedBy(List<OzoneCertPath> certPaths, X509Certificate signerCert) {
     if (certPaths.isEmpty()) {
       return false;
     }
-    CertPath certPath = certPaths.get(0);
+    OzoneCertPath certPath = certPaths.get(0);
     if (certPath == null) {
       LOG.info("CertPath is null");
       return false;

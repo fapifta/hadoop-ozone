@@ -52,7 +52,7 @@ class InfoSubcommand extends ScmCertSubcommand {
     // Print container report info.
     System.out.printf("Certificate id: %s%n", serialId);
     try {
-      X509Certificate cert = (X509Certificate) CertificateCodec.get().decode(certPemStr).getCertificates().get(0);
+      X509Certificate cert = CertificateCodec.get().decode(certPemStr).getLeafCert();
       System.out.println(cert);
     } catch (IOException ex) {
       System.err.println("Failed to get certificate id " + serialId);

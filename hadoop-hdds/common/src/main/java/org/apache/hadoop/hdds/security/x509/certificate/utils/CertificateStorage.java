@@ -35,7 +35,6 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -72,7 +71,7 @@ public abstract class CertificateStorage {
     this.componentName = componentName;
   }
 
-  public final List<CertPath> getCertPaths() {
+  public final List<OzoneCertPath> getCertPaths() {
     Path certificateLocation = getSecurityConfig().getCertificateLocation(getComponentName());
     if (!certificateLocation.toFile().exists()) {
       getLogger().error("CertificateLocation: {} doesn't exist", certificateLocation);
@@ -103,8 +102,8 @@ public abstract class CertificateStorage {
     }
   }
 
-  void insertCertsToKeystore(KeyStore keyStore, CertPath certPath) {
-    X509Certificate cert = (X509Certificate) certPath.getCertificates().get(0);
+  void insertCertsToKeystore(KeyStore keyStore, OzoneCertPath certPath) {
+    X509Certificate cert = certPath.getLeafCert();
     try {
       keyStore.setCertificateEntry(cert.getSerialNumber().toString(), cert);
     } catch (KeyStoreException e) {
@@ -112,7 +111,7 @@ public abstract class CertificateStorage {
     }
   }
 
-  abstract Predicate<CertPath> getCertificateFilter();
+  abstract Predicate<OzoneCertPath> getCertificateFilter();
 
   public Predicate<Path> getFileFilter() {
     return path -> true;
@@ -128,7 +127,7 @@ public abstract class CertificateStorage {
 
   public abstract Logger getLogger();
 
-  private CertPath readCertFile(Path filePath) {
+  private OzoneCertPath readCertFile(Path filePath) {
     if (filePath == null) {
       getLogger().error("Trying to read null as a certificate file.");
       return null;
@@ -152,7 +151,7 @@ public abstract class CertificateStorage {
       return new HashSet<>();
     }
     return getCertPaths().stream()
-        .map(certPath -> (X509Certificate) certPath.getCertificates().get(0))
+        .map(OzoneCertPath::getLeafCert)
         .collect(Collectors.toSet());
   }
 
@@ -175,9 +174,8 @@ public abstract class CertificateStorage {
   }
 
   public String storeCertificate(String pemEncodedCert, CAType caType, Path path) throws IOException {
-    CertPath certificatePath = CertificateCodec.get().decode(pemEncodedCert);
-    X509Certificate cert = (X509Certificate) certificatePath.getCertificates().get(0);
-    String certId = cert.getSerialNumber().toString();
+    OzoneCertPath certPath = CertificateCodec.get().decode(pemEncodedCert);
+    String certId = certPath.getLeafCert().getSerialNumber().toString();
     String certName = String.format(CERT_FILE_NAME_FORMAT, caType.getFileNamePrefix() + certId);
     writeCertificate(path, certName, pemEncodedCert);
     return certId;
@@ -209,7 +207,7 @@ public abstract class CertificateStorage {
     Files.setPosixFilePermissions(certificateFile.toPath(), permissionSet);
   }
 
-  protected CertPath getCertPath(Path path, String fileName) throws IOException,
+  protected OzoneCertPath getCertPath(Path path, String fileName) throws IOException,
       CertificateException {
     checkBasePathDirectory(path.toAbsolutePath());
     File certFile =

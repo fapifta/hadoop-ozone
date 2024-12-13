@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.ConfiguredCertStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.OzoneCertPath;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.KeyStorage;
@@ -153,7 +154,7 @@ public abstract class DefaultCAServer implements CertificateServer {
   }
 
   @Override
-  public CertPath getCaCertPath()
+  public OzoneCertPath getCaCertPath()
       throws CertificateException, IOException {
     ConfiguredCertStorage certStorage = new ConfiguredCertStorage(config, componentName);
     return certStorage.getCertPaths().get(0);
@@ -182,7 +183,7 @@ public abstract class DefaultCAServer implements CertificateServer {
   }
 
   @Override
-  public Future<CertPath> requestCertificate(
+  public Future<OzoneCertPath> requestCertificate(
       String csr,
       CertificateApprover.ApprovalType approverType, NodeType role,
       String certSerialId) {
@@ -190,7 +191,7 @@ public abstract class DefaultCAServer implements CertificateServer {
     LocalDateTime endDate = expiryFor(beginDate, role);
 
     CompletableFuture<Void> csrInspection = approver.inspectCSR(csr);
-    CompletableFuture<CertPath> certPathPromise = new CompletableFuture<>();
+    CompletableFuture<OzoneCertPath> certPathPromise = new CompletableFuture<>();
     if (csrInspection.isCompletedExceptionally()) {
       try {
         csrInspection.get();
@@ -207,9 +208,9 @@ public abstract class DefaultCAServer implements CertificateServer {
       case TESTING_AUTOMATIC:
         X509Certificate signedCertificate = signAndStoreCertificate(beginDate, endDate, csr, role, certSerialId);
         ConfiguredCertStorage certStorage = new ConfiguredCertStorage(config, componentName);
-        CertPath certPath = certStorage.getCertPaths().get(0);
+        OzoneCertPath certPath = certStorage.getCertPaths().get(0);
         CertPath updatedCertPath = ConfiguredCertStorage.prependCertToCertPath(signedCertificate, certPath);
-        certPathPromise.complete(updatedCertPath);
+        certPathPromise.complete(new OzoneCertPath(updatedCertPath));
         break;
       default:
         return null; // cannot happen, keeping checkstyle happy.
@@ -239,7 +240,7 @@ public abstract class DefaultCAServer implements CertificateServer {
       Preconditions.checkState(!Strings.isNullOrEmpty(certSerialId));
       xcert = approver.sign(config,
           getCAKeys().getPrivate(),
-          (X509Certificate) getCaCertPath().getCertificates().get(0),
+          getCaCertPath().getLeafCert(),
           Date.from(beginDate.atZone(ZoneId.systemDefault()).toInstant()),
           Date.from(endDate.atZone(ZoneId.systemDefault()).toInstant()),
           csr, scmID, clusterID, certSerialId);

@@ -33,7 +33,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.KeyPair;
-import java.security.cert.CertPath;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -60,7 +59,7 @@ public class RotationHandlerStorage extends CertificateStorage {
   }
 
   @Override
-  Predicate<CertPath> getCertificateFilter() {
+  Predicate<OzoneCertPath> getCertificateFilter() {
     return certPath -> true;
   }
 

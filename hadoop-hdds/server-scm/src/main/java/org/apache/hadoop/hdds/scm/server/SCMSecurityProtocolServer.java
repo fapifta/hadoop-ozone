@@ -21,7 +21,6 @@ import com.google.protobuf.BlockingService;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -55,6 +54,7 @@ import org.apache.hadoop.hdds.security.exception.SCMSecretKeyException;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.symmetric.ManagedSecretKey;
 import org.apache.hadoop.hdds.security.symmetric.SecretKeyManager;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.OzoneCertPath;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.utils.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmConfig;
@@ -336,7 +336,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
    */
   private synchronized String getEncodedCertToString(String csr,
       NodeType nodeType) throws IOException {
-    Future<CertPath> future;
+    Future<OzoneCertPath> future;
     if (nodeType == NodeType.SCM && rootCertificateServer != null) {
       future = rootCertificateServer.requestCertificate(csr,
           KERBEROS_TRUSTED, nodeType, getNextCertificateId());
@@ -412,8 +412,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
   public String getCACertificate() throws IOException {
     LOGGER.debug("Getting CA certificate.");
     try {
-      return CertificateCodec.get().encode(
-          scmCertificateServer.getCaCertPath());
+      return CertificateCodec.get().encode(scmCertificateServer.getCaCertPath());
     } catch (CertificateException e) {
       throw new SCMSecurityException("getRootCertificate operation failed. ",
           e, GET_CA_CERT_FAILED);
@@ -454,8 +453,7 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol,
     LOGGER.debug("Getting Root CA certificate.");
     if (rootCertificateServer != null) {
       try {
-        return CertificateCodec.get().encode(
-            (X509Certificate) rootCertificateServer.getCaCertPath().getCertificates().get(0));
+        return CertificateCodec.get().encode(rootCertificateServer.getCaCertPath().getLeafCert());
       } catch (CertificateException e) {
         LOGGER.error("Failed to get root CA certificate", e);
         throw new IOException("Failed to get root CA certificate", e);

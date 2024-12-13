@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultCAProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.DefaultProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.OzoneCertPath;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 
 import org.junit.jupiter.api.AfterAll;
@@ -45,7 +46,6 @@ import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.cert.CertPath;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -98,11 +98,11 @@ public class TestCAServerCommon {
   public void testInitParameterized(CertificateServer certificateServer) throws Exception {
     this.certServer = certificateServer;
     certServer.init(securityConfig);
-    X509Certificate first = (X509Certificate) certServer.getCaCertPath().getCertificates().get(0);
+    X509Certificate first = certServer.getCaCertPath().getLeafCert();
     assertNotNull(first);
     //Init is idempotent.
     certServer.init(securityConfig);
-    X509Certificate second = (X509Certificate) certServer.getCaCertPath().getCertificates().get(0);
+    X509Certificate second = certServer.getCaCertPath().getLeafCert();
     assertEquals(first.getSerialNumber(), second.getSerialNumber());
   }
 
@@ -201,18 +201,17 @@ public class TestCAServerCommon {
         .setKey(keyPair)
         .build();
 
-    Future<CertPath> holder = certificateServer.requestCertificate(
+    Future<OzoneCertPath> holder = certificateServer.requestCertificate(
         csr.toEncodedFormat(), CertificateApprover.ApprovalType.TESTING_AUTOMATIC, SCM,
         String.valueOf(System.nanoTime()));
     //Test that the cert path returned contains the CA certificate in proper
     // place
     List<? extends Certificate> certBundle = holder.get().getCertificates();
     X509Certificate caInReturnedBundle = (X509Certificate) certBundle.get(1);
-    assertEquals(caInReturnedBundle, certificateServer.getCaCertPath().getCertificates().get(0));
-    X509Certificate signedCert = (X509Certificate) holder.get().getCertificates().get(0);
+    assertEquals(caInReturnedBundle, certificateServer.getCaCertPath().getLeafCert());
+    X509Certificate signedCert = holder.get().getLeafCert();
     //Test that the ca has signed of the returned certificate
-    assertEquals(caInReturnedBundle.getSubjectX500Principal(),
-        signedCert.getIssuerX500Principal());
+    assertEquals(caInReturnedBundle.getSubjectX500Principal(), signedCert.getIssuerX500Principal());
   }
 
   /**
@@ -243,12 +242,12 @@ public class TestCAServerCommon {
 
     certificateServer.init(securityConfig);
 
-    Future<CertPath> holder = certificateServer.requestCertificate(
+    Future<OzoneCertPath> holder = certificateServer.requestCertificate(
         csr.toEncodedFormat(), CertificateApprover.ApprovalType.TESTING_AUTOMATIC, OM,
         String.valueOf(System.nanoTime()));
     // Right now our calls are synchronous. Eventually this will have to wait.
     assertTrue(holder.isDone());
-    assertNotNull(holder.get().getCertificates().get(0));
+    assertNotNull(holder.get().getLeafCert());
   }
 
   @ParameterizedTest
@@ -271,7 +270,7 @@ public class TestCAServerCommon {
 
     ExecutionException execution = assertThrows(ExecutionException.class,
         () -> {
-          Future<CertPath> holder =
+          Future<OzoneCertPath> holder =
               certificateServer.requestCertificate(csr.toEncodedFormat(),
                   CertificateApprover.ApprovalType.TESTING_AUTOMATIC, OM,
                   String.valueOf(System.nanoTime()));

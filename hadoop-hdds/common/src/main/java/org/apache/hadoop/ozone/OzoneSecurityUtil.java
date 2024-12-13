@@ -136,7 +136,7 @@ public final class OzoneSecurityUtil {
   public static List<X509Certificate> convertToX509(List<String> pemEncodedCerts) throws IOException {
     List<X509Certificate> x509Certificates = new ArrayList<>(pemEncodedCerts.size());
     for (String cert : pemEncodedCerts) {
-      x509Certificates.add((X509Certificate) CertificateCodec.get().decode(cert).getCertificates().get(0));
+      x509Certificates.add(CertificateCodec.get().decode(cert).getLeafCert());
     }
     return x509Certificates;
   }

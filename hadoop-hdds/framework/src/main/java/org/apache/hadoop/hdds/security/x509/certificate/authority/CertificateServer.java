@@ -23,9 +23,9 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 import org.apache.hadoop.hdds.scm.metadata.SCMMetadataStore;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.OzoneCertPath;
 
 import java.io.IOException;
-import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -55,7 +55,7 @@ public interface CertificateServer {
    * @throws CertificateException
    * @throws IOException
    */
-  CertPath getCaCertPath() throws CertificateException,
+  OzoneCertPath getCaCertPath() throws CertificateException,
       IOException;
 
   /**
@@ -81,7 +81,7 @@ public interface CertificateServer {
    * approved.
    * @throws SCMSecurityException - on Error.
    */
-  Future<CertPath> requestCertificate(
+  Future<OzoneCertPath> requestCertificate(
       String csr,
       CertificateApprover.ApprovalType type, NodeType role,
       String certSerialId) throws SCMSecurityException;

@@ -31,7 +31,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Signature;
 import java.security.SignatureException;
-import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -57,6 +56,7 @@ import org.apache.hadoop.hdds.security.exception.OzoneSecurityException;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.OzoneCertPath;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
@@ -167,14 +167,14 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   @Override
   public X509Certificate getCertificate() {
-    CertPath currentCertPath = getCertPath();
+    OzoneCertPath currentCertPath = getCertPath();
     if (currentCertPath == null || currentCertPath.getCertificates() == null) {
       return null;
     }
-    return firstCertificateFrom(currentCertPath);
+    return currentCertPath.getLeafCert();
   }
 
-  private synchronized CertPath getCertPath() {
+  private synchronized OzoneCertPath getCertPath() {
     if (sslIdentityStorage.getCertPaths().isEmpty()) {
       getLogger().info("No certificates found for certificate client with certificate id: {}", certSerialId);
       return null;
@@ -244,10 +244,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         .addInetAddresses()
         .setDigitalEncryption(true)
         .setDigitalSignature(true);
-  }
-
-  private X509Certificate firstCertificateFrom(CertPath certificatePath) {
-    return (X509Certificate) certificatePath.getCertificates().get(0);
   }
 
   protected KeyPair createKeyPair(KeyStorage storage) throws CertificateException {
@@ -338,8 +334,10 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       throws CertificateException {
     if (!force) {
       synchronized (this) {
+        OzoneCertPath certPath = getCertPath();
+        Preconditions.checkNotNull(certPath);
         Preconditions.checkArgument(
-            timeBeforeExpiryGracePeriod(firstCertificateFrom(getCertPath()))
+            timeBeforeExpiryGracePeriod(certPath.getLeafCert())
                 .isZero());
       }
     }

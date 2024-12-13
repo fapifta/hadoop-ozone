@@ -67,10 +67,17 @@ public final class CertificateCodec {
   /**
    * Get a valid pem encoded string for the certification path.
    */
+  public String encode(OzoneCertPath certPath) throws IOException {
+    return encode(certPath.getCertificates());
+  }
+
   public String encode(CertPath certPath) throws IOException {
-    List<? extends Certificate> certsInPath = certPath.getCertificates();
-    ArrayList<String> pemEncodedList = new ArrayList<>(certsInPath.size());
-    for (Certificate cert : certsInPath) {
+    return encode(certPath.getCertificates());
+  }
+
+  private String encode(List<? extends Certificate> certList) throws IOException {
+    ArrayList<String> pemEncodedList = new ArrayList<>(certList.size());
+    for (Certificate cert : certList) {
       pemEncodedList.add(encode((X509Certificate) cert));
     }
     return StringUtils.join(pemEncodedList, "\n");
@@ -94,13 +101,14 @@ public final class CertificateCodec {
     }
   }
 
-  public CertPath decode(String encodedCert) throws IOException {
+  public OzoneCertPath decode(String encodedCert) throws IOException {
     return decode(new ByteArrayInputStream(encodedCert.getBytes(CertificateCodec.DEFAULT_CHARSET)));
   }
 
-  public CertPath decode(InputStream inputStream) throws IOException {
+  public OzoneCertPath decode(InputStream inputStream) throws IOException {
     try {
-      return CertificateFactory.getInstance("X.509", "BC").generateCertPath(inputStream, "PEM");
+      CertPath certPath = CertificateFactory.getInstance("X.509", "BC").generateCertPath(inputStream, "PEM");
+      return new OzoneCertPath(certPath);
     } catch (CertificateException e) {
       throw new IOException(e);
     } catch (NoSuchProviderException e) {

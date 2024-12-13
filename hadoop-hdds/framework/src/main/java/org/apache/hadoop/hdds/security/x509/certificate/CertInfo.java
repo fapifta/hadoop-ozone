@@ -142,8 +142,7 @@ public final class CertInfo implements Comparable<CertInfo>, Serializable {
     }
 
     public Builder setX509Certificate(String x509Certificate) throws IOException {
-      return setX509Certificate(
-          (X509Certificate) CertificateCodec.get().decode(x509Certificate).getCertificates().get(0));
+      return setX509Certificate(CertificateCodec.get().decode(x509Certificate).getLeafCert());
     }
 
     public Builder setTimestamp(long timestamp) {

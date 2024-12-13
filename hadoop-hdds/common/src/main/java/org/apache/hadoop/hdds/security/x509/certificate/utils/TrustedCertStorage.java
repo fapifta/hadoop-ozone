@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
-import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
 import java.util.Comparator;
 import java.util.Set;
@@ -58,8 +57,8 @@ public class TrustedCertStorage extends CertificateStorage implements Certificat
    * @return true if the certificate is self-signed, false otherwise
    */
   @Override
-  public Predicate<CertPath> getCertificateFilter() {
-    return certPath -> isSelfSignedCertificate((X509Certificate) certPath.getCertificates().get(0));
+  public Predicate<OzoneCertPath> getCertificateFilter() {
+    return certPath -> isSelfSignedCertificate(certPath.getLeafCert());
   }
 
   public X509Certificate getLatestRootCaCert() {

@@ -48,7 +48,6 @@ import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.SignatureException;
-import java.security.cert.CertPath;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
@@ -88,10 +87,10 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
   }
 
   @Override
-  void insertCertsToKeystore(KeyStore keyStore, CertPath certPath) {
+  void insertCertsToKeystore(KeyStore keyStore, OzoneCertPath certPath) {
     try {
       PrivateKey privateKey = getPrivateKey();
-      keyStore.setKeyEntry(((X509Certificate) certPath.getCertificates().get(0)).getSerialNumber().toString(),
+      keyStore.setKeyEntry(certPath.getLeafCert().getSerialNumber().toString(),
           privateKey, "".toCharArray(), certPath.getCertificates().toArray(new Certificate[0]));
     } catch (KeyStoreException e) {
       LOG.error("Error while trying to insert keys to keystore", e);
@@ -99,7 +98,7 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
   }
 
   public X509Certificate getLeafCertificate() {
-    return (X509Certificate) getCertPaths().get(0).getCertificates().get(0);
+    return getCertPaths().get(0).getLeafCert();
   }
 
   private void initKeyStorage() {
@@ -114,7 +113,7 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
    * @return True if the Certificate path leaf certificate has the same id as the known certId, false otherwise
    */
   @Override
-  public Predicate<CertPath> getCertificateFilter() {
+  public Predicate<OzoneCertPath> getCertificateFilter() {
     return certPath -> isLeafCertIdEqual(certPath, certId);
   }
 
@@ -154,8 +153,8 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
     return new KeyPair(getPublicKey(), getPrivateKey());
   }
 
-  private boolean isLeafCertIdEqual(CertPath certPath, String certSerial) {
-    return ((X509Certificate) certPath.getCertificates().get(0)).getSerialNumber().toString().equals(certSerial);
+  private boolean isLeafCertIdEqual(OzoneCertPath certPath, String certSerial) {
+    return certPath.getLeafCert().getSerialNumber().toString().equals(certSerial);
   }
 
   @Override
@@ -279,12 +278,12 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
     FileUtils.deleteDirectory(currentKeyDir);
   }
 
-  private boolean isSingularLeafCert(CertPath seeIfCertPath) {
+  private boolean isSingularLeafCert(OzoneCertPath seeIfCertPath) {
     boolean isSingularLeafCert = seeIfCertPath != null && seeIfCertPath.getCertificates().size() == 1 &&
-        !isSelfSignedCertificate((X509Certificate) seeIfCertPath.getCertificates().get(0));
+        !isSelfSignedCertificate(seeIfCertPath.getLeafCert());
     if (isSingularLeafCert) {
       getLogger().info("Found singular cert path with id: {}, proceeding to reinit certificates.",
-          ((X509Certificate) seeIfCertPath.getCertificates().get(0)).getSerialNumber());
+          (seeIfCertPath.getLeafCert()).getSerialNumber());
     }
     return isSingularLeafCert;
   }
@@ -358,7 +357,7 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
    * public key.
    */
   protected boolean recoverPublicKey() throws CertificateException {
-    PublicKey pubKey = getCertPaths().get(0).getCertificates().get(0).getPublicKey();
+    PublicKey pubKey = getLeafCertificate().getPublicKey();
     try {
 
       if (validateKeyPair(pubKey)) {
@@ -422,7 +421,6 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
     return keyPair;
   }
 
-
   /**
    * Verifies a digital Signature, given the signature and the certificate of
    * the signer.
@@ -447,7 +445,6 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
     }
   }
 
-
   /**
    * Creates digital signature over the data stream using the s private key.
    *
@@ -470,7 +467,6 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
     }
   }
 
-
   public static boolean isSelfSignedCertificate(X509Certificate cert) {
     return cert.getIssuerX500Principal().equals(cert.getSubjectX500Principal());
   }
@@ -490,14 +486,14 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
   }
 
   private X509Certificate getCertificate() {
-    CertPath currentCertPath = getCertPath();
+    OzoneCertPath currentCertPath = getCertPath();
     if (currentCertPath == null || currentCertPath.getCertificates() == null) {
       return null;
     }
-    return (X509Certificate) currentCertPath.getCertificates().get(0);
+    return currentCertPath.getLeafCert();
   }
 
-  private CertPath getCertPath() {
+  private OzoneCertPath getCertPath() {
     if (getCertPaths().isEmpty()) {
       getLogger().info("No certificates found for SSLIdentityService");
       return null;

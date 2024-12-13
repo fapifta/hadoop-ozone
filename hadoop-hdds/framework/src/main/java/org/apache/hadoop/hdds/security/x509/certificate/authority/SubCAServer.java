@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.profile.PKIProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.OzoneCertPath;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.TrustedCertStorage;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.slf4j.Logger;
@@ -37,7 +38,6 @@ import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
@@ -145,13 +145,12 @@ public class SubCAServer extends DefaultCAServer {
 
   private void getPrimarySCMSelfSignedCert(KeyPair keyPair) {
     try {
-      CertPath rootCACertificatePath = rootCAServer.getCaCertPath();
-      String pemEncodedRootCert =
-          CertificateCodec.get().encode(rootCACertificatePath);
+      OzoneCertPath rootCACertificatePath = rootCAServer.getCaCertPath();
+      String pemEncodedRootCert = CertificateCodec.get().encode(rootCACertificatePath);
 
       CertificateSignRequest csr = configureCSRBuilder(keyPair).build();
       String subCaSerialId = BigInteger.ONE.add(BigInteger.ONE).toString();
-      CertPath scmSubCACertPath =
+      OzoneCertPath scmSubCACertPath =
           rootCAServer.requestCertificate(csr.toEncodedFormat(), KERBEROS_TRUSTED, SCM, subCaSerialId).get();
       String pemEncodedCert = CertificateCodec.get().encode(scmSubCACertPath);
 
@@ -159,7 +158,7 @@ public class SubCAServer extends DefaultCAServer {
       storeCertificate(pemEncodedCert, CAType.NONE);
       //note: this does exactly the same as store certificate
       persistSubCACertificate(pemEncodedCert);
-      X509Certificate cert = (X509Certificate) scmSubCACertPath.getCertificates().get(0);
+      X509Certificate cert = scmSubCACertPath.getLeafCert();
 
       // Persist scm cert serial ID.
       getSaveCertId().accept(cert.getSerialNumber().toString());

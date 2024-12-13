@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.security;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.security.cert.CertPath;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.client.DefaultCertificat
 import org.apache.hadoop.hdds.security.x509.certificate.utils.AllCertStorage;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateStorage;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.OzoneCertPath;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.SSLIdentityStorage;
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.io.Text;
@@ -549,8 +549,8 @@ public class OzoneDelegationTokenSecretManager
     try {
       String pemEncodedCert = scmClient.getCertificate(certId);
       storage.storeDefaultCertificate(pemEncodedCert);
-      CertPath certPath = CertificateCodec.get().decode(pemEncodedCert);
-      return (X509Certificate) certPath.getCertificates().get(0);
+      OzoneCertPath certPath = CertificateCodec.get().decode(pemEncodedCert);
+      return certPath.getLeafCert();
     } catch (Exception e) {
       LOG.error("Error while getting Certificate with " +
           "certSerialId:{} from scm.", certId, e);

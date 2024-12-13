@@ -67,7 +67,7 @@ public class TestCertificateCodec {
     assertTrue(pemString.endsWith(END_CERT + "\n"));
 
     // Read back the certificate and verify that all the comparisons pass.
-    X509Certificate newCert = (X509Certificate) CertificateCodec.get().decode(pemString).getCertificates().get(0);
+    X509Certificate newCert = CertificateCodec.get().decode(pemString).getLeafCert();
     assertEquals(cert, newCert);
   }
 
@@ -82,10 +82,10 @@ public class TestCertificateCodec {
     CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
 
     CertPath pathToEncode = certificateFactory.generateCertPath(ImmutableList.of(cert1, cert2));
-    String encodedPath = CertificateCodec.get().encode(pathToEncode);
-    CertPath certPathDecoded = CertificateCodec.get().decode(encodedPath);
+    String encodedPath = CertificateCodec.get().encode((pathToEncode));
+    OzoneCertPath certPathDecoded = CertificateCodec.get().decode(encodedPath);
 
-    assertEquals(cert1, certPathDecoded.getCertificates().get(0));
+    assertEquals(cert1, certPathDecoded.getLeafCert());
     assertEquals(cert2, certPathDecoded.getCertificates().get(1));
   }
 

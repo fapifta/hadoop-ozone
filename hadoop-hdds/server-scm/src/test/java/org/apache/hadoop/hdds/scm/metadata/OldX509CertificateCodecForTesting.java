@@ -62,7 +62,7 @@ public final class OldX509CertificateCodecForTesting
   @Override
   public X509Certificate fromPersistedFormat(byte[] rawData) throws IOException {
     String s = new String(rawData, StandardCharsets.UTF_8);
-    return (X509Certificate) CertificateCodec.get().decode(s).getCertificates().get(0);
+    return CertificateCodec.get().decode(s).getLeafCert();
   }
 
   @Override

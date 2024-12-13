@@ -103,7 +103,7 @@ public class ListSubcommand extends ScmCertSubcommand {
       for (String certPemStr : certPemList) {
         try {
           X509Certificate cert =
-              (X509Certificate) CertificateCodec.get().decode(certPemStr).getCertificates().get(0);
+              CertificateCodec.get().decode(certPemStr).getLeafCert();
           certList.add(new Certificate(cert));
         } catch (IOException ex) {
           err.println("Failed to parse certificate.");

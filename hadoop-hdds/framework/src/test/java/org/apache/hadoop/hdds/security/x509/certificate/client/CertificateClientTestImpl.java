@@ -354,7 +354,7 @@ public class CertificateClientTestImpl implements CertificateClient {
     keyStore.load(null, null);
     newRootCaCerts.forEach(certificate -> {
       try {
-        X509Certificate cert = (X509Certificate) CertificateCodec.get().decode(certificate).getCertificates().get(0);
+        X509Certificate cert = CertificateCodec.get().decode(certificate).getLeafCert();
         keyStore.setCertificateEntry(
             cert.getSerialNumber().toString(), cert);
       } catch (KeyStoreException | IOException e) {

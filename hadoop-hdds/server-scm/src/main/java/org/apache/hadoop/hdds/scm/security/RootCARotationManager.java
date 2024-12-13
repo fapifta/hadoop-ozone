@@ -411,7 +411,7 @@ public class RootCARotationManager extends StatefulService {
             if (newRootCAServer == null) {
               throw new Exception("New root CA server should not be null");
             }
-            newRootCertificate = (X509Certificate) newRootCAServer.getCaCertPath().getCertificates().get(0);
+            newRootCertificate = newRootCAServer.getCaCertPath().getLeafCert();
             newRootCertId = newRootCertificate.getSerialNumber().toString();
             Preconditions.checkState(newRootCertId.equals(newId.toString()),
                 "Root certificate doesn't match, " +
@@ -736,8 +736,7 @@ public class RootCARotationManager extends StatefulService {
       return;
     }
 
-    X509Certificate cert =
-        (X509Certificate) CertificateCodec.get().decode(proto.getX509Certificate()).getCertificates().get(0);
+    X509Certificate cert = CertificateCodec.get().decode(proto.getX509Certificate()).getLeafCert();
 
     X509Certificate rootCert = trustedCertStorage.getLatestRootCaCert();
     int result = rootCert.getSerialNumber().compareTo(cert.getSerialNumber());

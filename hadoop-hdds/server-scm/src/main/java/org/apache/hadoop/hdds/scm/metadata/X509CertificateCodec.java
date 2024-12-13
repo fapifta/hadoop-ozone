@@ -71,7 +71,7 @@ public final class X509CertificateCodec implements Codec<X509Certificate> {
   public X509Certificate fromCodecBuffer(@Nonnull CodecBuffer buffer)
       throws IOException {
     try (InputStream in = buffer.getInputStream()) {
-      return (X509Certificate) CertificateCodec.get().decode(in).getCertificates().get(0);
+      return CertificateCodec.get().decode(in).getLeafCert();
     }
   }
 
@@ -85,10 +85,8 @@ public final class X509CertificateCodec implements Codec<X509Certificate> {
   }
 
   @Override
-  public X509Certificate fromPersistedFormat(byte[] rawData)
-      throws IOException {
-    return (X509Certificate) CertificateCodec.get().decode(
-        new ByteArrayInputStream(rawData)).getCertificates().get(0);
+  public X509Certificate fromPersistedFormat(byte[] rawData) throws IOException {
+    return CertificateCodec.get().decode(new ByteArrayInputStream(rawData)).getLeafCert();
   }
 
   @Override

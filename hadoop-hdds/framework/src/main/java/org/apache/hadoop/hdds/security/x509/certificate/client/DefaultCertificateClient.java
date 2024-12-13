@@ -165,8 +165,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     }
   }
 
-  @Override
-  public X509Certificate getCertificate() {
+  private X509Certificate getCertificate() {
     OzoneCertPath currentCertPath = getCertPath();
     if (currentCertPath == null || currentCertPath.getCertificates() == null) {
       return null;

@@ -686,7 +686,7 @@ final class TestSecureOzoneCluster {
       CertificateClientTestImpl certClientTestImpl = new CertificateClientTestImpl(conf);
       om.setCertClient(certClientTestImpl);
       AllCertStorage allCertStorage = new AllCertStorage(new SecurityConfig(om.getConfiguration()), "om");
-      allCertStorage.storeCertificate(om.getCertificateClient().getCertificate());
+      allCertStorage.storeCertificate(certClientTestImpl.getCertificate());
 
       SSLIdentityStorage sslIdentityStorage = Mockito.mock(SSLIdentityStorage.class);
       when(sslIdentityStorage.getPublicKey()).thenReturn(certClientTestImpl.getPublicKey());
@@ -912,11 +912,10 @@ final class TestSecureOzoneCluster {
       assertNotNull(om.getCertificateClient());
       assertNotNull(om.getSslIdentityStorage().getPublicKey());
       assertNotNull(om.getSslIdentityStorage().getPrivateKey());
-      assertNotNull(om.getCertificateClient().getCertificate());
       assertThat(omLogs.getOutput())
           .contains("Init response: GETCERT")
           .contains("Successfully stored OM signed certificate");
-      X509Certificate certificate = om.getCertificateClient().getCertificate();
+      X509Certificate certificate = om.getSslIdentityStorage().getLeafCertificate();
       validateCertificate(certificate);
 
     } finally {
@@ -951,12 +950,11 @@ final class TestSecureOzoneCluster {
       assertNotNull(sslIdentityStorage.getPublicKey());
       assertNotNull(sslIdentityStorage.getPrivateKey());
 
-      assertNotNull(sslIdentityStorage.getLeafCertificate());
       assertEquals(3, sslIdentityStorage.getCertPaths().get(0).getCertificates().size());
       assertThat(omLogs.getOutput())
           .contains("Init response: GETCERT")
           .contains("Successfully stored OM signed certificate");
-      X509Certificate certificate = omCertClient.getCertificate();
+      X509Certificate certificate = sslIdentityStorage.getLeafCertificate();
       validateCertificate(certificate);
       String pemEncodedCACert =
           scm.getSecurityProtocolServer().getRootCACertificate();
@@ -1034,7 +1032,7 @@ final class TestSecureOzoneCluster {
       // check after renew, client will have the new cert ID
       String id1 = newCert.getSerialNumber().toString();
       GenericTestUtils.waitFor(() ->
-              id1.equals(client.getCertificate().getSerialNumber().toString()),
+              id1.equals(sslIdentityStorage.getLeafCertificate().getSerialNumber().toString()),
           1000, certificateLifetime * 1000);
 
       // test the second time certificate rotation
@@ -1053,7 +1051,7 @@ final class TestSecureOzoneCluster {
 
       // check after renew, client will have the new cert ID
       GenericTestUtils.waitFor(() ->
-              id2.equals(client.getCertificate().getSerialNumber().toString()),
+              id2.equals(sslIdentityStorage.getLeafCertificate().getSerialNumber().toString()),
           1000, certificateLifetime * 1000);
     }
   }
@@ -1117,14 +1115,14 @@ final class TestSecureOzoneCluster {
       // check that new cert ID should not equal to current cert ID
       String certId1 = newCertHolder.getSerialNumber().toString();
       assertNotEquals(certId1,
-          client.getCertificate().getSerialNumber().toString());
+          sslIdentityStorage.getLeafCertificate().getSerialNumber().toString());
 
       // certificate failed to renew, client still hold the old expired cert.
       Thread.sleep(certificateLifetime * 1000);
       assertEquals(certId,
-          client.getCertificate().getSerialNumber().toString());
+          sslIdentityStorage.getLeafCertificate().getSerialNumber().toString());
       assertThrows(CertificateExpiredException.class,
-          () -> client.getCertificate().checkValidity());
+          () -> sslIdentityStorage.getLeafCertificate().checkValidity());
       assertThat(omLogs.getOutput())
           .contains("Error while signing SCM signed certificate.");
 
@@ -1144,7 +1142,7 @@ final class TestSecureOzoneCluster {
 
       // check after renew, client will have the new cert ID
       GenericTestUtils.waitFor(() -> {
-        String newCertId = client.getCertificate().getSerialNumber().toString();
+        String newCertId = sslIdentityStorage.getLeafCertificate().getSerialNumber().toString();
         return newCertId.equals(certId2);
       }, 1000, certificateLifetime * 1000);
     }
@@ -1324,9 +1322,8 @@ final class TestSecureOzoneCluster {
 
       // Prepare the certificates for OM before OM start
       SecurityConfig omSecurityConfig = new SecurityConfig(conf);
-      CertificateClient scmCertClient = scm.getScmCertificateClient();
       ConfiguredCertStorage configuredCertStorage = new ConfiguredCertStorage(omSecurityConfig, "om");
-      X509Certificate scmCert = scmCertClient.getCertificate();
+      X509Certificate scmCert = scm.getSslIdentityStorage().getLeafCertificate();
       TrustedCertStorage trustedCertStorage = new TrustedCertStorage(scmSecurityConfig,
           SCMCertificateClient.COMPONENT_NAME);
       X509Certificate cert = signX509Cert(omSecurityConfig, keyPair, scm.getSslIdentityStorage().getKeyPair(), scmCert,
@@ -1350,8 +1347,7 @@ final class TestSecureOzoneCluster {
       om = OzoneManager.createOm(conf);
       om.start();
 
-      CertificateClient omCertClient = om.getCertificateClient();
-      X509Certificate omCert = omCertClient.getCertificate();
+      X509Certificate omCert = om.getSslIdentityStorage().getLeafCertificate();
       trustedCertStorage = new TrustedCertStorage(new SecurityConfig(om.getConfiguration()), "om");
       X509Certificate rootCaCert = trustedCertStorage.getLatestRootCaCert();
       List<X509Certificate> certList = new ArrayList<>();
@@ -1379,7 +1375,7 @@ final class TestSecureOzoneCluster {
         // Wait for OM certificate to renewed
         GenericTestUtils.waitFor(() ->
                 !omCert.getSerialNumber().toString().equals(
-                    omCertClient.getCertificate().getSerialNumber().toString()),
+                    om.getSslIdentityStorage().getLeafCertificate().getSerialNumber().toString()),
             500, certLifetime * 1000);
 
         // rerun the command using old client, it should succeed

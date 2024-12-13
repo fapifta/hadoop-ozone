@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.security.x509.certificate.utils;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.security.SecurityConfig;
@@ -98,7 +99,11 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
   }
 
   public X509Certificate getLeafCertificate() {
-    return getCertPaths().get(0).getLeafCert();
+    List<OzoneCertPath> certPaths = getCertPaths();
+    if (CollectionUtils.isEmpty(certPaths)) {
+      return null;
+    }
+    return certPaths.get(0).getLeafCert();
   }
 
   private void initKeyStorage() {

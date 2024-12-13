@@ -112,7 +112,7 @@ class TestSecureOzoneManager {
     publicKey = sslIdentityStorage.getPublicKey();
     assertNotNull(sslIdentityStorage.getPrivateKey());
     assertNotNull(sslIdentityStorage.getPublicKey());
-    assertNull(client.getCertificate());
+    assertNull(sslIdentityStorage.getLeafCertificate());
     client.close();
 
     // Case 2: If key pair already exist than response should be GETCERT.
@@ -122,7 +122,7 @@ class TestSecureOzoneManager {
     assertEquals(SSLIdentityStorage.InitResponse.GETCERT, sslIdentityStorage.init());
     assertNotNull(sslIdentityStorage.getPrivateKey());
     assertNotNull(sslIdentityStorage.getPublicKey());
-    assertNull(client.getCertificate());
+    assertNull(sslIdentityStorage.getLeafCertificate());
     client.close();
 
     // Case 3: When public key as well as certificate is missing.
@@ -134,7 +134,7 @@ class TestSecureOzoneManager {
     assertEquals(SSLIdentityStorage.InitResponse.GETCERT, sslIdentityStorage.init());
     assertNotNull(sslIdentityStorage.getPrivateKey());
     assertNotNull(sslIdentityStorage.getPublicKey());
-    assertNull(client.getCertificate());
+    assertNull(sslIdentityStorage.getLeafCertificate());
     client.close();
 
     // Case 4: When private key and certificate is missing.
@@ -147,7 +147,7 @@ class TestSecureOzoneManager {
     assertEquals(SSLIdentityStorage.InitResponse.GETCERT, sslIdentityStorage.init());
     assertNotNull(sslIdentityStorage.getPrivateKey());
     assertNotNull(sslIdentityStorage.getPublicKey());
-    assertNull(client.getCertificate());
+    assertNull(sslIdentityStorage.getLeafCertificate());
     client.close();
 
     // Case 5: When only certificate is present.
@@ -168,7 +168,7 @@ class TestSecureOzoneManager {
     assertEquals(SSLIdentityStorage.InitResponse.FAILURE, sslIdentityStorage.init());
     assertNull(sslIdentityStorage.getPrivateKey());
     assertNull(sslIdentityStorage.getPublicKey());
-    assertNotNull(client.getCertificate());
+    assertNotNull(sslIdentityStorage.getLeafCertificate());
     client.close();
 
     // Case 6: When private key and certificate is present.
@@ -181,7 +181,7 @@ class TestSecureOzoneManager {
     assertEquals(SSLIdentityStorage.InitResponse.SUCCESS, sslIdentityStorage.init());
     assertNotNull(sslIdentityStorage.getPrivateKey());
     assertNotNull(sslIdentityStorage.getPublicKey());
-    assertNotNull(client.getCertificate());
+    assertNotNull(sslIdentityStorage.getLeafCertificate());
     client.close();
 
     // Case 7 When keypair and certificate is present.
@@ -191,7 +191,7 @@ class TestSecureOzoneManager {
     assertEquals(SSLIdentityStorage.InitResponse.SUCCESS, sslIdentityStorage.init());
     assertNotNull(sslIdentityStorage.getPrivateKey());
     assertNotNull(sslIdentityStorage.getPublicKey());
-    assertNotNull(client.getCertificate());
+    assertNotNull(sslIdentityStorage.getLeafCertificate());
     client.close();
   }
 

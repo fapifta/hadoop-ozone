@@ -73,10 +73,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.mockito.Mockito;
 import org.slf4j.event.Level;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ratis.protocol.RaftPeerId;
@@ -126,7 +128,7 @@ public class TestOzoneDelegationTokenSecretManager {
     om = mock(OzoneManager.class);
     certStorage = mock(AllCertStorage.class);
     Set<X509Certificate> certs = new HashSet<>();
-    certs.add(certificateClient.getCertificate());
+    certs.add(sslIdentityStorage.getLeafCertificate());
     when(certStorage.getLeafCertificates()).thenReturn(certs);
     OMMetadataManager metadataManager = new OmMetadataManagerImpl(conf, om);
     when(om.getMetadataManager()).thenReturn(metadataManager);
@@ -172,15 +174,11 @@ public class TestOzoneDelegationTokenSecretManager {
     when(omStorage.getOmId()).thenReturn(UUID.randomUUID().toString());
     sslIdentityStorage = new SSLIdentityStorage(securityConfig, OMCertificateClient.COMPONENT_NAME,
         omStorage.getOmCertSerialId());
+    sslIdentityStorage = Mockito.spy(sslIdentityStorage);
+    doReturn(singleCert).when(sslIdentityStorage).getLeafCertificate();
     TrustedCertStorage trustedStorage = new TrustedCertStorage(securityConfig, OMCertificateClient.COMPONENT_NAME);
     OMCertificateClient omCertificateClient = new OMCertificateClient(
-        securityConfig, null, omStorage, null, "", null, null, null, sslIdentityStorage, trustedStorage) {
-
-      @Override
-      public X509Certificate getCertificate() {
-        return singleCert;
-      }
-    };
+        securityConfig, null, omStorage, null, "", null, null, null, sslIdentityStorage, trustedStorage);
     sslIdentityStorage.storeKeyPair(keyPair);
     trustedStorage.storeCertificate(CertificateCodec.get().encode(certPath), CAType.ROOT);
     return omCertificateClient;
@@ -395,8 +393,7 @@ public class TestOzoneDelegationTokenSecretManager {
         expiryTime, TOKEN_REMOVER_SCAN_INTERVAL);
     secretManager.start(certificateClient, sslIdentityStorage);
     OzoneTokenIdentifier id = new OzoneTokenIdentifier();
-    id.setOmCertSerialId(certificateClient.getCertificate()
-        .getSerialNumber().toString());
+    id.setOmCertSerialId(sslIdentityStorage.getLeafCertificate().getSerialNumber().toString());
     id.setMaxDate(Time.now() + 60 * 60 * 24);
     id.setOwner(new Text("test"));
     assertTrue(secretManager.verifySignature(id, certificateClient.signData(id.getBytes())));

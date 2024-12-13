@@ -322,7 +322,7 @@ public final class TestDelegationToken {
       om.setCertClient(certificateClient);
       om.setSslIdentityStorage(sslIdentityStorage);
       AllCertStorage allCertStorage = new AllCertStorage(new SecurityConfig(om.getConfiguration()), "om");
-      allCertStorage.storeCertificate(om.getCertificateClient().getCertificate());
+      allCertStorage.storeCertificate(sslIdentityStorage.getLeafCertificate());
       om.setScmTopologyClient(new ScmTopologyClient(
           new ScmBlockLocationTestingClient(null, null, 0)));
       om.start();

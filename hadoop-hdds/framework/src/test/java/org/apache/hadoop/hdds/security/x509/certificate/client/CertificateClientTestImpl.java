@@ -215,7 +215,6 @@ public class CertificateClientTestImpl implements CertificateClient {
     return resultPath;
   }
 
-  @Override
   public X509Certificate getCertificate() {
     return x509Certificate;
   }

@@ -181,7 +181,7 @@ public class TestHddsSecureDatanodeInit {
 
     assertNotNull(certStorage.getPrivateKey());
     assertNotNull(certStorage.getPublicKey());
-    assertNull(client.getCertificate());
+    assertNull(certStorage.getLeafCertificate());
     assertThat(dnLogs.getOutput()).contains("Init response: GETCERT");
   }
 
@@ -195,7 +195,7 @@ public class TestHddsSecureDatanodeInit {
     assertThat(rteException.getMessage()).contains("DN security initialization failed");
     assertNull(certStorage.getPrivateKey());
     assertNull(certStorage.getPublicKey());
-    assertNotNull(client.getCertificate());
+    assertNotNull(certStorage.getLeafCertificate());
     assertThat(dnLogs.getOutput())
         .contains("Init response: FAILURE");
   }
@@ -223,7 +223,7 @@ public class TestHddsSecureDatanodeInit {
         .contains("DN security initialization failed");
     assertNull(certStorage.getPrivateKey());
     assertNotNull(certStorage.getPublicKey());
-    assertNotNull(client.getCertificate());
+    assertNotNull(certStorage.getLeafCertificate());
     assertThat(dnLogs.getOutput())
         .contains("Init response: FAILURE");
   }
@@ -249,7 +249,7 @@ public class TestHddsSecureDatanodeInit {
     service.initializeCertificateClient(client);
     assertNotNull(certStorage.getPrivateKey());
     assertNotNull(certStorage.getPublicKey());
-    assertNotNull(client.getCertificate());
+    assertNotNull(certStorage.getLeafCertificate());
     assertThat(dnLogs.getOutput())
         .contains("Init response: GETCERT");
     dnLogs.clearOutput();
@@ -266,7 +266,7 @@ public class TestHddsSecureDatanodeInit {
     service.initializeCertificateClient(client);
     assertNotNull(certStorage.getPrivateKey());
     assertNotNull(certStorage.getPublicKey());
-    assertNotNull(client.getCertificate());
+    assertNotNull(certStorage.getLeafCertificate());
     assertThat(dnLogs.getOutput())
         .contains("Init response: SUCCESS");
   }
@@ -279,7 +279,7 @@ public class TestHddsSecureDatanodeInit {
     assertThrows(Exception.class, () -> service.initializeCertificateClient(client));
     assertNotNull(certStorage.getPrivateKey());
     assertNotNull(certStorage.getPublicKey());
-    assertNull(client.getCertificate());
+    assertNull(certStorage.getLeafCertificate());
     assertThat(dnLogs.getOutput())
         .contains("Init response: GETCERT");
   }
@@ -294,7 +294,7 @@ public class TestHddsSecureDatanodeInit {
     service.initializeCertificateClient(client);
     assertNotNull(certStorage.getPrivateKey());
     assertNotNull(certStorage.getPublicKey());
-    assertNotNull(client.getCertificate());
+    assertNotNull(certStorage.getLeafCertificate());
     assertThat(dnLogs.getOutput())
         .contains("Init response: SUCCESS");
   }
@@ -338,14 +338,14 @@ public class TestHddsSecureDatanodeInit {
     when(scmClient.getAllRootCaCertificates()).thenReturn(rootCaList);
     // check that new cert ID should not equal to current cert ID
     String certId = newCert.getSerialNumber().toString();
-    assertNotEquals(certId, client.getCertificate().getSerialNumber().toString());
+    assertNotEquals(certId, certStorage.getLeafCertificate().getSerialNumber().toString());
 
     // start monitor task to renew key and cert
     client.startCertificateRenewerService();
 
     // check after renew, client will have the new cert ID
     GenericTestUtils.waitFor(() -> {
-      String newCertId = client.getCertificate().getSerialNumber().toString();
+      String newCertId = certStorage.getLeafCertificate().getSerialNumber().toString();
       return newCertId.equals(certId);
     }, 1000, CERT_LIFETIME * 1000);
     PrivateKey privateKey1 = certStorage.getPrivateKey();
@@ -372,7 +372,7 @@ public class TestHddsSecureDatanodeInit {
 
     // check after renew, client will have the new cert ID
     GenericTestUtils.waitFor(() -> {
-      String newCertId = client.getCertificate().getSerialNumber().toString();
+      String newCertId = certStorage.getLeafCertificate().getSerialNumber().toString();
       return newCertId.equals(certId2);
     }, 1000, CERT_LIFETIME * 1000);
     assertNotEquals(privateKey1, certStorage.getPrivateKey());
@@ -404,7 +404,7 @@ public class TestHddsSecureDatanodeInit {
 
     // check that new cert ID should not equal to current cert ID
     String certId = newCert.getSerialNumber().toString();
-    assertNotEquals(certId, client.getCertificate().getSerialNumber().toString());
+    assertNotEquals(certId, certStorage.getLeafCertificate().getSerialNumber().toString());
 
     // start monitor task to renew key and cert
     client.startCertificateRenewerService();
@@ -413,9 +413,9 @@ public class TestHddsSecureDatanodeInit {
 
     // certificate failed to renew, client still hold the old expired cert.
     Thread.sleep(CERT_LIFETIME * 1000);
-    assertNotEquals(certId, client.getCertificate().getSerialNumber().toString());
+    assertNotEquals(certId, certStorage.getLeafCertificate().getSerialNumber().toString());
     try {
-      client.getCertificate().checkValidity();
+      certStorage.getLeafCertificate().checkValidity();
     } catch (Exception e) {
       assertInstanceOf(CertificateExpiredException.class, e);
     }
@@ -433,7 +433,7 @@ public class TestHddsSecureDatanodeInit {
 
     // check after renew, client will have the new cert ID
     GenericTestUtils.waitFor(() -> {
-      String newCertId = client.getCertificate().getSerialNumber().toString();
+      String newCertId = certStorage.getLeafCertificate().getSerialNumber().toString();
       return newCertId.equals(certId2);
     }, 1000, CERT_LIFETIME * 1000);
   }

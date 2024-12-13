@@ -176,7 +176,7 @@ public class TestDefaultCertificateClient {
   @Test
   public void testCertificateOps() throws Exception {
     storeCertificate(x509Certificate, CAType.NONE);
-    X509Certificate cert = dnCertClient.getCertificate();
+    X509Certificate cert = sslIdentityStorage.getLeafCertificate();
     assertNotNull(cert);
     assertThat(cert.getEncoded().length).isGreaterThan(0);
     assertEquals(x509Certificate, cert);
@@ -480,12 +480,11 @@ public class TestDefaultCertificateClient {
     when(scmSecurityClient.getDataNodeCertificateChain(any(), anyString()))
         .thenReturn(responseProto);
 
-    String certID = dnCertClient.getCertificate().getSerialNumber().toString();
+    String certID = sslIdentityStorage.getLeafCertificate().getSerialNumber().toString();
     // a success renew
     String newCertId = dnCertClient.renewAndStoreKeyAndCertificate(true);
     assertNotEquals(certID, newCertId);
-    assertEquals(dnCertClient.getCertificate().getSerialNumber()
-        .toString(), newCertId);
+    assertEquals(sslIdentityStorage.getLeafCertificate().getSerialNumber().toString(), newCertId);
 
     File newKeyDir = new File(dnSecurityConfig.getKeyLocation(
         DNCertificateClient.COMPONENT_NAME).toString() +

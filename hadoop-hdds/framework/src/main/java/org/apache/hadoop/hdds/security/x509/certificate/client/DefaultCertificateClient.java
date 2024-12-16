@@ -85,7 +85,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   private final Logger logger;
   private final SecurityConfig securityConfig;
-  private final KeyStorage keyStorage;
   private String certSerialId;
   private String component;
   private final String threadNamePrefix;
@@ -112,7 +111,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
     Objects.requireNonNull(securityConfig);
     this.securityConfig = securityConfig;
     this.scmSecurityClient = scmSecurityClient;
-    keyStorage = new KeyStorage(securityConfig, component);
     this.logger = log;
     this.component = component;
     this.threadNamePrefix = threadNamePrefix;

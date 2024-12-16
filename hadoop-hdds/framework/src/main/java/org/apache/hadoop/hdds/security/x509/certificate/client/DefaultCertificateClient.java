@@ -85,7 +85,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   private final Logger logger;
   private final SecurityConfig securityConfig;
-  private String certSerialId;
   private String component;
   private final String threadNamePrefix;
 
@@ -173,7 +172,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   private synchronized OzoneCertPath getCertPath() {
     if (sslIdentityStorage.getCertPaths().isEmpty()) {
-      getLogger().info("No certificates found for certificate client with certificate id: {}", certSerialId);
+      getLogger().info("No certificates found for certificate client?");
       return null;
     }
     return sslIdentityStorage.getCertPaths().get(0);
@@ -280,12 +279,10 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   /**
    * Notify all certificate renewal receivers that the certificate is renewed.
-   *
    */
-  protected void notifyNotificationReceivers(String oldCaCertId,
-      String newCaCertId) {
+  protected void notifyNotificationReceivers(String newCaCertId) {
     synchronized (notificationReceivers) {
-      notificationReceivers.forEach(r -> r.notifyCertificateRenewed(oldCaCertId, newCaCertId));
+      notificationReceivers.forEach(r -> r.notifyCertificateRenewed(newCaCertId));
     }
   }
 
@@ -372,9 +369,9 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       CertificateSignRequest.Builder csrBuilder = configureCSRBuilder();
       csrBuilder.setKey(newKeyPair);
       Path certificatePath = Paths.get(newCertPath);
-      String encoodedCert = signCertificate(csrBuilder.build());
+      String encodedCert = signCertificate(csrBuilder.build());
       // Return the default certificate ID
-      newCertSerialId = sslIdentityStorage.storeCertificate(encoodedCert, CAType.NONE, certificatePath);
+      newCertSerialId = sslIdentityStorage.storeCertificate(encodedCert, CAType.NONE, certificatePath);
       updateCertSerialId(newCertSerialId);
       getAndStoreAllRootCAs(certificatePath);
     } catch (Exception e) {
@@ -517,21 +514,18 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   public synchronized void reloadKeyAndCertificate(String newCertId) {
-    String oldCaCertId = updateCertSerialId(newCertId);
-    getLogger().info("Reset and reloaded key and all certificates for new " +
-        "certificate {}.", newCertId);
-    notifyNotificationReceivers(oldCaCertId, newCertId);
+    updateCertSerialId(newCertId);
+    getLogger().info("Reset and reloaded key and all certificates for new certificate {}.", newCertId);
+    notifyNotificationReceivers(newCertId);
   }
 
   protected SecurityConfig getSecurityConfig() {
     return securityConfig;
   }
 
-  private synchronized String updateCertSerialId(String newCertSerialId) {
-    certSerialId = newCertSerialId;
-    getLogger().info("Certificate serial ID set to {}", certSerialId);
-    sslIdentityStorage.setCertId(certSerialId);
-    return certSerialId;
+  private synchronized void updateCertSerialId(String newCertSerialId) {
+    getLogger().info("Current certificate ID is updated from to {}", newCertSerialId);
+    sslIdentityStorage.setCertId(newCertSerialId);
   }
 
   protected abstract SCMGetCertResponseProto sign(CertificateSignRequest request) throws IOException;
@@ -563,10 +557,6 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   public SCMSecurityProtocolClientSideTranslatorPB getScmSecureClient() {
     return scmSecurityClient;
-  }
-
-  public String getCertSerialId() {
-    return certSerialId;
   }
 
   protected TrustedCertStorage getTrustedCertStorage() {

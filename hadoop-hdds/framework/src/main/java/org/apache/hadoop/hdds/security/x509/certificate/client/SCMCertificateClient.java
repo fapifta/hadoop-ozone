@@ -181,8 +181,8 @@ public class SCMCertificateClient extends DefaultCertificateClient {
               CertificateCodec.get().encode(cert), CAType.SUBORDINATE,
               getSecurityConfig().getCertificateLocation(COMPONENT_NAME));
         }
-        String scmCertId = getCertSerialId();
-        notifyNotificationReceivers(scmCertId, scmCertId);
+        String scmCertId = getSslIdentityStorage().getLeafCertificate().getSerialNumber().toString();
+        notifyNotificationReceivers(scmCertId);
       } catch (IOException e) {
         LOG.error("Failed to refresh CA certificates", e);
       }

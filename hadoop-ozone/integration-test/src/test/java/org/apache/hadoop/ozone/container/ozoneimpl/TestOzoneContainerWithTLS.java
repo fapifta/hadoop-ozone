@@ -231,8 +231,8 @@ public class TestOzoneContainerWithTLS {
           caClient.getKeyStoreForSSLIdentity(caClient.getPrivateKey(), caClient.getCertPath()));
       Mockito.when(trustedCertStorage.getKeyStore()).thenReturn(
           caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCertificates()));
-      sslIdentityStorage.notifyCertificateRenewed("", caClient.getCertSerialId());
-      trustedCertStorage.notifyCertificateRenewed("", caClient.getCertSerialId());
+      sslIdentityStorage.notifyCertificateRenewed(caClient.getCertSerialId());
+      trustedCertStorage.notifyCertificateRenewed(caClient.getCertSerialId());
       containers.add(createAndCloseContainer(client, containerTokenEnabled));
       assertDownloadContainerWorks(containers, sourceDatanodes);
     } finally {
@@ -300,8 +300,8 @@ public class TestOzoneContainerWithTLS {
           caClient.getKeyStoreForSSLIdentity(caClient.getPrivateKey(), caClient.getCertPath()));
       Mockito.when(trustedCertStorage.getKeyStore()).thenReturn(
           caClient.getKeyStoreForTrustedCertificates(caClient.getAllRootCaCertificates()));
-      sslIdentityStorage.notifyCertificateRenewed("", caClient.getCertSerialId());
-      trustedCertStorage.notifyCertificateRenewed("", caClient.getCertSerialId());
+      sslIdentityStorage.notifyCertificateRenewed(caClient.getCertSerialId());
+      trustedCertStorage.notifyCertificateRenewed(caClient.getCertSerialId());
 
       createAndCloseContainer(client, false);
       assertClientTrustManagerFailedAndRetried(logs);

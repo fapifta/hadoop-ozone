@@ -413,7 +413,6 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
           this::terminateDatanode, sslIdentityStorage, trustedCertStorage);
       certClient = dnCertClient;
     }
-    sslIdentityStorage.setCertId(certClient.getCertSerialId());
     sslIdentityStorage.initWithRecovery(certClient);
     return certClient;
   }

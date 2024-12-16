@@ -188,9 +188,9 @@ public class SSLIdentityStorage extends CertificateStorage implements Certificat
   }
 
   @Override
-  public synchronized void notifyCertificateRenewed(String oldCertId, String newCertId) {
+  public synchronized void notifyCertificateRenewed(String newCertId) {
     if (keyManager != null) {
-      keyManager.notifyCertificateRenewed(oldCertId, newCertId);
+      keyManager.notifyCertificateRenewed(newCertId);
     }
   }
 

@@ -218,8 +218,7 @@ public class CertificateClientTestImpl implements CertificateClient {
   public X509Certificate getCertificate() {
     return x509Certificate;
   }
-
-  @Override
+  
   public String getCertSerialId() {
     return x509Certificate.getSerialNumber().toString();
   }
@@ -328,7 +327,6 @@ public class CertificateClientTestImpl implements CertificateClient {
         getAllRootCaCertificates()));
     // notify notification receivers
     notificationReceivers.forEach(r -> r.notifyCertificateRenewed(
-        oldCert.getSerialNumber().toString(),
         x509Certificate.getSerialNumber().toString()));
   }
 

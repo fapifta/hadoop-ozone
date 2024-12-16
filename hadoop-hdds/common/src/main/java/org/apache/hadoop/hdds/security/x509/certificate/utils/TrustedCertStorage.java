@@ -77,9 +77,9 @@ public class TrustedCertStorage extends CertificateStorage implements Certificat
   }
 
   @Override
-  public synchronized void notifyCertificateRenewed(String oldCertId, String newCertId) {
+  public synchronized void notifyCertificateRenewed(String newCertId) {
     if (trustManager != null) {
-      trustManager.notifyCertificateRenewed(oldCertId, newCertId);
+      trustManager.notifyCertificateRenewed(newCertId);
     }
   }
 

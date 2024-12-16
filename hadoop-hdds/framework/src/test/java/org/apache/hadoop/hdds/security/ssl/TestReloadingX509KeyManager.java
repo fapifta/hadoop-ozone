@@ -61,7 +61,7 @@ public class TestReloadingX509KeyManager {
     caClient.renewKey();
     Mockito.when(sslIdentityStorage.getKeyStore()).thenReturn(
         caClient.getKeyStoreForSSLIdentity(caClient.getPrivateKey(), caClient.getCertPath()));
-    km.notifyCertificateRenewed("", caClient.getCertSerialId());
+    km.notifyCertificateRenewed(caClient.getCertSerialId());
     PrivateKey privateKey2 = caClient.getPrivateKey();
     assertNotEquals(privateKey1, privateKey2);
 

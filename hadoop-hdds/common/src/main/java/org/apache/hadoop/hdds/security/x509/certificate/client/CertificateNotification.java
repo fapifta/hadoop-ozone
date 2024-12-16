@@ -27,8 +27,7 @@ public interface CertificateNotification {
   /**
    * Notify the class implementing this interface that certificate is renewed.
    *
-   * @param oldCertId The old cert id before renew.
    * @param newCertId The new cert id after renew.
    */
-  void notifyCertificateRenewed(String oldCertId, String newCertId);
+  void notifyCertificateRenewed(String newCertId);
 }

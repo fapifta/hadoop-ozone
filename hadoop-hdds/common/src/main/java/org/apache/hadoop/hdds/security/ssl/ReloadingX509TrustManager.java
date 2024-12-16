@@ -152,8 +152,8 @@ public final class ReloadingX509TrustManager implements X509TrustManager, Certif
   }
 
   @Override
-  public synchronized void notifyCertificateRenewed(String oldCertId, String newCertId) {
-    LOG.info("Notify certificate renewed old cert id: {}, new cert id: {}", oldCertId, newCertId);
+  public synchronized void notifyCertificateRenewed(String newCertId) {
+    LOG.info("Notify certificate renewed to new cert id: {}", newCertId);
     try {
       X509TrustManager manager = init(trustedCertStorage.getKeyStore());
       if (manager != null) {

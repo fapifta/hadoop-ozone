@@ -49,8 +49,6 @@ public interface CertificateClient extends Closeable {
    */
   List<String> getAllRootCaCertificates() throws IOException;
 
-  String getCertSerialId();
-
   /**
    * Verifies a digital Signature, given the signature and the certificate of
    * the signer.

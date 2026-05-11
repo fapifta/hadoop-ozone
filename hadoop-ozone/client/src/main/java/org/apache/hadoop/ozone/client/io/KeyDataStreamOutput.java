@@ -399,6 +399,15 @@ public class KeyDataStreamOutput extends AbstractDataStreamOutput
             try {
               handleStreamAction(entry, op);
             } catch (IOException ioe) {
+              // For hsync, the caller's contract is to learn whether data is durably committed.  The retry path below
+              // handles write and close failures by re-sending data to a new block, but that does not work for hsync:
+              // in the DataStream path the chunk data has already been sent to datanodes and is no longer buffered
+              // locally, so retrying on a new (empty) block would let hsync "succeed" without the data actually being
+              // committed anywhere — causing OM to record a sync point for unacknowledged data.  Propagate the error
+              // so the application can decide how to recover.
+              if (op == StreamAction.HSYNC) {
+                throw ioe;
+              }
               handleException(entry, ioe);
               continue;
             }

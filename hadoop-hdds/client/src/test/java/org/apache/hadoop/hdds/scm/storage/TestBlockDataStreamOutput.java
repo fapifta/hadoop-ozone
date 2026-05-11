@@ -138,7 +138,7 @@ class TestBlockDataStreamOutput {
     }
   }
 
-  //@Test - skipped as it fails now.
+  @Test
   void hsyncPropagatesIOException() throws Exception {
     FakeDatanodePipeline fake = new FakeDatanodePipeline();
     // Fail the first putBlock
@@ -150,10 +150,11 @@ class TestBlockDataStreamOutput {
 
     // hsync should propagate the IOException from the failed putBlock
     assertThrows(IOException.class, stream::hsync, "hsync() must propagate IOException from failed putBlock");
-    stream.close();
+    // close() is also expected to fail since the stream has a stored error
+    assertThrows(IOException.class, stream::close);
   }
 
-  //@Test - skipped as it fails now
+  @Test
   void hsyncPropagatesWatchFailure() throws Exception {
     FakeDatanodePipeline fake = new FakeDatanodePipeline();
     // Fail the first watchForCommit
@@ -166,7 +167,8 @@ class TestBlockDataStreamOutput {
 
     // hsync should propagate the watch failure
     assertThrows(IOException.class, stream::hsync, "hsync() must propagate IOException from failed watchForCommit");
-    stream.close();
+    // close() is also expected to fail since the stream has a stored error
+    assertThrows(IOException.class, stream::close);
   }
 
   @Test

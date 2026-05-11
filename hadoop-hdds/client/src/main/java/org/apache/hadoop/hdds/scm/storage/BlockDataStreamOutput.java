@@ -530,8 +530,11 @@ public class BlockDataStreamOutput implements ByteBufferStreamOutput {
       if (!isClosed()) {
         handleFlush(false);
       }
-    } catch (Exception e) {
-
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("hsync interrupted", e);
+    } catch (ExecutionException e) {
+      throw new IOException("hsync failed", e);
     }
   }
 

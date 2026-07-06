@@ -76,3 +76,76 @@ When a contribution is authored in whole or in part with AI tooling, disclose it
 [ASF generative tooling guidance](https://www.apache.org/legal/generative-tooling.html): add
 a `Generated-by: TOOL (MODEL)` line to the pull request description (and, where known, the
 commit message). See `AGENTS.md` for the full commit/PR conventions.
+
+## Code intelligence (LSP) setup for agents
+
+Optional per-developer, per-machine setup that gives coding agents IDE-grade Java
+understanding — exact go-to-definition, find-references across the reactor, type resolution
+into dependencies, safe rename, and real-time diagnostics after each edit — backed by Eclipse
+JDT.LS (`jdtls`), the same engine behind VS Code's Java support. It replaces probabilistic
+grep with compiler-accurate answers, which matters most across Ozone's service boundaries
+(SCM ↔ OM ↔ datanode). `jdtls` is the shared foundation for both setups below, so install it
+first. Nothing here is committed to the repo; these are local machine settings.
+
+### Step 1 — Install jdtls
+
+Requires a JDK 17+ on `PATH` / `JAVA_HOME` to run (Ozone already uses JDK 21).
+
+- **Linux, package manager (Arch/AUR):** `yay -S jdtls` — installs the `jdtls` launcher onto
+  your `PATH`. Debian/Ubuntu/Fedora have no official `jdtls` package; use from-source there.
+- **Linux, from source:**
+  ```
+  git clone https://github.com/eclipse-jdtls/eclipse.jdt.ls.git
+  cd eclipse.jdt.ls
+  JAVA_HOME=/path/to/jdk-21 ./mvnw clean verify -DskipTests=true
+  ```
+  Builds with the bundled Maven wrapper (JDK 21 required, tests skipped). The runnable server
+  lands in `./org.eclipse.jdt.ls.product/target/repository`; put a launcher for that folder on
+  your `PATH` to expose a `jdtls` command (see the README's "Running from the command line").
+- **macOS (Homebrew):** `brew install jdtls` — installs the `jdtls` binary and launcher.
+
+Docs:
+- [eclipse-jdtls/eclipse.jdt.ls](https://github.com/eclipse-jdtls/eclipse.jdt.ls)
+- [builds](https://download.eclipse.org/jdtls/snapshots/)
+- [Homebrew formula](https://formulae.brew.sh/formula/jdtls)
+
+### Step 2a — Claude Code: official jdtls plugin
+
+Uses the `jdtls` binary from Step 1.
+
+```
+/plugin marketplace add anthropics/claude-plugins-official
+/plugin install jdtls-lsp@claude-plugins-official
+```
+
+First line registers Anthropic's official plugin marketplace; second installs the `jdtls-lsp`
+plugin. Restart Claude Code — the language server then activates automatically on `.java`
+files, injecting diagnostics after each edit and exposing LSP tools (hover, definition,
+references, symbols, rename). First start indexes the reactor and is slow; later calls ~50ms.
+
+Docs:
+- [plugin source & README](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/jdtls-lsp)
+- [plugin page](https://claude.com/plugins/jdtls-lsp)
+
+### Step 2b — Other engines: Serena MCP
+
+Serena is an MCP server that exposes `jdtls`-backed symbol tools to any MCP client (Codex,
+Gemini CLI, Qwen, Cursor). Requires [`uv`](https://docs.astral.sh/uv/).
+
+```
+uv tool install -p 3.13 serena-agent
+serena project index
+serena start-mcp-server --context ide-assistant --project "$(pwd)"
+```
+
+`uv tool install` puts the `serena` command on your `PATH` (its LSP backend drives Eclipse
+JDT.LS for Java). `serena project index`, run once from the repo root, pre-indexes the
+checkout so the first agent query is fast. `serena start-mcp-server` launches the server over
+stdio for the current project (`--context ide-assistant` is the terminal-agent profile);
+confirm it starts, then register the same command with your MCP client per Serena's client
+guide.
+
+Docs:
+- [oraios/serena](https://github.com/oraios/serena)
+- [running the server](https://oraios.github.io/serena/02-usage/020_running.html)
+- [connecting your MCP client](https://oraios.github.io/serena/02-usage/030_clients.html)

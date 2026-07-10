@@ -153,7 +153,8 @@ public final class  HASecurityUtils {
   public static GrpcTlsConfig createSCMRatisTLSConfig(SecurityConfig conf,
       CertificateClient certificateClient) throws IOException {
     if (conf.isSecurityEnabled() && conf.isGrpcTlsEnabled()) {
-      return new GrpcTlsConfig(certificateClient.getKeyManager(),
+      return RatisHelper.createGrpcTlsConfig(conf,
+          certificateClient.getKeyManager(),
           certificateClient.getTrustManager(), true);
     }
     return null;

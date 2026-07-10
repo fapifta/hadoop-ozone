@@ -17,15 +17,25 @@
 
 package org.apache.hadoop.hdds.ratis;
 
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_CIPHERS;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_ENABLED;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_PROTOCOLS;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_PROVIDER;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.util.Arrays;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.DatanodeID;
 import org.apache.hadoop.hdds.protocol.MockDatanodeDetails;
+import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.ratis.conf.RaftProperties;
+import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.protocol.RaftPeer;
+import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslProvider;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -136,5 +146,50 @@ public class TestRatisHelper {
         DatanodeID.randomID(), "dn-ipv6", "2001:db8::1", "/default-rack");
     RaftPeer peer = RatisHelper.toRaftPeer(dn);
     assertEquals("[2001:db8::1]:0", peer.getAddress());
+  }
+
+  @Test
+  public void testCreateGrpcTlsConfigAppliesProviderProtocolsCiphers() {
+    OzoneConfiguration conf = new OzoneConfiguration();
+    conf.set(HDDS_GRPC_TLS_PROVIDER, "JDK");
+    conf.set(HDDS_GRPC_TLS_PROTOCOLS, "TLSv1.3,TLSv1.2");
+    conf.set(HDDS_GRPC_TLS_CIPHERS,
+        "TLS_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256");
+    SecurityConfig secConf = new SecurityConfig(conf);
+
+    GrpcTlsConfig tlsConfig =
+        RatisHelper.createGrpcTlsConfig(secConf, null, null, false);
+
+    assertEquals(SslProvider.JDK, tlsConfig.getSslProvider());
+    assertEquals(Arrays.asList("TLSv1.3", "TLSv1.2"),
+        tlsConfig.getProtocols());
+    assertEquals(Arrays.asList("TLS_AES_256_GCM_SHA384", "TLS_AES_128_GCM_SHA256"),
+        tlsConfig.getCipherSuites());
+  }
+
+  @Test
+  public void testCreateTlsClientConfigCarriesProtocolsWhenEnabled() {
+    OzoneConfiguration conf = new OzoneConfiguration();
+    conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
+    conf.setBoolean(HDDS_GRPC_TLS_ENABLED, true);
+    conf.set(HDDS_GRPC_TLS_PROTOCOLS, "TLSv1.3");
+    conf.set(HDDS_GRPC_TLS_CIPHERS, "TLS_AES_256_GCM_SHA384");
+    SecurityConfig secConf = new SecurityConfig(conf);
+
+    GrpcTlsConfig tlsConfig = RatisHelper.createTlsClientConfig(secConf, null);
+
+    assertNotNull(tlsConfig);
+    assertEquals(Arrays.asList("TLSv1.3"), tlsConfig.getProtocols());
+    assertEquals(Arrays.asList("TLS_AES_256_GCM_SHA384"), tlsConfig.getCipherSuites());
+  }
+
+  @Test
+  public void testCreateTlsClientConfigNullWhenTlsDisabled() {
+    OzoneConfiguration conf = new OzoneConfiguration();
+    conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
+    // hdds.grpc.tls.enabled defaults to false
+    SecurityConfig secConf = new SecurityConfig(conf);
+
+    assertNull(RatisHelper.createTlsClientConfig(secConf, null));
   }
 }

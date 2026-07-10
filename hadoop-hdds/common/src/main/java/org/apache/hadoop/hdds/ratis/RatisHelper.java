@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
+import javax.net.ssl.KeyManager;
 import javax.net.ssl.TrustManager;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.HddsUtils;
@@ -413,13 +414,27 @@ public final class RatisHelper {
     return configuration.getPropsMatchPrefixAndTrimPrefix(HDDS_DATANODE_RATIS_PREFIX_KEY + '.');
   }
 
+  // Builds a GrpcTlsConfig carrying the key/trust material together with the
+  // TLS provider, protocols and cipher suites configured via hdds.grpc.tls.*.
+  public static GrpcTlsConfig createGrpcTlsConfig(SecurityConfig conf,
+      KeyManager keyManager, TrustManager trustManager, boolean mtls) {
+    return GrpcTlsConfig.newBuilder()
+        .setKeyManager(keyManager)
+        .setTrustManager(trustManager)
+        .setMutualTls(mtls)
+        .setSslProvider(conf.getGrpcSslProvider())
+        .setProtocols(conf.getGrpcTlsProtocols())
+        .setCipherSuites(conf.getGrpcTlsCiphers())
+        .build();
+  }
+
   // For External gRPC client to server with gRPC TLS.
   // No mTLS for external client as SCM CA does not issued certificates for them
   public static GrpcTlsConfig createTlsClientConfig(SecurityConfig conf,
       TrustManager trustManager) {
     GrpcTlsConfig tlsConfig = null;
     if (conf.isSecurityEnabled() && conf.isGrpcTlsEnabled()) {
-      tlsConfig = new GrpcTlsConfig(null, trustManager, false);
+      tlsConfig = createGrpcTlsConfig(conf, null, trustManager, false);
     }
     return tlsConfig;
   }

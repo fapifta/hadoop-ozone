@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
+import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.server.ServerUtils;
@@ -506,7 +507,8 @@ public final class OzoneManagerRatisUtils {
   public static GrpcTlsConfig createServerTlsConfig(SecurityConfig conf,
       CertificateClient caClient) throws IOException {
     if (conf.isSecurityEnabled() && conf.isGrpcTlsEnabled()) {
-      return new GrpcTlsConfig(caClient.getKeyManager(), caClient.getTrustManager(), true);
+      return RatisHelper.createGrpcTlsConfig(conf,
+          caClient.getKeyManager(), caClient.getTrustManager(), true);
     }
 
     return null;
